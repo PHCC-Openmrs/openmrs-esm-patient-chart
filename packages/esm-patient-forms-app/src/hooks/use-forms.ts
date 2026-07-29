@@ -9,7 +9,7 @@ import {
   userHasAccess,
   useSession,
 } from '@openmrs/esm-framework';
-import type { FormEntryConfigSchema } from '../config-schema';
+import type { FormEntryConfigSchema, FormLocationRestriction, FormRoleRestriction } from '../config-schema';
 import type { ListResponse, Form, EncounterWithFormRef, CompletedFormInfo } from '../types';
 import {
   customEncounterRepresentation,
@@ -78,7 +78,7 @@ export function useForms(
   cachedOfflineFormsOnly = false,
   orderBy: 'name' | 'most-recent' = 'name',
 ) {
-  const { htmlFormEntryForms } = useConfig<FormEntryConfigSchema>();
+  const { htmlFormEntryForms, formsLocationRestrictions, formsRoleRestrictions } = useConfig<FormEntryConfigSchema>();
   const allFormsRes = useFormEncounters(cachedOfflineFormsOnly, patientUuid, visitUuid);
   const encountersRes = useEncountersWithFormRef(patientUuid, startDate, endDate);
   const pastEncounters = encountersRes.data?.data?.results ?? [];
@@ -106,6 +106,9 @@ export function useForms(
     );
   }
 
+  formsToDisplay = filterFormsByLocation(formsToDisplay, formsLocationRestrictions, session?.sessionLocation?.uuid);
+  formsToDisplay = filterFormsByRole(formsToDisplay, formsRoleRestrictions, session?.user?.roles);
+
   if (orderBy === 'name') {
     formsToDisplay?.sort((formInfo1, formInfo2) =>
       (formInfo1.form.display ?? formInfo1.form.name).localeCompare(formInfo2.form.display ?? formInfo2.form.name),
@@ -124,6 +127,50 @@ export function useForms(
     isValidating: allFormsRes.isValidating || encountersRes.isValidating,
     mutateForms,
   };
+}
+
+// Restricts a form to specific locations, keyed directly by form UUID rather than encounter type.
+// There's no native OpenMRS field this mirrors, so keying by form UUID avoids requiring a dedicated
+// encounter type per restricted form (and the risk of accidentally restricting other forms that
+// happen to share the same encounter type).
+function filterFormsByLocation(
+  forms: Array<CompletedFormInfo> | undefined,
+  formsLocationRestrictions: Array<FormLocationRestriction> | undefined,
+  currentLocationUuid: string | undefined,
+): Array<CompletedFormInfo> | undefined {
+  if (!formsLocationRestrictions?.length) {
+    return forms;
+  }
+
+  return forms?.filter((formInfo) => {
+    const restriction = formsLocationRestrictions.find((r) => r.formUuid === formInfo.form.uuid);
+    if (!restriction || !restriction.allowedLocationUuids?.length) {
+      return true;
+    }
+    return Boolean(currentLocationUuid) && restriction.allowedLocationUuids.includes(currentLocationUuid);
+  });
+}
+
+// Restricts a form to specific roles, keyed directly by form UUID for the same reason as the
+// location restriction above.
+function filterFormsByRole(
+  forms: Array<CompletedFormInfo> | undefined,
+  formsRoleRestrictions: Array<FormRoleRestriction> | undefined,
+  currentUserRoles: Array<{ uuid: string }> | undefined,
+): Array<CompletedFormInfo> | undefined {
+  if (!formsRoleRestrictions?.length) {
+    return forms;
+  }
+
+  const currentUserRoleUuids = currentUserRoles?.map((role) => role.uuid) ?? [];
+
+  return forms?.filter((formInfo) => {
+    const restriction = formsRoleRestrictions.find((r) => r.formUuid === formInfo.form.uuid);
+    if (!restriction || !restriction.allowedRoleUuids?.length) {
+      return true;
+    }
+    return restriction.allowedRoleUuids.some((roleUuid) => currentUserRoleUuids.includes(roleUuid));
+  });
 }
 
 function mapToFormCompletedInfo(
