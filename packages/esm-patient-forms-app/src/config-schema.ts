@@ -87,6 +87,46 @@ export const configSchema = {
     _default: 'name',
     _validators: [validators.oneOf(['name', 'most-recent'])],
   },
+  formsLocationRestrictions: {
+    _type: Type.Array,
+    _elements: {
+      _type: Type.Object,
+      formUuid: {
+        _type: Type.UUID,
+        _description: 'The UUID of the form to restrict by location.',
+      },
+      allowedLocationUuids: {
+        _type: Type.Array,
+        _elements: {
+          _type: Type.UUID,
+        },
+        _description: 'UUIDs of the locations at which this form should be visible. Leave empty to allow everywhere.',
+        _default: [],
+      },
+    },
+    _default: [],
+    _description: 'Restricts a form to being visible only when the user is logged in at one of the allowed locations.',
+  },
+  formsRoleRestrictions: {
+    _type: Type.Array,
+    _elements: {
+      _type: Type.Object,
+      formUuid: {
+        _type: Type.UUID,
+        _description: 'The UUID of the form to restrict by role.',
+      },
+      allowedRoleUuids: {
+        _type: Type.Array,
+        _elements: {
+          _type: Type.UUID,
+        },
+        _description: 'UUIDs of the roles that may access this form. Leave empty to allow every role.',
+        _default: [],
+      },
+    },
+    _default: [],
+    _description: 'Restricts a form to being visible only to users who have one of the allowed roles.',
+  },
   formSections: {
     _type: Type.Array,
     _elements: {
@@ -123,9 +163,21 @@ export interface FormsSection {
   forms: Array<string>;
 }
 
+export interface FormLocationRestriction {
+  formUuid: string;
+  allowedLocationUuids: Array<string>;
+}
+
+export interface FormRoleRestriction {
+  formUuid: string;
+  allowedRoleUuids: Array<string>;
+}
+
 export interface FormEntryConfigSchema {
   htmlFormEntryForms: Array<HtmlFormEntryForm>;
   formSections: Array<FormsSection>;
+  formsLocationRestrictions: Array<FormLocationRestriction>;
+  formsRoleRestrictions: Array<FormRoleRestriction>;
   customFormsUrl: string;
   orderBy: 'name' | 'most-recent';
   showHtmlFormEntryForms: boolean;
