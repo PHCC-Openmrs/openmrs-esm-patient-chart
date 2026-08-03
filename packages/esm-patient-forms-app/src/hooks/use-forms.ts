@@ -9,7 +9,12 @@ import {
   userHasAccess,
   useSession,
 } from '@openmrs/esm-framework';
-import type { FormEntryConfigSchema, FormLocationRestriction, FormRoleRestriction } from '../config-schema';
+import type {
+  FormEntryConfigSchema,
+  FormLocationRestriction,
+  FormRoleRestriction,
+  LocationFormsAllowlistEntry,
+} from '../config-schema';
 import type { ListResponse, Form, EncounterWithFormRef, CompletedFormInfo } from '../types';
 import {
   customEncounterRepresentation,
@@ -78,7 +83,8 @@ export function useForms(
   cachedOfflineFormsOnly = false,
   orderBy: 'name' | 'most-recent' = 'name',
 ) {
-  const { htmlFormEntryForms, formsLocationRestrictions, formsRoleRestrictions } = useConfig<FormEntryConfigSchema>();
+  const { htmlFormEntryForms, formsLocationRestrictions, formsRoleRestrictions, locationFormsAllowlist } =
+    useConfig<FormEntryConfigSchema>();
   const allFormsRes = useFormEncounters(cachedOfflineFormsOnly, patientUuid, visitUuid);
   const encountersRes = useEncountersWithFormRef(patientUuid, startDate, endDate);
   const pastEncounters = encountersRes.data?.data?.results ?? [];
@@ -106,8 +112,10 @@ export function useForms(
     );
   }
 
-  formsToDisplay = filterFormsByLocation(formsToDisplay, formsLocationRestrictions, session?.sessionLocation?.uuid);
+  const currentLocationUuid = session?.sessionLocation?.uuid;
+  formsToDisplay = filterFormsByLocation(formsToDisplay, formsLocationRestrictions, currentLocationUuid);
   formsToDisplay = filterFormsByRole(formsToDisplay, formsRoleRestrictions, session?.user?.roles);
+  formsToDisplay = filterFormsByLocationAllowlist(formsToDisplay, locationFormsAllowlist, currentLocationUuid);
 
   if (orderBy === 'name') {
     formsToDisplay?.sort((formInfo1, formInfo2) =>
@@ -171,6 +179,27 @@ function filterFormsByRole(
     }
     return restriction.allowedRoleUuids.some((roleUuid) => currentUserRoleUuids.includes(roleUuid));
   });
+}
+
+// The inverse of filterFormsByLocation: rather than restricting one form to specific locations,
+// this restricts a location to only showing specific forms. Locations with no matching entry are
+// unaffected. Used when a location should show a curated subset (e.g. only nutrition forms) with
+// no need to individually restrict every other form that already exists or gets added later.
+function filterFormsByLocationAllowlist(
+  forms: Array<CompletedFormInfo> | undefined,
+  locationFormsAllowlist: Array<LocationFormsAllowlistEntry> | undefined,
+  currentLocationUuid: string | undefined,
+): Array<CompletedFormInfo> | undefined {
+  if (!locationFormsAllowlist?.length || !currentLocationUuid) {
+    return forms;
+  }
+
+  const allowlistEntry = locationFormsAllowlist.find((entry) => entry.locationUuid === currentLocationUuid);
+  if (!allowlistEntry) {
+    return forms;
+  }
+
+  return forms?.filter((formInfo) => allowlistEntry.allowedFormUuids?.includes(formInfo.form.uuid));
 }
 
 function mapToFormCompletedInfo(
