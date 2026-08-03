@@ -1,29 +1,16 @@
 {
   "@openmrs/esm-patient-forms-app": {
-    "formsLocationRestrictions": [
+    "locationFormsAllowlist": [
       {
-        "formUuid": "330122a1-3669-4458-8540-f41cfcdbb9ac",
-        "allowedLocationUuids": ["8a84d48a-bf7e-45ca-b906-7fad48184642"]
-      },
-      {
-        "formUuid": "1ae929be-07db-442c-91ed-f2d8cb8c5b74",
-        "allowedLocationUuids": ["8a84d48a-bf7e-45ca-b906-7fad48184642"]
-      },
-      {
-        "formUuid": "7bc28659-2cbf-4432-bb33-a9612432cbdc",
-        "allowedLocationUuids": ["8a84d48a-bf7e-45ca-b906-7fad48184642"]
-      },
-      {
-        "formUuid": "6cb24522-aef4-42a7-a4b8-f3e8b4415416",
-        "allowedLocationUuids": ["8a84d48a-bf7e-45ca-b906-7fad48184642"]
-      },
-      {
-        "formUuid": "585447f0-dfb4-4dcc-98c1-c8ab819acd05",
-        "allowedLocationUuids": ["8a84d48a-bf7e-45ca-b906-7fad48184642"]
-      },
-      {
-        "formUuid": "c1d7432a-f5ec-4769-9aed-ee6b382ad819",
-        "allowedLocationUuids": ["8a84d48a-bf7e-45ca-b906-7fad48184642"]
+        "locationUuid": "8a84d48a-bf7e-45ca-b906-7fad48184642",
+        "allowedFormUuids": [
+          "330122a1-3669-4458-8540-f41cfcdbb9ac",
+          "1ae929be-07db-442c-91ed-f2d8cb8c5b74",
+          "7bc28659-2cbf-4432-bb33-a9612432cbdc",
+          "6cb24522-aef4-42a7-a4b8-f3e8b4415416",
+          "585447f0-dfb4-4dcc-98c1-c8ab819acd05",
+          "c1d7432a-f5ec-4769-9aed-ee6b382ad819"
+        ]
       }
     ]
   }
