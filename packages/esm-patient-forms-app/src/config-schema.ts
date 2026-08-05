@@ -127,6 +127,27 @@ export const configSchema = {
     _default: [],
     _description: 'Restricts a form to being visible only to users who have one of the allowed roles.',
   },
+  locationFormsAllowlist: {
+    _type: Type.Array,
+    _elements: {
+      _type: Type.Object,
+      locationUuid: {
+        _type: Type.UUID,
+        _description: 'The UUID of the location this allowlist applies to.',
+      },
+      allowedFormUuids: {
+        _type: Type.Array,
+        _elements: {
+          _type: Type.UUID,
+        },
+        _description: 'UUIDs of the only forms that should be visible while at this location.',
+        _default: [],
+      },
+    },
+    _default: [],
+    _description:
+      'When the current session location matches locationUuid, only forms listed in allowedFormUuids are shown — every other form is hidden, regardless of any other restriction. Locations with no entry here are unaffected (all forms visible as usual).',
+  },
   formSections: {
     _type: Type.Array,
     _elements: {
@@ -173,9 +194,15 @@ export interface FormRoleRestriction {
   allowedRoleUuids: Array<string>;
 }
 
+export interface LocationFormsAllowlistEntry {
+  locationUuid: string;
+  allowedFormUuids: Array<string>;
+}
+
 export interface FormEntryConfigSchema {
   htmlFormEntryForms: Array<HtmlFormEntryForm>;
   formSections: Array<FormsSection>;
+  locationFormsAllowlist: Array<LocationFormsAllowlistEntry>;
   formsLocationRestrictions: Array<FormLocationRestriction>;
   formsRoleRestrictions: Array<FormRoleRestriction>;
   customFormsUrl: string;

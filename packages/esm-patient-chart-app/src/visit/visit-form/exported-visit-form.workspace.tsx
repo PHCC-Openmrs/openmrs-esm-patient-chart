@@ -163,6 +163,7 @@ const ExportedVisitForm: React.FC<Workspace2DefinitionProps<ExportedVisitFormPro
     handleSubmit,
     control,
     getValues,
+    setValue,
     formState: { errors, isDirty, isSubmitting },
     reset,
   } = methods;
@@ -179,6 +180,16 @@ const ExportedVisitForm: React.FC<Workspace2DefinitionProps<ExportedVisitFormPro
       keepTouched: true,
     });
   }, [defaultValues, reset]);
+
+  // Visit type selection is hidden, so default new visits to "Facility Visit" since the backend requires a visit type
+  useEffect(() => {
+    if (!visitToEdit && !getValues('visitType') && allVisitTypes?.length) {
+      const facilityVisitType = allVisitTypes.find((type) => type.display === 'Facility Visit');
+      if (facilityVisitType) {
+        setValue('visitType', facilityVisitType.uuid, { shouldDirty: true });
+      }
+    }
+  }, [allVisitTypes, visitToEdit, getValues, setValue]);
 
   const getErrorDescription = useCallback(
     (error: unknown) => {
@@ -509,9 +520,17 @@ const ExportedVisitForm: React.FC<Workspace2DefinitionProps<ExportedVisitFormPro
                           onChange={({ name }) => onChange(name)}
                           size="md"
                         >
+                          {/* Visit status choice is hidden for new visits; always defaults to "new" */}
+                          {/*
                           <Switch name="new">{t('new', 'New')}</Switch>
                           <Switch name="ongoing">{t('ongoing', 'Ongoing')}</Switch>
                           <Switch name="past">{t('inThePast', 'In the past')}</Switch>
+                          */}
+                          {[
+                            <Switch key="new" name="new">
+                              {t('visit', 'Visit')}
+                            </Switch>,
+                          ]}
                         </ContentSwitcher>
                       );
                     }}
@@ -587,6 +606,7 @@ const ExportedVisitForm: React.FC<Workspace2DefinitionProps<ExportedVisitFormPro
                   )}
 
                   {/* Lists available visit types if no atFacilityVisitType enabled. The content switcher only gets shown when recommended visit types are enabled */}
+                  {/*
                   {!emrConfiguration?.atFacilityVisitType && (
                     <section>
                       <h1 className={styles.sectionTitle}>{t('visitType_title', 'Visit Type')}</h1>
@@ -636,6 +656,7 @@ const ExportedVisitForm: React.FC<Workspace2DefinitionProps<ExportedVisitFormPro
                       )}
                     </section>
                   )}
+                  */}
 
                   <ExtensionSlot state={{ patientUuid, setExtraVisitInfo }} name="extra-visit-attribute-slot" />
 

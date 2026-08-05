@@ -273,7 +273,7 @@ export function useVisitFormSchemaAndDefaultValues(visitToEdit: Visit, earliestA
         visitStopTime: z.string().regex(time12HourFormatRegex).optional(),
         visitStopTimeFormat: z.enum(['PM', 'AM']).optional(),
         programType: z.string().optional(),
-        visitType: z.string({ required_error: t('visitTypeRequired', 'Visit type is required') }),
+        visitType: z.string().optional(),
         visitLocation: z.object({
           display: z.string(),
           uuid: z.string({ required_error: t('visitLocationRequired', 'Visit location is required') }),

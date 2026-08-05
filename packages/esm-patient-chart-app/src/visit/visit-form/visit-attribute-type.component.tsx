@@ -252,6 +252,11 @@ const AttributeTypeField: React.FC<AttributeTypeFieldProps> = ({
     return null;
   }
 
+  // Insurance Policy Number field temporarily hidden
+  if (/insurance/i.test(displayText)) {
+    return null;
+  }
+
   return <div className={styles.visitAttributeField}>{fieldToRender}</div>;
 };
 
