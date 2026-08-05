@@ -520,7 +520,17 @@ const ExportedVisitForm: React.FC<Workspace2DefinitionProps<ExportedVisitFormPro
                           onChange={({ name }) => onChange(name)}
                           size="md"
                         >
-                          {[<Switch key="new" name="new">{t('visit', 'Visit')}</Switch>]}
+                          {/* Visit status choice is hidden for new visits; always defaults to "new" */}
+                          {/*
+                          <Switch name="new">{t('new', 'New')}</Switch>
+                          <Switch name="ongoing">{t('ongoing', 'Ongoing')}</Switch>
+                          <Switch name="past">{t('inThePast', 'In the past')}</Switch>
+                          */}
+                          {[
+                            <Switch key="new" name="new">
+                              {t('visit', 'Visit')}
+                            </Switch>,
+                          ]}
                         </ContentSwitcher>
                       );
                     }}
