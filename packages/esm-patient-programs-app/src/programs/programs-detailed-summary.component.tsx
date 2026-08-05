@@ -40,8 +40,8 @@ const ProgramsDetailedSummary: React.FC<ProgramsDetailedSummaryProps> = ({ patie
   const layout = useLayoutType();
   const isTablet = layout === 'tablet';
   const isDesktop = desktopLayout(layout);
-  const displayText = t('programEnrollmentsLower', 'program enrollments');
-  const headerTitle = t('carePrograms', 'Care Programs');
+  const displayText = t('programEnrollmentsLower', 'service enrollments');
+  const headerTitle = t('carePrograms', 'Care Services');
 
   const { enrollments, isLoading, error, isValidating, availablePrograms } = usePrograms(patientUuid);
 
@@ -49,7 +49,7 @@ const ProgramsDetailedSummary: React.FC<ProgramsDetailedSummaryProps> = ({ patie
     const headers = [
       {
         key: 'display',
-        header: t('activePrograms', 'Active programs'),
+        header: t('activePrograms', 'Active services'),
       },
       {
         key: 'location',
@@ -67,7 +67,7 @@ const ProgramsDetailedSummary: React.FC<ProgramsDetailedSummaryProps> = ({ patie
     if (showProgramStatusField) {
       headers.push({
         key: 'state',
-        header: t('programStatus', 'Program status'),
+        header: t('serviceStatus', 'Service status'),
       });
     }
     return headers;
@@ -125,7 +125,7 @@ const ProgramsDetailedSummary: React.FC<ProgramsDetailedSummaryProps> = ({ patie
               disabled={isEnrolledInAllPrograms}
               kind="ghost"
               renderIcon={(props: ComponentProps<typeof AddIcon>) => <AddIcon size={16} {...props} />}
-              iconDescription={t('addPrograms', 'Add programs')}
+              iconDescription={t('addPrograms', 'Add services')}
               onClick={launchProgramsForm}
             >
               {t('add', 'Add')}
@@ -136,14 +136,14 @@ const ProgramsDetailedSummary: React.FC<ProgramsDetailedSummaryProps> = ({ patie
           <InlineNotification
             style={{ minWidth: '100%', margin: '0', padding: '0' }}
             lowContrast
-            subtitle={t('noEligibleEnrollments', 'There are no more programs left to enroll this patient in')}
-            title={t('fullyEnrolled', 'Enrolled in all programs')}
+            subtitle={t('noEligibleEnrollments', 'There are no more services left to enroll this patient in')}
+            title={t('fullyEnrolled', 'Enrolled in all services')}
           />
         )}
         <DataTable rows={tableRows} headers={tableHeaders} isSortable size={isTablet ? 'lg' : 'sm'} useZebraStyles>
           {({ rows, headers, getHeaderProps, getTableProps, getRowProps }) => (
             <TableContainer>
-              <Table aria-label="program enrollments" {...getTableProps()}>
+              <Table aria-label="service enrollments" {...getTableProps()}>
                 <TableHead>
                   <TableRow>
                     {headers.map((header) => (

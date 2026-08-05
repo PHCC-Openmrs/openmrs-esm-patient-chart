@@ -41,8 +41,8 @@ const ProgramsOverview: React.FC<ProgramsOverviewProps> = ({ basePath, patientUu
   const programsCount = 5;
   const { t } = useTranslation();
   const config = useConfig<ConfigObject>();
-  const displayText = t('programEnrollmentsLower', 'program enrollments');
-  const headerTitle = t('carePrograms', 'Care Programs');
+  const displayText = t('programEnrollmentsLower', 'service enrollments');
+  const headerTitle = t('carePrograms', 'Care Services');
   const urlLabel = t('seeAll', 'See all');
   const pageUrl = `\${openmrsSpaBase}/patient/${patientUuid}/chart/programs`;
   const layout = useLayoutType();
@@ -64,7 +64,7 @@ const ProgramsOverview: React.FC<ProgramsOverviewProps> = ({ basePath, patientUu
   const tableHeaders = [
     {
       key: 'display',
-      header: t('activePrograms', 'Active programs'),
+      header: t('activePrograms', 'Active services'),
     },
     {
       key: 'location',
@@ -121,7 +121,7 @@ const ProgramsOverview: React.FC<ProgramsOverviewProps> = ({ basePath, patientUu
             <Button
               kind="ghost"
               renderIcon={(props: ComponentProps<typeof AddIcon>) => <AddIcon size={16} {...props} />}
-              iconDescription="Add programs"
+              iconDescription="Add services"
               onClick={launchProgramsForm}
               disabled={availablePrograms?.length && eligiblePrograms?.length === 0}
             >
@@ -134,14 +134,14 @@ const ProgramsOverview: React.FC<ProgramsOverviewProps> = ({ basePath, patientUu
             style={{ minWidth: '100%', margin: '0', padding: '0' }}
             kind={'info'}
             lowContrast
-            subtitle={t('noEligibleEnrollments', 'There are no more programs left to enroll this patient in')}
-            title={t('fullyEnrolled', 'Enrolled in all programs')}
+            subtitle={t('noEligibleEnrollments', 'There are no more services left to enroll this patient in')}
+            title={t('fullyEnrolled', 'Enrolled in all services')}
           />
         )}
         <DataTable rows={tableRows} headers={tableHeaders} isSortable size={isTablet ? 'lg' : 'sm'} useZebraStyles>
           {({ rows, headers, getHeaderProps, getRowProps, getTableProps }) => (
             <TableContainer>
-              <Table aria-label="programs overview" {...getTableProps()}>
+              <Table aria-label="services overview" {...getTableProps()}>
                 <TableHead>
                   <TableRow>
                     {headers.map((header) => (

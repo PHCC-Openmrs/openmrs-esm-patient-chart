@@ -25,13 +25,13 @@ const DeleteProgramModal: React.FC<DeleteProgramProps> = ({ closeDeleteModal, pr
       showSnackbar({
         isLowContrast: true,
         kind: 'success',
-        title: t('programEnrollmentDeleted', 'Program enrollment deleted'),
+        title: t('programEnrollmentDeleted', 'Service enrollment deleted'),
       });
     } catch (error) {
       showSnackbar({
         isLowContrast: false,
         kind: 'error',
-        title: t('errorDeletingProgram', 'Error deleting program enrollment'),
+        title: t('errorDeletingProgram', 'Error deleting service enrollment'),
         subtitle: error?.responseBody?.message ?? error?.message,
       });
     } finally {
@@ -43,10 +43,10 @@ const DeleteProgramModal: React.FC<DeleteProgramProps> = ({ closeDeleteModal, pr
     <div>
       <ModalHeader
         closeModal={closeDeleteModal}
-        title={t('deletePatientProgramEnrollment', 'Delete program enrollment')}
+        title={t('deletePatientProgramEnrollment', 'Delete service enrollment')}
       />
       <ModalBody>
-        <p>{t('deleteModalConfirmationText', 'Are you sure you want to delete this program enrollment?')}</p>
+        <p>{t('deleteModalConfirmationText', 'Are you sure you want to delete this service enrollment?')}</p>
       </ModalBody>
       <ModalFooter>
         <Button kind="secondary" onClick={closeDeleteModal}>

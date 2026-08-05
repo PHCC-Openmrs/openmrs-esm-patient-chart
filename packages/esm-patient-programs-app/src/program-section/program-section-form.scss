@@ -1,0 +1,31 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.formContainer {
+  flex: 1;
+  padding: 1rem;
+
+  // Carbon's form controls each reserve space below themselves for helper/error text even
+  // when none is shown -- collapsing that closes up the remaining visual gap between fields
+  // beyond what the Stack `gap` prop alone controls.
+  :global(.cds--form-item) {
+    margin-bottom: 0;
+  }
+}
+
+.buttonSet {
+  width: 100%;
+}
+
+.readOnlyField {
+  display: flex;
+  flex-direction: column;
+}
+
+.readOnlyValue {
+  font-weight: 600;
+  margin-top: 0.25rem;
+}

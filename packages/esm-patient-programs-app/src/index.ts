@@ -4,6 +4,7 @@ import { configSchema } from './config-schema';
 import { dashboardMeta } from './dashboard.meta';
 import programsOverviewComponent from './programs/programs-overview.component';
 import programsDetailedSummaryComponent from './programs/programs-detailed-summary.component';
+import programSectionsOverviewComponent from './program-section/program-sections-overview.component';
 
 const moduleName = '@openmrs/esm-patient-programs-app';
 
@@ -22,8 +23,10 @@ export const programsOverview = getSyncLifecycle(programsOverviewComponent, opti
 
 export const programsDetailedSummary = getSyncLifecycle(programsDetailedSummaryComponent, options);
 
+export const programSectionsOverview = getSyncLifecycle(programSectionsOverviewComponent, options);
+
 export const programsDashboardLink =
-  // t('Programs', 'Programs')
+  // t('Services', 'Services')
   getSyncLifecycle(
     createDashboardLink({
       ...dashboardMeta,
@@ -31,8 +34,13 @@ export const programsDashboardLink =
     options,
   );
 
-// t('programEnrollmentWorkspaceTitle', 'Record program enrollment')
+// t('programEnrollmentWorkspaceTitle', 'Service enrollment')
 export const programsFormWorkspace = getAsyncLifecycle(() => import('./programs/programs-form.workspace'), options);
+
+export const programSectionFormWorkspace = getAsyncLifecycle(
+  () => import('./program-section/program-section-form.workspace'),
+  options,
+);
 
 export const deleteProgramConfirmationModal = getAsyncLifecycle(
   () => import('./programs/delete-program.modal'),

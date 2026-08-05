@@ -17,29 +17,8 @@ export interface PatientProgram {
   voided?: boolean;
   outcome?: null;
   states?: ProgramWorkflowState[];
-  attributes?: Array<PatientProgramAttribute>;
   links?: Links;
   resourceVersion?: string;
-}
-
-export interface ProgramAttributeType {
-  uuid: string;
-  name: string;
-  display?: string;
-  description?: string;
-  datatypeClassname?: string;
-  datatypeConfig?: string;
-  minOccurs?: number;
-  maxOccurs?: number;
-  retired?: boolean;
-}
-
-export interface PatientProgramAttribute {
-  uuid?: string;
-  attributeType: ProgramAttributeType | DisplayMetadata;
-  value: string | number | boolean | DisplayMetadata | null;
-  display?: string;
-  voided?: boolean;
 }
 
 export interface ProgramWorkflowState {

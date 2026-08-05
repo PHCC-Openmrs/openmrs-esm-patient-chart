@@ -1,0 +1,11 @@
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.widgetCard {
+  border: 1px solid $ui-03;
+}

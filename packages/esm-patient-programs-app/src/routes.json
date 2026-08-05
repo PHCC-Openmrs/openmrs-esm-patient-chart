@@ -19,6 +19,15 @@
       "order": 6
     },
     {
+      "name": "program-sections-overview-widget",
+      "slot": "patient-chart-summary-dashboard-slot",
+      "component": "programSectionsOverview",
+      "meta": {
+        "fullWidth": true
+      },
+      "order": 7
+    },
+    {
       "name": "programs-summary-dashboard",
       "slot": "patient-chart-dashboard-slot",
       "component": "programsDashboardLink",
@@ -26,7 +35,7 @@
         "slot": "patient-chart-programs-dashboard-slot",
         "path": "programs"
       },
-      "order": 10
+      "order": -100
     }
   ],
   "pages": [],
@@ -34,6 +43,11 @@
     {
       "name": "programs-form-workspace",
       "component": "programsFormWorkspace",
+      "window": "programs-form-window"
+    },
+    {
+      "name": "program-section-form-workspace",
+      "component": "programSectionFormWorkspace",
       "window": "programs-form-window"
     }
   ],

@@ -16,7 +16,7 @@ export const ProgramsActionMenu = ({ patientUuid, programEnrollmentId }: Program
   const launchEditProgramsForm = useCallback(
     () =>
       launchWorkspace2('programs-form-workspace', {
-        workspaceTitle: t('editProgramEnrollment', 'Edit program enrollment'),
+        workspaceTitle: t('editProgramEnrollment', 'Edit service enrollment'),
         programEnrollmentId,
       }),
     [programEnrollmentId, t],
@@ -34,7 +34,7 @@ export const ProgramsActionMenu = ({ patientUuid, programEnrollmentId }: Program
   return (
     <Layer className={styles.layer}>
       <OverflowMenu
-        aria-label={t('editOrDeleteProgram', 'Edit or delete program')}
+        aria-label={t('editOrDeleteProgram', 'Edit or delete service')}
         align="left"
         flipped
         size={isTablet ? 'lg' : 'sm'}
