@@ -21,7 +21,7 @@ it('renders an empty state view if conditions data is unavailable', async () => 
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   expect(screen.getByRole('heading', { name: /diagnoses/i })).toBeInTheDocument();
   expect(screen.getByTitle(/Empty data illustration/i)).toBeInTheDocument();
-  expect(screen.getByText(/There are no diagnoses to display for this patient/i)).toBeInTheDocument();
+  expect(screen.getByText(/There are no conditions to display for this patient/i)).toBeInTheDocument();
   expect(screen.getByText(/Record conditions/i)).toBeInTheDocument();
 });
 
