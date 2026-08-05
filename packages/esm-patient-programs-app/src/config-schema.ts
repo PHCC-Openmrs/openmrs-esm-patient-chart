@@ -47,8 +47,14 @@ export const configSchema = {
         programUuid: 'bd6b8c0a-49c9-4f98-afea-8b8fcd999688',
         allowedLocationUuids: ['ba34b45c-0a0d-4000-9624-ab6fd419f778'],
       },
+      {
+        // Pediatric Consultation -- only offered at Deir Al-Balah PHCC, not Beir 19 point.
+        programUuid: '9138885e-f9f4-4981-b1fb-ef3d022228bd',
+        allowedLocationUuids: ['ba34b45c-0a0d-4000-9624-ab6fd419f778'],
+      },
       // Nutrition Registration has no entry here -- an empty/missing restriction means it's
-      // offered everywhere, including Beir 19 point.
+      // offered everywhere, including Beir 19 point. This makes it the only service visible
+      // at Beir 19 point, since every other program above is restricted to Deir Al-Balah PHCC.
     ],
     _description: 'Restricts a program to being offered only when the user is logged in at one of the allowed locations.',
   },
