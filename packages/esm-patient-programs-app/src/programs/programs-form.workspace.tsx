@@ -15,6 +15,7 @@ import {
   Select,
   SelectItem,
   Stack,
+  TextInput,
 } from '@carbon/react';
 import { z } from 'zod';
 import { useForm, Controller, useWatch } from 'react-hook-form';
@@ -33,11 +34,13 @@ import {
 import { type PatientWorkspace2DefinitionProps } from '@openmrs/esm-patient-common-lib';
 import { type ConfigObject } from '../config-schema';
 import {
+  addProgramEnrollmentAttribute,
   createProgramEnrollment,
   findLastState,
   updateProgramEnrollment,
   useAvailablePrograms,
   useEnrollments,
+  useProgramAttributeTypes,
 } from './programs.resource';
 import styles from './programs-form.scss';
 
@@ -53,6 +56,7 @@ const createProgramsFormSchema = (t: TFunction) =>
       completionDate: z.date().optional().nullable(),
       enrollmentLocation: z.string(),
       selectedProgramStatus: z.string(),
+      attributeValues: z.record(z.string(), z.string()).optional(),
     })
     .superRefine((data, ctx) => {
       if (
@@ -83,6 +87,7 @@ const ProgramsForm: React.FC<PatientWorkspace2DefinitionProps<ProgramsFormProps,
   const session = useSession();
   const { data: availablePrograms } = useAvailablePrograms();
   const { data: enrollments, mutateEnrollments } = useEnrollments(patientUuid);
+  const { programAttributeTypes } = useProgramAttributeTypes();
   const { showProgramStatusField } = useConfig<ConfigObject>();
   const inEditMode = Boolean(programEnrollmentId);
 
@@ -126,6 +131,11 @@ const ProgramsForm: React.FC<PatientWorkspace2DefinitionProps<ProgramsFormProps,
       completionDate: currentEnrollment?.dateCompleted ? parseDate(currentEnrollment.dateCompleted) : null,
       enrollmentLocation: getLocationUuid() ?? '',
       selectedProgramStatus: currentState?.state.uuid ?? '',
+      attributeValues: Object.fromEntries(
+        (currentEnrollment?.attributes ?? [])
+          .filter((attribute) => !attribute.voided)
+          .map((attribute) => [(attribute.attributeType as { uuid: string }).uuid, String(attribute.value ?? '')]),
+      ),
     },
   });
 
@@ -133,7 +143,8 @@ const ProgramsForm: React.FC<PatientWorkspace2DefinitionProps<ProgramsFormProps,
 
   const onSubmit = useCallback(
     async (data: ProgramsFormData) => {
-      const { selectedProgram, enrollmentDate, completionDate, enrollmentLocation, selectedProgramStatus } = data;
+      const { selectedProgram, enrollmentDate, completionDate, enrollmentLocation, selectedProgramStatus, attributeValues } =
+        data;
 
       const payload = {
         patient: patientUuid,
@@ -157,10 +168,20 @@ const ProgramsForm: React.FC<PatientWorkspace2DefinitionProps<ProgramsFormProps,
       try {
         const abortController = new AbortController();
 
+        let enrollmentUuid = currentEnrollment?.uuid;
         if (currentEnrollment) {
           await updateProgramEnrollment(currentEnrollment.uuid, payload, abortController);
         } else {
-          await createProgramEnrollment(payload, abortController);
+          const response = await createProgramEnrollment(payload, abortController);
+          enrollmentUuid = response?.data?.uuid;
+        }
+
+        if (enrollmentUuid && attributeValues) {
+          for (const [attributeTypeUuid, value] of Object.entries(attributeValues)) {
+            if (value) {
+              await addProgramEnrollmentAttribute(enrollmentUuid, attributeTypeUuid, value, abortController);
+            }
+          }
         }
 
         await mutateEnrollments();
@@ -311,6 +332,23 @@ const ProgramsForm: React.FC<PatientWorkspace2DefinitionProps<ProgramsFormProps,
     />
   );
 
+  const attributeFields = programAttributeTypes.map((attributeType) => (
+    <Controller
+      key={attributeType.uuid}
+      name={`attributeValues.${attributeType.uuid}`}
+      control={control}
+      render={({ field: { onChange, value } }) => (
+        <TextInput
+          id={`attribute-${attributeType.uuid}`}
+          labelText={attributeType.display ?? attributeType.name}
+          helperText={attributeType.description}
+          value={value ?? ''}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )}
+    />
+  ));
+
   const formGroups = [
     inEditMode
       ? {
@@ -347,6 +385,14 @@ const ProgramsForm: React.FC<PatientWorkspace2DefinitionProps<ProgramsFormProps,
       value: programStatusDropdown,
     });
   }
+
+  attributeFields.forEach((field) => {
+    formGroups.push({
+      style: { width: '50%' },
+      legendText: '',
+      value: field,
+    });
+  });
 
   return (
     <Workspace2 title={t('programEnrollmentWorkspaceTitle', 'Program enrollment')} hasUnsavedChanges={isDirty}>

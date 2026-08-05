@@ -1,9 +1,44 @@
 import useSWR from 'swr';
 import { filter, includes, map, uniqBy } from 'lodash-es';
 import { openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
-import type { PatientProgram, Program, ProgramWorkflowState, ProgramsFetchResponse } from '../types';
+import type {
+  PatientProgram,
+  Program,
+  ProgramAttributeType,
+  ProgramWorkflowState,
+  ProgramsFetchResponse,
+} from '../types';
 
-export const customRepresentation = `custom:(uuid,display,program,dateEnrolled,dateCompleted,location:(uuid,display),states:(startDate,endDate,voided,state:(uuid,concept:(display))))`;
+export const customRepresentation = `custom:(uuid,display,program,dateEnrolled,dateCompleted,location:(uuid,display),states:(startDate,endDate,voided,state:(uuid,concept:(display))),attributes:(uuid,attributeType:(uuid,name),value,voided))`;
+
+export function useProgramAttributeTypes() {
+  const { data, error, isLoading } = useSWR<{ data: { results: Array<ProgramAttributeType> } }, Error>(
+    `${restBaseUrl}/programattributetype?v=custom:(uuid,name,description,datatypeClassname,datatypeConfig,minOccurs,maxOccurs,retired)`,
+    openmrsFetch,
+  );
+
+  return {
+    programAttributeTypes: data?.data?.results?.filter((type) => !type.retired) ?? [],
+    error,
+    isLoading,
+  };
+}
+
+export function addProgramEnrollmentAttribute(
+  programEnrollmentUuid: string,
+  attributeTypeUuid: string,
+  value: string,
+  abortController: AbortController,
+) {
+  return openmrsFetch(`${restBaseUrl}/programenrollment/${programEnrollmentUuid}/attribute`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: { attributeType: attributeTypeUuid, value },
+    signal: abortController.signal,
+  });
+}
 
 export function useEnrollments(patientUuid: string) {
   const enrollmentsUrl = `${restBaseUrl}/programenrollment?patient=${patientUuid}&v=${customRepresentation}`;
