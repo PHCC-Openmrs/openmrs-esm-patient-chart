@@ -120,7 +120,7 @@
   "noVisitTypesToDisplay": "No visit types to display",
   "offlineVisit": "Offline Visit",
   "On scheduled date": "On scheduled date",
-  "ongoing": "Ongoing",
+  "ongoing": "Followup",
   "optional": "optional",
   "orderDurationAndUnit": "for {{duration}} {{durationUnit}}",
   "orderIndefiniteDuration": "Indefinite duration",

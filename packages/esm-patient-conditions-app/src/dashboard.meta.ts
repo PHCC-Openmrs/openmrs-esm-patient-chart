@@ -3,6 +3,6 @@ import { type DashboardLinkConfig } from '@openmrs/esm-patient-common-lib';
 export const dashboardMeta: DashboardLinkConfig & { slot: string } = {
   slot: 'patient-chart-conditions-dashboard-slot',
   path: 'conditions',
-  title: 'Conditions',
+  title: 'Diagnoses',
   icon: 'omrs-icon-table-of-contents',
 };

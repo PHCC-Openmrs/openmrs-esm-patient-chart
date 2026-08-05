@@ -19,7 +19,7 @@ it('renders an empty state view if conditions data is unavailable', async () => 
   await waitForLoadingToFinish();
 
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: /conditions/i })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /diagnoses/i })).toBeInTheDocument();
   expect(screen.getByTitle(/Empty data illustration/i)).toBeInTheDocument();
   expect(screen.getByText(/There are no conditions to display for this patient/i)).toBeInTheDocument();
   expect(screen.getByText(/Record conditions/i)).toBeInTheDocument();
@@ -41,7 +41,7 @@ it('renders an error state view if there is a problem fetching conditions data',
   await waitForLoadingToFinish();
 
   expect(screen.queryByRole('table')).not.toBeInTheDocument();
-  expect(ErrorState).toHaveBeenCalledWith(expect.objectContaining({ error, headerTitle: 'Conditions' }), {});
+  expect(ErrorState).toHaveBeenCalledWith(expect.objectContaining({ error, headerTitle: 'Diagnoses' }), {});
 });
 
 it("renders a detailed summary of the patient's conditions when present", async () => {
@@ -50,7 +50,7 @@ it("renders a detailed summary of the patient's conditions when present", async 
 
   await waitForLoadingToFinish();
 
-  expect(screen.getByRole('heading', { name: /conditions/i })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /diagnoses/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /add/i })).toBeInTheDocument();
 
   const expectedColumnHeaders = [/condition/, /date of onset/, /status/];

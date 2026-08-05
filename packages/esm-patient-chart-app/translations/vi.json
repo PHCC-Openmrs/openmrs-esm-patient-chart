@@ -120,7 +120,7 @@
   "noVisitTypesToDisplay": "Không có loại thăm khám nào để hiển thị",
   "offlineVisit": "Offline Visit",
   "On scheduled date": "On scheduled date",
-  "ongoing": "Ongoing",
+  "ongoing": "Followup",
   "optional": "tùy chọn",
   "orderDurationAndUnit": "cho {{duration}} {{durationUnit}}",
   "orderIndefiniteDuration": "Thời hạn không xác định",

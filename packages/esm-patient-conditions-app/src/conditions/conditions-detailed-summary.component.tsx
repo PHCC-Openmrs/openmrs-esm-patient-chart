@@ -25,7 +25,7 @@ import styles from './conditions-detailed-summary.scss';
 function ConditionsDetailedSummary({ patient }) {
   const { t } = useTranslation();
   const displayText = t('conditions_lower', 'conditions');
-  const headerTitle = t('conditions', 'Conditions');
+  const headerTitle = t('conditions', 'Diagnoses');
   const [filter, setFilter] = useState<'All' | 'Active' | 'Inactive'>('Active');
   const layout = useLayoutType();
   const isTablet = layout === 'tablet';
