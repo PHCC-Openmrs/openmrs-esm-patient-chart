@@ -132,6 +132,10 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
                   }
 
                   if (field.controlType === 'select') {
+                    const choices = field.answers.length
+                      ? field.answers.map((answer) => ({ text: answer.label, value: answer.conceptUuid }))
+                      : field.options.map((option) => ({ text: option, value: option }));
+
                     return (
                       <Select
                         id={`field-${field.conceptUuid}`}
@@ -140,8 +144,8 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
                         onChange={(event) => onChange(event.target.value)}
                       >
                         <SelectItem text={t('chooseAnOption', 'Choose an option')} value="" />
-                        {field.options.map((option) => (
-                          <SelectItem key={option} text={option} value={option} />
+                        {choices.map((choice) => (
+                          <SelectItem key={choice.value} text={choice.text} value={choice.value} />
                         ))}
                       </Select>
                     );
