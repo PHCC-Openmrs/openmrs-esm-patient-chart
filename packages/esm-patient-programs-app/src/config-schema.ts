@@ -56,7 +56,8 @@ export const configSchema = {
       // offered everywhere, including Beir 19 point. This makes it the only service visible
       // at Beir 19 point, since every other program above is restricted to Deir Al-Balah PHCC.
     ],
-    _description: 'Restricts a program to being offered only when the user is logged in at one of the allowed locations.',
+    _description:
+      'Restricts a program to being offered only when the user is logged in at one of the allowed locations.',
   },
   programSections: {
     _type: Type.Array,
@@ -88,7 +89,19 @@ export const configSchema = {
           options: {
             _type: Type.Array,
             _elements: { _type: Type.String },
-            _description: 'Fixed choices to show when controlType is "select".',
+            _description: 'Fixed choices to show when controlType is "select". Ignored if "answers" is set.',
+            _default: [],
+          },
+          answers: {
+            _type: Type.Array,
+            _elements: {
+              _type: Type.Object,
+              label: { _type: Type.String, _description: 'Choice text shown in the dropdown.' },
+              conceptUuid: { _type: Type.UUID, _description: 'UUID of the answer concept submitted as the obs value.' },
+            },
+            _description:
+              'Coded choices to show when controlType is "select", for concepts with concept-answer sets. Takes ' +
+              'precedence over "options" when non-empty.',
             _default: [],
           },
           minAge: {
@@ -110,13 +123,13 @@ export const configSchema = {
           autofillFromConceptUuid: {
             _type: Type.UUID,
             _description:
-              'If set, this field\'s value is computed from another field in the same section (matched by concept ' +
+              "If set, this field's value is computed from another field in the same section (matched by concept " +
               'UUID) using autofillRule, instead of being entered directly.',
           },
           autofillRule: {
             _type: Type.String,
             _description:
-              'Name of the computation used to derive this field\'s value from the autofillFromConceptUuid field. ' +
+              "Name of the computation used to derive this field's value from the autofillFromConceptUuid field. " +
               'Currently supported: "muacNutritionCategory".',
           },
         },
@@ -160,25 +173,35 @@ export const configSchema = {
           },
           {
             conceptUuid: 'cddb2f24-e4c2-4d04-b249-73d0c6219f12',
-            label: 'Oedema (Y / M)',
+            label: 'Oedema (Y / N)',
             controlType: 'select',
-            options: ['Y', 'M'],
+            options: ['Y', 'N'],
             minAge: 0,
             maxAge: 5,
             readOnly: false,
           },
           {
-            conceptUuid: '348e3f95-8b24-4ebb-8654-ac10c444bc65',
+            conceptUuid: 'c963d0ea-7d87-49a5-9267-e07612c4d3e1',
             label: 'Type of supplement received',
             controlType: 'select',
-            options: ['Yes', 'No'],
+            options: [],
+            answers: [
+              { label: 'RUTF – Sachet', conceptUuid: '261388a0-729f-44e5-b79c-e3f88b474089' },
+              { label: 'RUSF – Sachet', conceptUuid: 'a181d0a5-caf3-4249-b73a-b0157636e5d3' },
+              { label: 'LNS-MQ – Sachet', conceptUuid: '65e33d78-6687-46c1-a047-5665b1c8aedd' },
+              { label: 'LNS-SQ – Sachet', conceptUuid: 'f4d467d5-24c0-4ad9-ae5c-a0ad375e8bc9' },
+              { label: 'HEB – 50 g – Packet', conceptUuid: '7b9da3fa-2529-409f-b2e3-f440bfc89b62' },
+              { label: 'RUCF – Jar', conceptUuid: '7b723eab-08dd-48d3-98ec-6849572ed78f' },
+              { label: 'BP-5 - Box', conceptUuid: 'be7d19d0-3440-4d4c-9b65-48073ef72982' },
+              { label: 'SC + - Packet', conceptUuid: '6247969d-5424-4a6a-b088-cdd5513de52a' },
+            ],
             minAge: 0,
             maxAge: 200,
             readOnly: false,
           },
           {
             conceptUuid: '127b8e09-54dc-4ccd-b078-f0a97206ceca',
-            label: 'Supp qut',
+            label: 'Supplement quantity',
             controlType: 'number',
             options: [],
             minAge: 0,
@@ -252,11 +275,17 @@ export interface ProgramLocationRestriction {
   allowedLocationUuids: Array<string>;
 }
 
+export interface ProgramSectionAnswer {
+  label: string;
+  conceptUuid: string;
+}
+
 export interface ProgramSectionField {
   conceptUuid: string;
   label: string;
   controlType: 'text' | 'number' | 'select' | 'date';
   options: Array<string>;
+  answers: Array<ProgramSectionAnswer>;
   minAge: number;
   maxAge: number;
   readOnly: boolean;
