@@ -132,7 +132,7 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
                   }
 
                   if (field.controlType === 'select') {
-                    const choices = field.answers.length
+                    const choices = field.answers?.length
                       ? field.answers.map((answer) => ({ text: answer.label, value: answer.conceptUuid }))
                       : field.options.map((option) => ({ text: option, value: option }));
 
