@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, ButtonSet, Form, FormLabel, NumberInput, Select, SelectItem, Stack, TextInput } from '@carbon/react';
 import { useForm, useWatch, Controller } from 'react-hook-form';
@@ -12,7 +12,7 @@ import {
   Workspace2,
 } from '@openmrs/esm-framework';
 import { type PatientWorkspace2DefinitionProps } from '@openmrs/esm-patient-common-lib';
-import { RECEIVED_SUPPLEMENT_FIELD_KEY, type ProgramSectionConfig, type ProgramSectionField } from '../config-schema';
+import { type ProgramSectionConfig, type ProgramSectionField } from '../config-schema';
 import {
   computeAutofillValue,
   saveProgramSectionEncounter,
@@ -46,6 +46,8 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
   const { control, handleSubmit, setValue, formState } = useForm<Record<string, string>>({
     defaultValues: Object.fromEntries(section.fields.map((field) => [field.conceptUuid, ''])),
   });
+
+  const [missingConceptUuids, setMissingConceptUuids] = useState<Set<string>>(new Set());
 
   const formValues = useWatch({ control });
 
@@ -82,18 +84,38 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formValues]);
 
+  // Clear the "missing" flag on a field as soon as it's filled in, rather than only on the next
+  // failed submit attempt.
+  useEffect(() => {
+    setMissingConceptUuids((previous) => {
+      const stillMissing = [...previous].filter((conceptUuid) => !formValues[conceptUuid]);
+      return stillMissing.length === previous.size ? previous : new Set(stillMissing);
+    });
+  }, [formValues]);
+
   const onSubmit = useCallback(
     async (values: Record<string, string>) => {
+      // Every currently-visible field is mandatory -- fields hidden by age or a
+      // visibleWhenConceptUuid condition (e.g. the supplement fields when "Received
+      // supplement" is "No") are correctly excluded, since they don't apply to this patient.
+      const missingFields = visibleFields.filter((field) => !values[field.conceptUuid]);
+      if (missingFields.length > 0) {
+        setMissingConceptUuids(new Set(missingFields.map((field) => field.conceptUuid)));
+        showSnackbar({
+          kind: 'error',
+          title: t('missingRequiredFields', 'Please fill in all fields'),
+          subtitle: missingFields.map((field) => field.label).join(', '),
+        });
+        return;
+      }
+      setMissingConceptUuids(new Set());
+
       const abortController = new AbortController();
       try {
-        // UI-only fields (persist: false, or the hardcoded "Received supplement" sentinel key)
-        // have no real concept behind them -- they only exist to drive visibleWhenConceptUuid,
-        // so their answer must never be sent as an observation (there's no concept to attach it
-        // to on the backend, which otherwise blows up with a null-concept error on save).
+        // UI-only fields (persist: false) have no real concept behind them -- they only exist
+        // to drive visibleWhenConceptUuid, so their answer is never sent as an observation.
         const persistedConceptUuids = new Set(
-          section.fields
-            .filter((field) => field.persist !== false && field.conceptUuid !== RECEIVED_SUPPLEMENT_FIELD_KEY)
-            .map((field) => field.conceptUuid),
+          section.fields.filter((field) => field.persist !== false).map((field) => field.conceptUuid),
         );
         const persistedValues = Object.fromEntries(
           Object.entries(values).filter(([conceptUuid]) => persistedConceptUuids.has(conceptUuid)),
@@ -119,7 +141,7 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
         });
       }
     },
-    [closeWorkspace, mutateEncounters, patientUuid, section, session, t],
+    [closeWorkspace, mutateEncounters, patientUuid, section, session, t, visibleFields],
   );
 
   if (isLoadingAge) {
@@ -170,6 +192,8 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
                         id={`field-${field.conceptUuid}`}
                         labelText={field.label}
                         value={value ?? ''}
+                        invalid={missingConceptUuids.has(field.conceptUuid)}
+                        invalidText={t('fieldRequired', 'This field is required')}
                         onChange={(event) => onChange(event.target.value)}
                       >
                         <SelectItem text={t('chooseAnOption', 'Choose an option')} value="" />
@@ -187,6 +211,8 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
                         label={field.label}
                         value={value ?? ''}
                         allowEmpty
+                        invalid={missingConceptUuids.has(field.conceptUuid)}
+                        invalidText={t('fieldRequired', 'This field is required')}
                         onChange={(_event, state) => {
                           // Carbon's NumberInput can emit NaN (e.g. clicking the +/- stepper
                           // while empty) -- without this check that becomes the literal
@@ -203,6 +229,8 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
                       id={`field-${field.conceptUuid}`}
                       labelText={field.label}
                       value={value ?? ''}
+                      invalid={missingConceptUuids.has(field.conceptUuid)}
+                      invalidText={t('fieldRequired', 'This field is required')}
                       onChange={(event) => onChange(event.target.value)}
                     />
                   );

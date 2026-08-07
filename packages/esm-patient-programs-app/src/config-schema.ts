@@ -10,10 +10,9 @@ export const MUAC_DIAGNOSIS_OPTIONS = [
 // Malnutrition category by MUAC for patients over 5: Malnourished < 23.5cm, Normal >= 23.5cm.
 export const ADULT_MUAC_DIAGNOSIS_OPTIONS = ['Malnourished', 'Normal'];
 
-// Placeholder concept UUID for the UI-only "Received supplement" question below (see `persist: false`).
-// There is no real concept for it -- it exists purely to show/hide the supplement fields, so this
-// syntactically-valid-but-unused UUID is never sent to the backend as an observation.
-export const RECEIVED_SUPPLEMENT_FIELD_KEY = '00000000-0000-0000-0000-000000000001';
+// Concept UUID for the "Received supplement" (Yes/No) question, created via the REST API
+// (concept, Text datatype, Finding class -- same shape as the Oedema concept below).
+export const RECEIVED_SUPPLEMENT_CONCEPT_UUID = '54064b9a-39de-4dee-8984-56c58341d461';
 
 export const configSchema = {
   hideAddProgramButton: {
@@ -211,14 +210,13 @@ export const configSchema = {
             readOnly: false,
           },
           {
-            conceptUuid: RECEIVED_SUPPLEMENT_FIELD_KEY,
+            conceptUuid: RECEIVED_SUPPLEMENT_CONCEPT_UUID,
             label: 'Received supplement',
             controlType: 'select',
             options: ['Yes', 'No'],
             minAge: 0,
             maxAge: 200,
             readOnly: false,
-            persist: false,
           },
           {
             conceptUuid: 'c963d0ea-7d87-49a5-9267-e07612c4d3e1',
@@ -226,19 +224,28 @@ export const configSchema = {
             controlType: 'select',
             options: [],
             answers: [
-              { label: 'RUTF – Sachet', conceptUuid: '261388a0-729f-44e5-b79c-e3f88b474089' },
-              { label: 'RUSF – Sachet', conceptUuid: 'a181d0a5-caf3-4249-b73a-b0157636e5d3' },
-              { label: 'LNS-MQ – Sachet', conceptUuid: '65e33d78-6687-46c1-a047-5665b1c8aedd' },
-              { label: 'LNS-SQ – Sachet', conceptUuid: 'f4d467d5-24c0-4ad9-ae5c-a0ad375e8bc9' },
-              { label: 'HEB – 50 g – Packet', conceptUuid: '7b9da3fa-2529-409f-b2e3-f440bfc89b62' },
-              { label: 'RUCF – Jar', conceptUuid: '7b723eab-08dd-48d3-98ec-6849572ed78f' },
-              { label: 'BP-5 - Box', conceptUuid: 'be7d19d0-3440-4d4c-9b65-48073ef72982' },
-              { label: 'SC + - Packet', conceptUuid: '6247969d-5424-4a6a-b088-cdd5513de52a' },
+              { label: 'Ready-to-Use Therapeutic Food (RUTF)', conceptUuid: '261388a0-729f-44e5-b79c-e3f88b474089' },
+              { label: 'Ready-to-Use Supplementary Food (RUSF)', conceptUuid: 'a181d0a5-caf3-4249-b73a-b0157636e5d3' },
+              {
+                label: 'Lipid-based Nutrient Supplement - Medium Quantity (LNS-MQ)',
+                conceptUuid: '65e33d78-6687-46c1-a047-5665b1c8aedd',
+              },
+              {
+                label: 'Lipid-based Nutrient Supplement - Small Quantity (LNS-SQ)',
+                conceptUuid: 'f4d467d5-24c0-4ad9-ae5c-a0ad375e8bc9',
+              },
+              { label: 'High Energy Biscuits (HEB) - 50g', conceptUuid: '7b9da3fa-2529-409f-b2e3-f440bfc89b62' },
+              {
+                label: 'Ready-to-Use Complementary Food (RUCF)',
+                conceptUuid: '7b723eab-08dd-48d3-98ec-6849572ed78f',
+              },
+              { label: 'BP-5 Compact Food', conceptUuid: 'be7d19d0-3440-4d4c-9b65-48073ef72982' },
+              { label: 'Supercereal Plus (SC+)', conceptUuid: '6247969d-5424-4a6a-b088-cdd5513de52a' },
             ],
             minAge: 0,
             maxAge: 200,
             readOnly: false,
-            visibleWhenConceptUuid: RECEIVED_SUPPLEMENT_FIELD_KEY,
+            visibleWhenConceptUuid: RECEIVED_SUPPLEMENT_CONCEPT_UUID,
             visibleWhenValue: 'Yes',
           },
           {
@@ -249,7 +256,7 @@ export const configSchema = {
             minAge: 0,
             maxAge: 200,
             readOnly: false,
-            visibleWhenConceptUuid: RECEIVED_SUPPLEMENT_FIELD_KEY,
+            visibleWhenConceptUuid: RECEIVED_SUPPLEMENT_CONCEPT_UUID,
             visibleWhenValue: 'Yes',
           },
           {
@@ -262,14 +269,14 @@ export const configSchema = {
             readOnly: true,
             autofillFromConceptUuid: 'c963d0ea-7d87-49a5-9267-e07612c4d3e1',
             autofillRule: 'supplementTypeToProject',
-            visibleWhenConceptUuid: RECEIVED_SUPPLEMENT_FIELD_KEY,
+            visibleWhenConceptUuid: RECEIVED_SUPPLEMENT_CONCEPT_UUID,
             visibleWhenValue: 'Yes',
           },
           {
             conceptUuid: '838e14c1-d63f-4062-8eaf-edc5edcfabc6',
-            label: 'Status (PW, BW, MH, FH)',
+            label: 'Status',
             controlType: 'select',
-            options: ['PW', 'BW', 'MH', 'FH'],
+            options: ['Pregnant Women (PW)', 'Breastfeeding Women (BW)', 'Motherhood (MH)', 'Fatherhood (FH)'],
             minAge: 5,
             maxAge: 200,
             readOnly: false,

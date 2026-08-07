@@ -1,6 +1,5 @@
 import useSWR from 'swr';
 import { openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
-import { RECEIVED_SUPPLEMENT_FIELD_KEY } from '../config-schema';
 
 export interface ProgramSectionObservation {
   uuid: string;
@@ -47,11 +46,8 @@ export function saveProgramSectionEncounter(
   valuesByConceptUuid: Record<string, string>,
   abortController: AbortController,
 ) {
-  // Belt-and-suspenders: RECEIVED_SUPPLEMENT_FIELD_KEY has no real concept behind it (see
-  // config-schema.ts) and must never reach the backend as an obs, regardless of what the caller
-  // passes in -- sending it crashes the encounter save with a null-concept error.
   const obs = Object.entries(valuesByConceptUuid)
-    .filter(([concept, value]) => concept !== RECEIVED_SUPPLEMENT_FIELD_KEY && value != null && value !== '')
+    .filter(([, value]) => value != null && value !== '')
     .map(([concept, value]) => ({ concept, value }));
 
   return openmrsFetch(`${restBaseUrl}/encounter`, {
