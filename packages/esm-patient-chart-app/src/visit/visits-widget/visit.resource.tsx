@@ -46,6 +46,22 @@ export function usePaginatedVisits(
   return ret;
 }
 
+/**
+ * Whether the patient has ever had a visit before (any visit, any status), for distinguishing a
+ * first-ever visit from a follow-up. Uses a minimal representation and a single-row page, since
+ * only the total count is needed.
+ */
+export function useHasPatientEverHadVisit(patientUuid: string) {
+  const url = new URL(
+    `${window.openmrsBase}/${restBaseUrl}/visit?patient=${patientUuid}&v=custom:(uuid)`,
+    window.location.toString(),
+  );
+
+  const { totalCount, isLoading, error } = useOpenmrsPagination<Visit>(url, 1);
+
+  return { hasEverHadAVisit: totalCount > 0, isLoading, error };
+}
+
 export function deleteVisit(visitUuid: string) {
   return openmrsFetch(`${restBaseUrl}/visit/${visitUuid}`, {
     method: 'DELETE',

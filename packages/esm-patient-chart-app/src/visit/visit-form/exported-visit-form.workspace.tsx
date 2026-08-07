@@ -61,6 +61,7 @@ import {
 } from './visit-form.resource';
 import { type ChartConfig } from '../../config-schema';
 import { useVisitAttributeTypes } from '../hooks/useVisitAttributeType';
+import { useHasPatientEverHadVisit } from '../visits-widget/visit.resource';
 import BaseVisitType from './base-visit-type.component';
 import LocationSelector from './location-selector.component';
 import VisitAttributeTypeFields from './visit-attribute-type.component';
@@ -139,7 +140,19 @@ const ExportedVisitForm: React.FC<Workspace2DefinitionProps<ExportedVisitFormPro
   const { allowOverlappingVisits, isLoading: isLoadingOverlapSetting } = useAllowOverlappingVisits();
 
   const { mutate: globalMutate } = useSWRConfig();
-  const allVisitTypes = useConditionalVisitTypes();
+  const conditionalVisitTypes = useConditionalVisitTypes();
+  const { hasEverHadAVisit } = useHasPatientEverHadVisit(patientUuid);
+  // The generic "Visit" type reads as "Follow up" once the patient has any visit history,
+  // so staff can tell a first-ever visit apart from a returning patient at a glance.
+  const allVisitTypes = useMemo(
+    () =>
+      hasEverHadAVisit
+        ? conditionalVisitTypes?.map((type) =>
+            type.display === 'Visit' ? { ...type, display: t('followUp', 'Follow up') } : type,
+          )
+        : conditionalVisitTypes,
+    [conditionalVisitTypes, hasEverHadAVisit, t],
+  );
   const { earliestAllowedStartDate, isLoading: isLoadingBirthdateCheck } =
     useEarliestAllowedVisitStartDate(patientUuid);
 
