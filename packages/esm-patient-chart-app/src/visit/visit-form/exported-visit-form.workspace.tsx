@@ -401,6 +401,11 @@ const ExportedVisitForm: React.FC<Workspace2DefinitionProps<ExportedVisitFormPro
             await Promise.all([visitAttributesRequest, ...onVisitCreatedOrUpdatedRequests]);
             await handleCreateExtraVisitInfo?.();
             await closeWorkspace({ discardUnsavedChanges: true });
+            if (!visitToEdit) {
+              window.dispatchEvent(
+                new CustomEvent('visit-started', { detail: { patientUuid, visitUuid: visit.uuid } }),
+              );
+            }
             onVisitStarted?.(visit);
           })
           .catch(() => {
