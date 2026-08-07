@@ -7,6 +7,14 @@ export const MUAC_DIAGNOSIS_OPTIONS = [
   'Normal Nutritional Status',
 ];
 
+// Malnutrition category by MUAC for patients over 5: Malnourished < 23.5cm, Normal >= 23.5cm.
+export const ADULT_MUAC_DIAGNOSIS_OPTIONS = ['Malnourished', 'Normal'];
+
+// Placeholder concept UUID for the UI-only "Received supplement" question below (see `persist: false`).
+// There is no real concept for it -- it exists purely to show/hide the supplement fields, so this
+// syntactically-valid-but-unused UUID is never sent to the backend as an observation.
+export const RECEIVED_SUPPLEMENT_FIELD_KEY = '00000000-0000-0000-0000-000000000001';
+
 export const configSchema = {
   hideAddProgramButton: {
     _type: Type.Boolean,
@@ -130,7 +138,27 @@ export const configSchema = {
             _type: Type.String,
             _description:
               "Name of the computation used to derive this field's value from the autofillFromConceptUuid field. " +
-              'Currently supported: "muacNutritionCategory".',
+              'Currently supported: "muacNutritionCategory", "muacAdultDiagnosis", "supplementTypeToProject".',
+          },
+          visibleWhenConceptUuid: {
+            _type: Type.UUID,
+            _description:
+              'If set, this field is only shown when the field with this concept UUID (elsewhere in the same ' +
+              'section) has the value given in visibleWhenValue. Omit to always show this field.',
+          },
+          visibleWhenValue: {
+            _type: Type.String,
+            _description:
+              'The value (option text, or answer concept UUID for a coded select) that visibleWhenConceptUuid ' +
+              "must have for this field to be shown. Ignored if visibleWhenConceptUuid isn't set.",
+            _default: '',
+          },
+          persist: {
+            _type: Type.Boolean,
+            _description:
+              'Whether this field is saved as an observation. Set to false for UI-only fields (e.g. a question ' +
+              'that only exists to show/hide other fields via visibleWhenConceptUuid) that have no real concept.',
+            _default: true,
           },
         },
         _default: [],
@@ -164,21 +192,33 @@ export const configSchema = {
           },
           {
             conceptUuid: '6d4f0916-5913-4e48-82ea-265e379ffb6b',
-            label: 'Diagnosis',
+            label: 'Diagnosis (Autofill)',
             controlType: 'select',
-            options: MUAC_DIAGNOSIS_OPTIONS,
+            options: ADULT_MUAC_DIAGNOSIS_OPTIONS,
             minAge: 5,
             maxAge: 200,
-            readOnly: false,
+            readOnly: true,
+            autofillFromConceptUuid: '1343AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+            autofillRule: 'muacAdultDiagnosis',
           },
           {
             conceptUuid: 'cddb2f24-e4c2-4d04-b249-73d0c6219f12',
-            label: 'Oedema (Y / N)',
+            label: 'Oedema (Yes / No)',
             controlType: 'select',
-            options: ['Y', 'N'],
+            options: ['Yes', 'No'],
             minAge: 0,
             maxAge: 5,
             readOnly: false,
+          },
+          {
+            conceptUuid: RECEIVED_SUPPLEMENT_FIELD_KEY,
+            label: 'Received supplement',
+            controlType: 'select',
+            options: ['Yes', 'No'],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+            persist: false,
           },
           {
             conceptUuid: 'c963d0ea-7d87-49a5-9267-e07612c4d3e1',
@@ -198,6 +238,8 @@ export const configSchema = {
             minAge: 0,
             maxAge: 200,
             readOnly: false,
+            visibleWhenConceptUuid: RECEIVED_SUPPLEMENT_FIELD_KEY,
+            visibleWhenValue: 'Yes',
           },
           {
             conceptUuid: '127b8e09-54dc-4ccd-b078-f0a97206ceca',
@@ -207,6 +249,8 @@ export const configSchema = {
             minAge: 0,
             maxAge: 200,
             readOnly: false,
+            visibleWhenConceptUuid: RECEIVED_SUPPLEMENT_FIELD_KEY,
+            visibleWhenValue: 'Yes',
           },
           {
             conceptUuid: '5aadb886-873d-43f8-bd99-53528eb7f04c',
@@ -214,8 +258,12 @@ export const configSchema = {
             controlType: 'select',
             options: ['UNICEF', 'WFP'],
             minAge: 0,
-            maxAge: 5,
-            readOnly: false,
+            maxAge: 200,
+            readOnly: true,
+            autofillFromConceptUuid: 'c963d0ea-7d87-49a5-9267-e07612c4d3e1',
+            autofillRule: 'supplementTypeToProject',
+            visibleWhenConceptUuid: RECEIVED_SUPPLEMENT_FIELD_KEY,
+            visibleWhenValue: 'Yes',
           },
           {
             conceptUuid: '838e14c1-d63f-4062-8eaf-edc5edcfabc6',
@@ -291,6 +339,9 @@ export interface ProgramSectionField {
   readOnly: boolean;
   autofillFromConceptUuid?: string;
   autofillRule?: string;
+  visibleWhenConceptUuid?: string;
+  visibleWhenValue?: string;
+  persist?: boolean;
 }
 
 export interface ProgramSectionConfig {

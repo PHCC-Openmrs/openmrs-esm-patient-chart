@@ -1,5 +1,6 @@
 import useSWR from 'swr';
 import { openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
+import { RECEIVED_SUPPLEMENT_FIELD_KEY } from '../config-schema';
 
 export interface ProgramSectionObservation {
   uuid: string;
@@ -46,8 +47,11 @@ export function saveProgramSectionEncounter(
   valuesByConceptUuid: Record<string, string>,
   abortController: AbortController,
 ) {
+  // Belt-and-suspenders: RECEIVED_SUPPLEMENT_FIELD_KEY has no real concept behind it (see
+  // config-schema.ts) and must never reach the backend as an obs, regardless of what the caller
+  // passes in -- sending it crashes the encounter save with a null-concept error.
   const obs = Object.entries(valuesByConceptUuid)
-    .filter(([, value]) => value != null && value !== '')
+    .filter(([concept, value]) => concept !== RECEIVED_SUPPLEMENT_FIELD_KEY && value != null && value !== '')
     .map(([concept, value]) => ({ concept, value }));
 
   return openmrsFetch(`${restBaseUrl}/encounter`, {
@@ -92,8 +96,35 @@ function muacNutritionCategory(muacValue: string): string {
   return 'Normal Nutritional Status';
 }
 
+// Malnutrition category by MUAC for patients over 5: Malnourished < 23.5cm, Normal >= 23.5cm.
+function muacAdultDiagnosis(muacValue: string): string {
+  const muac = Number(muacValue);
+  if (!muacValue || Number.isNaN(muac)) {
+    return '';
+  }
+  return muac < 23.5 ? 'Malnourished' : 'Normal';
+}
+
+// "Type of supplement received" answer concepts for RUTF and RUCF -- see config-schema.ts's
+// Nutrition Registration section for the full list of answers.
+const RUTF_ANSWER_CONCEPT_UUID = '261388a0-729f-44e5-b79c-e3f88b474089';
+const RUCF_ANSWER_CONCEPT_UUID = '7b723eab-08dd-48d3-98ec-6849572ed78f';
+
+// IF(OR(supplement="RUTF", supplement="RUCF"), "UNICEF", "WFP")
+function supplementTypeToProject(supplementAnswerConceptUuid: string): string {
+  if (!supplementAnswerConceptUuid) {
+    return '';
+  }
+  const isRutfOrRucf =
+    supplementAnswerConceptUuid === RUTF_ANSWER_CONCEPT_UUID ||
+    supplementAnswerConceptUuid === RUCF_ANSWER_CONCEPT_UUID;
+  return isRutfOrRucf ? 'UNICEF' : 'WFP';
+}
+
 const AUTOFILL_RULES: Record<string, (sourceValue: string) => string> = {
   muacNutritionCategory,
+  muacAdultDiagnosis,
+  supplementTypeToProject,
 };
 
 export function computeAutofillValue(autofillRule: string, sourceValue: string): string {

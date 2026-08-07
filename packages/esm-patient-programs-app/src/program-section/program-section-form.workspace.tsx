@@ -12,7 +12,7 @@ import {
   Workspace2,
 } from '@openmrs/esm-framework';
 import { type PatientWorkspace2DefinitionProps } from '@openmrs/esm-patient-common-lib';
-import { type ProgramSectionConfig } from '../config-schema';
+import { RECEIVED_SUPPLEMENT_FIELD_KEY, type ProgramSectionConfig, type ProgramSectionField } from '../config-schema';
 import {
   computeAutofillValue,
   saveProgramSectionEncounter,
@@ -38,7 +38,7 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
   // Some fields (e.g. Diagnosis) have two config entries sharing the same concept, one per
   // age band (e.g. <=5 read-only/autofilled, >5 manually chosen) -- only one is ever visible
   // for a given patient, so keying by conceptUuid below never collides at runtime.
-  const visibleFields = useMemo(
+  const ageEligibleFields = useMemo(
     () => section.fields.filter((field) => age != null && age >= field.minAge && age <= field.maxAge),
     [section.fields, age],
   );
@@ -49,8 +49,25 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
 
   const formValues = useWatch({ control });
 
+  const isFieldVisible = useCallback(
+    (field: ProgramSectionField) =>
+      !field.visibleWhenConceptUuid || formValues[field.visibleWhenConceptUuid] === field.visibleWhenValue,
+    [formValues],
+  );
+
+  // e.g. "Type of supplement received" only shows once "Received supplement" is answered "Yes".
+  const visibleFields = useMemo(() => ageEligibleFields.filter(isFieldVisible), [ageEligibleFields, isFieldVisible]);
+
   useEffect(() => {
-    visibleFields.forEach((field) => {
+    ageEligibleFields.forEach((field) => {
+      if (!isFieldVisible(field)) {
+        // Clear values behind a hidden dependent field, so toggling e.g. "Received supplement"
+        // back to "No" doesn't silently resubmit a stale answer for the fields it hides.
+        if ((formValues[field.conceptUuid] ?? '') !== '') {
+          setValue(field.conceptUuid, '');
+        }
+        return;
+      }
       if (!field.autofillFromConceptUuid || !field.autofillRule) {
         return;
       }
@@ -60,8 +77,8 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
         setValue(field.conceptUuid, computedValue);
       }
     });
-    // Only re-run when the watched form values change -- visibleFields/setValue are stable
-    // for the lifetime of this workspace instance (derived from the fixed `section` prop).
+    // Only re-run when the watched form values change -- ageEligibleFields/isFieldVisible/setValue
+    // are stable for the lifetime of this workspace instance (derived from the fixed `section` prop).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formValues]);
 
@@ -69,11 +86,23 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
     async (values: Record<string, string>) => {
       const abortController = new AbortController();
       try {
+        // UI-only fields (persist: false, or the hardcoded "Received supplement" sentinel key)
+        // have no real concept behind them -- they only exist to drive visibleWhenConceptUuid,
+        // so their answer must never be sent as an observation (there's no concept to attach it
+        // to on the backend, which otherwise blows up with a null-concept error on save).
+        const persistedConceptUuids = new Set(
+          section.fields
+            .filter((field) => field.persist !== false && field.conceptUuid !== RECEIVED_SUPPLEMENT_FIELD_KEY)
+            .map((field) => field.conceptUuid),
+        );
+        const persistedValues = Object.fromEntries(
+          Object.entries(values).filter(([conceptUuid]) => persistedConceptUuids.has(conceptUuid)),
+        );
         await saveProgramSectionEncounter(
           patientUuid,
           session?.sessionLocation?.uuid,
           section.encounterTypeUuid,
-          values,
+          persistedValues,
           abortController,
         );
         await mutateEncounters();
