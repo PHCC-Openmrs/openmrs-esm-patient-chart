@@ -61,7 +61,7 @@ import {
 } from './visit-form.resource';
 import { type ChartConfig } from '../../config-schema';
 import { useVisitAttributeTypes } from '../hooks/useVisitAttributeType';
-import { useHasPatientEverHadVisit } from '../visits-widget/visit.resource';
+import { useHasPatientCompletedAVisit } from '../visits-widget/visit.resource';
 import BaseVisitType from './base-visit-type.component';
 import LocationSelector from './location-selector.component';
 import VisitAttributeTypeFields from './visit-attribute-type.component';
@@ -141,17 +141,17 @@ const ExportedVisitForm: React.FC<Workspace2DefinitionProps<ExportedVisitFormPro
 
   const { mutate: globalMutate } = useSWRConfig();
   const conditionalVisitTypes = useConditionalVisitTypes();
-  const { hasEverHadAVisit } = useHasPatientEverHadVisit(patientUuid);
-  // The generic "Visit" type reads as "Follow up" once the patient has any visit history,
+  const { hasCompletedAVisit } = useHasPatientCompletedAVisit(patientUuid);
+  // The generic "Visit" type reads as "Follow up" once the patient has a completed visit,
   // so staff can tell a first-ever visit apart from a returning patient at a glance.
   const allVisitTypes = useMemo(
     () =>
-      hasEverHadAVisit
+      hasCompletedAVisit
         ? conditionalVisitTypes?.map((type) =>
             type.display === 'Visit' ? { ...type, display: t('followUp', 'Follow up') } : type,
           )
         : conditionalVisitTypes,
-    [conditionalVisitTypes, hasEverHadAVisit, t],
+    [conditionalVisitTypes, hasCompletedAVisit, t],
   );
   const { earliestAllowedStartDate, isLoading: isLoadingBirthdateCheck } =
     useEarliestAllowedVisitStartDate(patientUuid);
@@ -476,7 +476,13 @@ const ExportedVisitForm: React.FC<Workspace2DefinitionProps<ExportedVisitFormPro
 
   return (
     <Workspace2
-      title={visitToEdit ? t('editVisit', 'Edit visit') : t('startVisitWorkspaceTitle', 'Start a visit')}
+      title={
+        visitToEdit
+          ? t('editVisit', 'Edit visit')
+          : hasCompletedAVisit
+            ? t('startFollowUpWorkspaceTitle', 'Start a follow up')
+            : t('startVisitWorkspaceTitle', 'Start a visit')
+      }
       hasUnsavedChanges={isDirty && !isVisitSaved}
     >
       <FormProvider {...methods}>
@@ -546,7 +552,7 @@ const ExportedVisitForm: React.FC<Workspace2DefinitionProps<ExportedVisitFormPro
                           */}
                           {[
                             <Switch key="new" name="new">
-                              {t('visit', 'Visit')}
+                              {hasCompletedAVisit ? t('followUp', 'Follow up') : t('visit', 'Visit')}
                             </Switch>,
                           ]}
                         </ContentSwitcher>

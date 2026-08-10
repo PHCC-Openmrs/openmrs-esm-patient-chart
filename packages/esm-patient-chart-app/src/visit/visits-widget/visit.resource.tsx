@@ -47,19 +47,36 @@ export function usePaginatedVisits(
 }
 
 /**
- * Whether the patient has ever had a visit before (any visit, any status), for distinguishing a
- * first-ever visit from a follow-up. Uses a minimal representation and a single-row page, since
- * only the total count is needed.
+ * Whether the patient has at least one completed (ended) visit, for distinguishing a first-ever
+ * visit from a follow-up. Compares the total visit count against the active-only visit count
+ * (rather than inspecting stopDatetime on fetched rows), since only the counts are needed.
  */
-export function useHasPatientEverHadVisit(patientUuid: string) {
-  const url = new URL(
+export function useHasPatientCompletedAVisit(patientUuid: string) {
+  const allVisitsUrl = new URL(
     `${window.openmrsBase}/${restBaseUrl}/visit?patient=${patientUuid}&v=custom:(uuid)`,
     window.location.toString(),
   );
+  const activeVisitsUrl = new URL(
+    `${window.openmrsBase}/${restBaseUrl}/visit?patient=${patientUuid}&includeInactive=false&v=custom:(uuid)`,
+    window.location.toString(),
+  );
 
-  const { totalCount, isLoading, error } = useOpenmrsPagination<Visit>(url, 1);
+  const {
+    totalCount: totalVisitCount,
+    isLoading: isLoadingTotalCount,
+    error: totalCountError,
+  } = useOpenmrsPagination<Visit>(patientUuid ? allVisitsUrl : null, 1);
+  const {
+    totalCount: activeVisitCount,
+    isLoading: isLoadingActiveCount,
+    error: activeCountError,
+  } = useOpenmrsPagination<Visit>(patientUuid ? activeVisitsUrl : null, 1);
 
-  return { hasEverHadAVisit: totalCount > 0, isLoading, error };
+  return {
+    hasCompletedAVisit: totalVisitCount > activeVisitCount,
+    isLoading: isLoadingTotalCount || isLoadingActiveCount,
+    error: totalCountError || activeCountError,
+  };
 }
 
 export function deleteVisit(visitUuid: string) {
