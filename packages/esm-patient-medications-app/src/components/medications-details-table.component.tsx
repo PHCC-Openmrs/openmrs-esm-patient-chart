@@ -32,6 +32,7 @@ import {
   type OrderBasketWindowProps,
   type PatientWorkspaceGroupProps,
   useLaunchWorkspaceRequiringVisit,
+  useMedicationDispense,
   useOrderBasket,
 } from '@openmrs/esm-patient-common-lib';
 import {
@@ -62,6 +63,30 @@ export interface MedicationsDetailsTableProps {
   showRenewButton: boolean;
   patient: fhir.Patient;
 }
+
+const DispensedQuantity: React.FC<{ orderUuid: string; quantity: number; quantityUnitsDisplay?: string }> = ({
+  orderUuid,
+  quantity,
+  quantityUnitsDisplay,
+}) => {
+  const { t } = useTranslation();
+  const { dispenses, quantityDispensed, isLoading } = useMedicationDispense(orderUuid);
+
+  if (isLoading || !dispenses.length) {
+    return null;
+  }
+
+  return (
+    <span>
+      <span className={styles.label01}> {t('dispensed', 'Dispensed').toUpperCase()}</span>{' '}
+      {t('quantityDispensedOfTotal', '{{dispensed}} of {{total}} {{unit}}', {
+        dispensed: quantityDispensed,
+        total: quantity,
+        unit: quantityUnitsDisplay ?? '',
+      })}
+    </span>
+  );
+};
 
 const MedicationsDetailsTable: React.FC<MedicationsDetailsTableProps> = ({
   isValidating,
@@ -190,6 +215,13 @@ const MedicationsDetailsTable: React.FC<MedicationsDetailsTableProps> = ({
                 <span className={styles.label01}> {t('quantity', 'Quantity').toUpperCase()}</span> {medication.quantity}{' '}
                 {medication?.quantityUnits?.display}
               </span>
+            )}{' '}
+            {medication.quantity != null && (
+              <DispensedQuantity
+                orderUuid={medication.uuid}
+                quantity={medication.quantity}
+                quantityUnitsDisplay={medication?.quantityUnits?.display}
+              />
             )}
           </p>
         </div>

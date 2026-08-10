@@ -3,7 +3,7 @@ import { capitalize } from 'lodash-es';
 import { InlineLoading, Toggletip, ToggletipButton, ToggletipContent } from '@carbon/react';
 import { useTranslation } from 'react-i18next';
 import { formatDate, UserIcon } from '@openmrs/esm-framework';
-import { type Order, useDrugOrderByUuid } from '@openmrs/esm-patient-common-lib';
+import { type Order, useDrugOrderByUuid, useMedicationDispense } from '@openmrs/esm-patient-common-lib';
 import styles from './medication-record.scss';
 
 interface MedicationRecordProps {
@@ -13,6 +13,7 @@ interface MedicationRecordProps {
 export default function MedicationRecord({ medication }: MedicationRecordProps) {
   const { t } = useTranslation();
   const { data: drugOrder, isLoading } = useDrugOrderByUuid(medication.uuid);
+  const { dispenses, quantityDispensed } = useMedicationDispense(medication.uuid);
 
   if (isLoading) {
     return <InlineLoading description={t('loading', 'Loading') + '...'} />;
@@ -88,6 +89,16 @@ export default function MedicationRecord({ medication }: MedicationRecordProps) 
             <span>
               <span className={styles.label01}> {t('quantity', 'Quantity').toUpperCase()}</span> {order.quantity}{' '}
               {order.quantityUnits?.display}
+            </span>
+          ) : null}
+          {order.quantity != null && dispenses.length > 0 ? (
+            <span>
+              <span className={styles.label01}> {t('dispensed', 'Dispensed').toUpperCase()}</span>{' '}
+              {t('quantityDispensedOfTotal', '{{dispensed}} of {{total}} {{unit}}', {
+                dispensed: quantityDispensed,
+                total: order.quantity,
+                unit: order.quantityUnits?.display ?? '',
+              })}
             </span>
           ) : null}
           {order.dateStopped ? (
