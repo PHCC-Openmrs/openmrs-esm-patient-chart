@@ -14,6 +14,7 @@ import {
   RadioButtonGroup,
   Search,
   Stack,
+  TextArea,
   Tile,
 } from '@carbon/react';
 import { WarningFilled } from '@carbon/react/icons';
@@ -125,6 +126,7 @@ const ConditionsWidget: React.FC<ConditionsWidgetProps> = ({
       onsetDateTime: getValues('onsetDateTime') ? dayjs(getValues('onsetDateTime')).format() : null,
       patientId: patientUuid,
       userId: session?.user?.uuid,
+      note: getValues('note'),
     };
 
     try {
@@ -167,6 +169,7 @@ const ConditionsWidget: React.FC<ConditionsWidgetProps> = ({
       onsetDateTime: getValues('onsetDateTime') ? dayjs(getValues('onsetDateTime')).format() : null,
       patientId: patientUuid,
       userId: session?.user?.uuid,
+      note: getValues('note'),
     };
 
     try {
@@ -376,6 +379,25 @@ const ConditionsWidget: React.FC<ConditionsWidgetProps> = ({
             />
           </FormGroup>
         )}
+        <FormGroup legendText="">
+          <Controller
+            name="note"
+            control={control}
+            render={({ field: { onChange, onBlur, value, ref } }) => (
+              <ResponsiveWrapper>
+                <TextArea
+                  id="conditionNote"
+                  labelText={t('notes', 'Notes')}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  ref={ref}
+                  rows={4}
+                  value={value ?? ''}
+                />
+              </ResponsiveWrapper>
+            )}
+          />
+        </FormGroup>
       </Stack>
     </div>
   );

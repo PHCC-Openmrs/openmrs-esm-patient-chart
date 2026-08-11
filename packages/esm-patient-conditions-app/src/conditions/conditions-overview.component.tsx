@@ -42,7 +42,7 @@ interface ConditionTableRow extends Condition {
 }
 
 interface ConditionTableHeader {
-  key: 'display' | 'onsetDateTimeRender' | 'status';
+  key: 'display' | 'onsetDateTimeRender' | 'status' | 'note';
   header: string;
   isSortable: true;
   sortFunc: (valueA: ConditionTableRow, valueB: ConditionTableRow) => number;
@@ -108,6 +108,12 @@ const ConditionsOverview: React.FC<ConditionsOverviewProps> = ({ patientUuid }) 
         isSortable: true,
         sortFunc: (valueA, valueB) => valueA.status?.localeCompare(valueB.status),
       },
+      {
+        key: 'note',
+        header: t('notes', 'Notes'),
+        isSortable: true,
+        sortFunc: (valueA, valueB) => (valueA.note ?? '').localeCompare(valueB.note ?? ''),
+      },
     ],
     [t],
   );
@@ -123,6 +129,7 @@ const ConditionsOverview: React.FC<ConditionsOverviewProps> = ({ patientUuid }) 
           ? formatDate(parseDate(condition.onsetDateTime), { mode: 'wide', time: 'for today' })
           : '--',
         status: condition.clinicalStatus,
+        note: condition.note ?? '--',
       };
     });
   }, [filteredConditions]);

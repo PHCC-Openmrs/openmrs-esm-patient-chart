@@ -68,6 +68,12 @@ function ConditionsDetailedSummary({ patient }) {
         isSortable: true,
         sortFunc: (valueA, valueB) => valueA.clinicalStatus?.localeCompare(valueB.clinicalStatus),
       },
+      {
+        key: 'note',
+        header: t('notes', 'Notes'),
+        isSortable: true,
+        sortFunc: (valueA, valueB) => (valueA.note ?? '').localeCompare(valueB.note ?? ''),
+      },
     ],
     [t],
   );
@@ -83,6 +89,7 @@ function ConditionsDetailedSummary({ patient }) {
           ? formatDate(parseDate(condition.onsetDateTime), { mode: 'wide', time: 'for today' })
           : '--',
         status: condition.clinicalStatus,
+        note: condition.note ?? '--',
       };
     });
   }, [filteredConditions]);

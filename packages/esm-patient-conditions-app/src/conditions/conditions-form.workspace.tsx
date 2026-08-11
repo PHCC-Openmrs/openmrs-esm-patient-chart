@@ -33,6 +33,7 @@ const createSchema = (formContext: 'creating' | 'editing', t: TFunction) => {
     clinicalStatus: clinicalStatusValidation,
     conditionName: z.string(),
     conditionUuid: conditionUuidValidation,
+    note: z.string().optional(),
     onsetDateTime: z
       .date()
       .nullable()
@@ -67,6 +68,7 @@ const ConditionsForm: React.FC<PatientWorkspace2DefinitionProps<ConditionFormPro
     conditionName: '',
     conditionUuid: '',
     clinicalStatus: isEditing ? matchingCondition?.clinicalStatus?.toLowerCase() ?? '' : 'active',
+    note: isEditing ? matchingCondition?.note ?? '' : '',
     onsetDateTime: isEditing && matchingCondition?.onsetDateTime ? new Date(matchingCondition?.onsetDateTime) : null,
   };
 

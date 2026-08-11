@@ -43,6 +43,7 @@ export interface FHIRCondition {
     status: string;
   };
   abatementDateTime?: string;
+  note?: Array<{ text: string }>;
 }
 
 interface CodingData {
@@ -65,6 +66,7 @@ export type Condition = {
   recordedDate: string;
   id: string;
   abatementDateTime?: string;
+  note?: string;
 };
 
 export interface ConditionDataTableRow {
@@ -110,6 +112,7 @@ type CreatePayload = {
     reference: string;
   };
   abatementDateTime?: string;
+  note?: Array<{ text: string }>;
 };
 
 type EditPayload = CreatePayload & {
@@ -124,6 +127,7 @@ export type FormFields = {
   onsetDateTime: string;
   patientId: string;
   userId: string;
+  note?: string;
 };
 
 export function useConditions(patientUuid: string) {
@@ -178,6 +182,7 @@ function mapConditionProperties(condition: FHIRCondition): Condition {
     onsetDateTime: condition?.onsetDateTime,
     recordedDate: condition?.recordedDate,
     id: condition?.id,
+    note: condition?.note?.[0]?.text,
   };
 }
 
@@ -212,6 +217,7 @@ export async function createCondition(payload: FormFields) {
     subject: {
       reference: `Patient/${payload.patientId}`,
     },
+    note: payload.note ? [{ text: payload.note }] : undefined,
   };
 
   const res = await openmrsFetch(url, {
@@ -258,6 +264,7 @@ export async function updateCondition(conditionId, payload: FormFields) {
     subject: {
       reference: `Patient/${payload.patientId}`,
     },
+    note: payload.note ? [{ text: payload.note }] : undefined,
   };
 
   const res = await openmrsFetch(url, {
@@ -292,7 +299,7 @@ export interface ConditionTableRow extends Condition {
 }
 
 export interface ConditionTableHeader {
-  key: 'display' | 'onsetDateTimeRender' | 'status';
+  key: 'display' | 'onsetDateTimeRender' | 'status' | 'note';
   header: string;
   isSortable: true;
   sortFunc: (valueA: ConditionTableRow, valueB: ConditionTableRow) => number;
