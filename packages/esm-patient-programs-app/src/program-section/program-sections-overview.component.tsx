@@ -16,7 +16,13 @@ import { CardHeader, EmptyState, ErrorState, PatientChartPagination } from '@ope
 import { type ConfigObject, type ProgramSectionConfig } from '../config-schema';
 import { useEnrollments } from '../programs/programs.resource';
 import { useProgramSummaryWidgetRules } from '../programs/program-summary-widget-rules';
-import { findObsValue, type ProgramSectionEncounter, useProgramSectionEncounters, usePatientAge } from './program-section.resource';
+import {
+  findObsValue,
+  type ProgramSectionEncounter,
+  useProgramSectionEncounters,
+  usePatientAge,
+} from './program-section.resource';
+import { ProgramSectionActionMenu } from './program-section-action-menu.component';
 import styles from './program-sections-overview.scss';
 
 const PAGE_SIZE = 5;
@@ -77,12 +83,14 @@ const ProgramSectionCard: React.FC<ProgramSectionCardProps> = ({ patientUuid, se
   const tableHeaders = [
     { key: 'date', header: t('dateAndTime', 'Date and time') },
     ...visibleFields.map((field) => ({ key: field.conceptUuid, header: field.label })),
+    { key: 'actions', header: '' },
   ];
 
   const tableRows = paginatedEncounters.map((encounter) => ({
     id: encounter.uuid,
     date: formatDatetime(new Date(encounter.encounterDatetime)),
     ...Object.fromEntries(visibleFields.map((field) => [field.conceptUuid, formatFieldValue(encounter, field)])),
+    actions: <ProgramSectionActionMenu encounter={encounter} section={section} />,
   }));
 
   return (

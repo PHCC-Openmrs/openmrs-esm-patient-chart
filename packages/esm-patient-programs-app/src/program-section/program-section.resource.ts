@@ -63,12 +63,71 @@ export function saveProgramSectionEncounter(
   });
 }
 
+/**
+ * Updates an existing program section encounter's obs to match `valuesByConceptUuid`: obs for a
+ * concept that already exists are updated in place, missing concepts get a new obs created on
+ * the encounter, and concepts whose value was cleared (e.g. a `visibleWhenConceptUuid` field got
+ * hidden) have their existing obs voided.
+ */
+export async function updateProgramSectionEncounter(
+  encounterUuid: string,
+  existingObs: Array<ProgramSectionObservation>,
+  valuesByConceptUuid: Record<string, string>,
+  abortController: AbortController,
+) {
+  const obsByConceptUuid = new Map(existingObs.map((observation) => [observation.concept.uuid, observation]));
+  const newObs: Array<{ concept: string; value: string }> = [];
+
+  for (const [conceptUuid, value] of Object.entries(valuesByConceptUuid)) {
+    const existing = obsByConceptUuid.get(conceptUuid);
+    const hasValue = value != null && value !== '';
+
+    if (existing && hasValue) {
+      await openmrsFetch(`${restBaseUrl}/obs/${existing.uuid}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: { value },
+        signal: abortController.signal,
+      });
+    } else if (existing && !hasValue) {
+      await openmrsFetch(`${restBaseUrl}/obs/${existing.uuid}`, {
+        method: 'DELETE',
+        signal: abortController.signal,
+      });
+    } else if (!existing && hasValue) {
+      newObs.push({ concept: conceptUuid, value });
+    }
+  }
+
+  if (newObs.length > 0) {
+    await openmrsFetch(`${restBaseUrl}/encounter/${encounterUuid}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: { obs: newObs },
+      signal: abortController.signal,
+    });
+  }
+}
+
 export function findObsValue(encounter: ProgramSectionEncounter | undefined, conceptUuid: string): string {
   const obs = encounter?.obs?.find((o) => o.concept.uuid === conceptUuid);
   if (!obs) {
     return '--';
   }
   return typeof obs.value === 'object' ? obs.value.display : String(obs.value);
+}
+
+/**
+ * The raw, editable form of an existing obs's value -- the answer concept UUID for a coded obs
+ * (matching what the form's Select options use as their value), otherwise the same display value
+ * findObsValue would show.
+ */
+export function findObsFormValue(encounter: ProgramSectionEncounter | undefined, conceptUuid: string): string {
+  const obs = encounter?.obs?.find((o) => o.concept.uuid === conceptUuid);
+  if (!obs) {
+    return '';
+  }
+  return typeof obs.value === 'object' ? obs.value.uuid : String(obs.value);
 }
 
 export function usePatientAge(patientUuid: string) {

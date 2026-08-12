@@ -15,23 +15,28 @@ import { type PatientWorkspace2DefinitionProps } from '@openmrs/esm-patient-comm
 import { type ProgramSectionConfig, type ProgramSectionField } from '../config-schema';
 import {
   computeAutofillValue,
+  findObsFormValue,
   saveProgramSectionEncounter,
+  updateProgramSectionEncounter,
   useProgramSectionEncounters,
   usePatientAge,
+  type ProgramSectionEncounter,
 } from './program-section.resource';
 import styles from './program-section-form.scss';
 
 export interface ProgramSectionFormProps {
   section: ProgramSectionConfig;
+  encounterToEdit?: ProgramSectionEncounter;
 }
 
 const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSectionFormProps, {}>> = ({
   closeWorkspace,
   groupProps: { patientUuid },
-  workspaceProps: { section },
+  workspaceProps: { section, encounterToEdit },
 }) => {
   const { t } = useTranslation();
   const session = useSession();
+  const isEditing = !!encounterToEdit;
   const { age, isLoading: isLoadingAge } = usePatientAge(patientUuid);
   const { mutateEncounters } = useProgramSectionEncounters(patientUuid, section.encounterTypeUuid);
 
@@ -44,7 +49,9 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
   );
 
   const { control, handleSubmit, setValue, formState } = useForm<Record<string, string>>({
-    defaultValues: Object.fromEntries(section.fields.map((field) => [field.conceptUuid, ''])),
+    defaultValues: Object.fromEntries(
+      section.fields.map((field) => [field.conceptUuid, findObsFormValue(encounterToEdit, field.conceptUuid)]),
+    ),
   });
 
   const [missingConceptUuids, setMissingConceptUuids] = useState<Set<string>>(new Set());
@@ -120,13 +127,22 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
         const persistedValues = Object.fromEntries(
           Object.entries(values).filter(([conceptUuid]) => persistedConceptUuids.has(conceptUuid)),
         );
-        await saveProgramSectionEncounter(
-          patientUuid,
-          session?.sessionLocation?.uuid,
-          section.encounterTypeUuid,
-          persistedValues,
-          abortController,
-        );
+        if (isEditing) {
+          await updateProgramSectionEncounter(
+            encounterToEdit.uuid,
+            encounterToEdit.obs,
+            persistedValues,
+            abortController,
+          );
+        } else {
+          await saveProgramSectionEncounter(
+            patientUuid,
+            session?.sessionLocation?.uuid,
+            section.encounterTypeUuid,
+            persistedValues,
+            abortController,
+          );
+        }
         await mutateEncounters();
         closeWorkspace({ discardUnsavedChanges: true });
         showSnackbar({
@@ -141,19 +157,23 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
         });
       }
     },
-    [closeWorkspace, mutateEncounters, patientUuid, section, session, t, visibleFields],
+    [closeWorkspace, encounterToEdit, isEditing, mutateEncounters, patientUuid, section, session, t, visibleFields],
   );
+
+  const workspaceTitle = isEditing
+    ? t('editSectionTitle', 'Edit {{sectionTitle}}', { sectionTitle: section.sectionTitle })
+    : section.sectionTitle;
 
   if (isLoadingAge) {
     return (
-      <Workspace2 title={section.sectionTitle} hasUnsavedChanges={false}>
+      <Workspace2 title={workspaceTitle} hasUnsavedChanges={false}>
         <div className={styles.formContainer} />
       </Workspace2>
     );
   }
 
   return (
-    <Workspace2 title={section.sectionTitle} hasUnsavedChanges>
+    <Workspace2 title={workspaceTitle} hasUnsavedChanges>
       <Form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
         <Stack className={styles.formContainer} gap={1}>
           {visibleFields.map((field) => (
