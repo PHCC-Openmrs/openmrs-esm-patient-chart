@@ -46,3 +46,8 @@ export const deleteProgramConfirmationModal = getAsyncLifecycle(
   () => import('./programs/delete-program.modal'),
   options,
 );
+
+export const deleteProgramSectionEncounterConfirmationModal = getAsyncLifecycle(
+  () => import('./program-section/delete-program-section-encounter.modal'),
+  options,
+);

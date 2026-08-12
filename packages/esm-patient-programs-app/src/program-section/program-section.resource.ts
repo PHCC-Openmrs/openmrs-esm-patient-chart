@@ -109,6 +109,13 @@ export async function updateProgramSectionEncounter(
   }
 }
 
+export function deleteProgramSectionEncounter(encounterUuid: string, abortController: AbortController) {
+  return openmrsFetch(`${restBaseUrl}/encounter/${encounterUuid}`, {
+    method: 'DELETE',
+    signal: abortController.signal,
+  });
+}
+
 export function findObsValue(encounter: ProgramSectionEncounter | undefined, conceptUuid: string): string {
   const obs = encounter?.obs?.find((o) => o.concept.uuid === conceptUuid);
   if (!obs) {

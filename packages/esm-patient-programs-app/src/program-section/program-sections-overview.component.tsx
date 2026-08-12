@@ -90,7 +90,7 @@ const ProgramSectionCard: React.FC<ProgramSectionCardProps> = ({ patientUuid, se
     id: encounter.uuid,
     date: formatDatetime(new Date(encounter.encounterDatetime)),
     ...Object.fromEntries(visibleFields.map((field) => [field.conceptUuid, formatFieldValue(encounter, field)])),
-    actions: <ProgramSectionActionMenu encounter={encounter} section={section} />,
+    actions: <ProgramSectionActionMenu encounter={encounter} section={section} patientUuid={patientUuid} />,
   }));
 
   return (

@@ -61,6 +61,10 @@
     {
       "name": "program-delete-confirmation-modal",
       "component": "deleteProgramConfirmationModal"
+    },
+    {
+      "name": "program-section-delete-confirmation-modal",
+      "component": "deleteProgramSectionEncounterConfirmationModal"
     }
   ]
 }
