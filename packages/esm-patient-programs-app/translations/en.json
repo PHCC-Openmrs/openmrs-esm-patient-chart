@@ -23,7 +23,6 @@
   "editOrDeleteProgram": "Edit or delete service",
   "editOrDeleteSection": "Edit or delete {{sectionTitle}} record",
   "editProgramEnrollment": "Edit service enrollment",
-  "editSection": "Edit {{sectionTitle}}",
   "editSectionTitle": "Edit {{sectionTitle}}",
   "enrollmentNowVisible": "It is now visible in the Services table",
   "enrollmentSaved": "Service enrollment saved",
