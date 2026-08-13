@@ -231,6 +231,10 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
                         label={field.label}
                         value={value ?? ''}
                         allowEmpty
+                        // These fields (e.g. Gravidity, MUAC, Supplement quantity) are counts/measurements
+                        // that can never be negative, but Carbon's stepper allows decrementing below 0
+                        // without a min set.
+                        min={0}
                         invalid={missingConceptUuids.has(field.conceptUuid)}
                         invalidText={t('fieldRequired', 'This field is required')}
                         onChange={(_event, state) => {
