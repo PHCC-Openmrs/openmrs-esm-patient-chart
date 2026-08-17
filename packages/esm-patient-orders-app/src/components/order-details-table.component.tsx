@@ -241,6 +241,11 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
       header: t('status', 'Status'),
       isSortable: false,
     },
+    {
+      key: 'reason',
+      header: t('reason', 'Reason'),
+      isSortable: false,
+    },
   ];
 
   const tableRows = useMemo(
@@ -279,6 +284,7 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
         ) : (
           '--'
         ),
+        reason: <div className={styles.singleLineText}>{order.fulfillerComment || '--'}</div>,
       })) ?? [],
     [displayedOrders, t],
   );

@@ -107,6 +107,7 @@
   "priorityRequired": "Priority is required",
   "quantity": "Quantity",
   "quantityDispensedOfTotal": "{{dispensed}} of {{total}} {{unit}}",
+  "reason": "Reason",
   "referenceNumber": "Reference number",
   "referenceNumberTableHeader": "{{orderType}} reference number",
   "referenceRange": "Reference range",
