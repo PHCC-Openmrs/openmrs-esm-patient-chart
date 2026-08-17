@@ -26,11 +26,15 @@ export function usePatientOrders(
   endDate?: string,
 ) {
   const { mutate } = useSWRConfig();
-  const activeStatusParams = status === 'ACTIVE' ? '&excludeCanceledAndExpired=true' : '';
+  // Always fetch status=any rather than letting the server filter out stopped orders: a
+  // fulfiller (e.g. the Laboratory app) discontinues the original order as part of marking
+  // it COMPLETED/DECLINED, so a server-side status=ACTIVE filter would drop completed orders
+  // entirely. We replicate the "ACTIVE" semantics client-side below, but also keep any order
+  // that has been through a fulfiller workflow regardless of its stop/discontinue state.
   const baseOrdersUrl =
     startDate && endDate
-      ? `${restBaseUrl}/order?patient=${patientUuid}&careSetting=${careSettingUuid}&v=${orderCustomRepresentation}&activatedOnOrAfterDate=${startDate}&activatedOnOrBeforeDate=${endDate}&excludeDiscontinueOrders=true${activeStatusParams}`
-      : `${restBaseUrl}/order?patient=${patientUuid}&careSetting=${careSettingUuid}&v=${orderCustomRepresentation}&status=${status}&excludeDiscontinueOrders=true`;
+      ? `${restBaseUrl}/order?patient=${patientUuid}&careSetting=${careSettingUuid}&v=${orderCustomRepresentation}&activatedOnOrAfterDate=${startDate}&activatedOnOrBeforeDate=${endDate}&excludeDiscontinueOrders=true&status=any`
+      : `${restBaseUrl}/order?patient=${patientUuid}&careSetting=${careSettingUuid}&v=${orderCustomRepresentation}&status=any&excludeDiscontinueOrders=true`;
   const ordersUrl = orderType ? `${baseOrdersUrl}&orderTypes=${orderType}` : baseOrdersUrl;
 
   const { data, error, isLoading, isValidating } = useSWR<FetchResponse<PatientOrderFetchResponse>, Error>(
@@ -48,15 +52,15 @@ export function usePatientOrders(
     [mutate, patientUuid],
   );
 
-  const orders = useMemo(
-    () =>
-      data?.data?.results
-        ? [...data.data.results]?.sort(
-            (a, b) => new Date(b.dateActivated).getTime() - new Date(a.dateActivated).getTime(),
-          )
-        : null,
-    [data],
-  );
+  const orders = useMemo(() => {
+    const results = data?.data?.results;
+    if (!results) {
+      return null;
+    }
+    const filtered =
+      status === 'ACTIVE' ? results.filter((order) => !order.dateStopped || !!order.fulfillerStatus) : results;
+    return [...filtered].sort((a, b) => new Date(b.dateActivated).getTime() - new Date(a.dateActivated).getTime());
+  }, [data, status]);
 
   return {
     data: orders,
