@@ -6,6 +6,7 @@ import { moduleName } from './constants';
 import { setupCacheableRoutes, setupOfflineVisitsSync } from './offline';
 import { summaryDashboardMeta, encountersDashboardMeta } from './dashboard.meta';
 import deleteVisitActionButtonComponent from './actions-buttons/delete-visit.component';
+import voidPatientActionButtonComponent from './actions-buttons/void-patient.component';
 import currentVisitSummaryComponent from './visit/visits-widget/current-visit-summary.extension';
 import visitSummaryComponent from './visit/visits-widget/visit-summary.extension';
 import markPatientAliveActionButtonComponent from './actions-buttons/mark-patient-alive.component';
@@ -62,6 +63,11 @@ export const startVisitActionButton = getSyncLifecycle(startVisitActionButtonCom
 
 export const stopVisitActionButton = getSyncLifecycle(stopVisitActionButtonComponent, {
   featureName: 'patient-action-stop-visit',
+  moduleName,
+});
+
+export const deletePatientActionMenuButton = getSyncLifecycle(voidPatientActionButtonComponent, {
+  featureName: 'patient-action-delete-patient',
   moduleName,
 });
 
@@ -145,6 +151,11 @@ export const startVisitModal = getAsyncLifecycle(() => import('./visit/visit-pro
 
 export const deleteVisitModal = getAsyncLifecycle(() => import('./visit/visit-prompt/delete-visit-dialog.modal'), {
   featureName: 'delete visit',
+  moduleName,
+});
+
+export const voidPatientModal = getAsyncLifecycle(() => import('./actions-buttons/void-patient-dialog.modal'), {
+  featureName: 'delete patient',
   moduleName,
 });
 

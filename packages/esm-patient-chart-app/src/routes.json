@@ -87,6 +87,14 @@
       "offline": true
     },
     {
+      "name": "delete-patient-button",
+      "slot": "patient-actions-slot",
+      "component": "deletePatientActionMenuButton",
+      "online": true,
+      "offline": true,
+      "order": 1200
+    },
+    {
       "name": "encounters-summary-dashboard",
       "slot": "patient-chart-dashboard-slot",
       "component": "encountersSummaryDashboardLink",
@@ -203,6 +211,10 @@
     {
       "name": "delete-visit-dialog",
       "component": "deleteVisitModal"
+    },
+    {
+      "name": "void-patient-dialog",
+      "component": "voidPatientModal"
     },
     {
       "name": "end-visit-dialog",
