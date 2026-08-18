@@ -49,3 +49,8 @@ export const exportedAddDrugOrderWorkspace = getAsyncLifecycle(
   () => import('./add-drug-order/exported-add-drug-order.workspace'),
   options,
 );
+
+export const stockAvailabilityInfo = getAsyncLifecycle(
+  () => import('./add-drug-order/stock-availability/stock-availability-info.component'),
+  options,
+);

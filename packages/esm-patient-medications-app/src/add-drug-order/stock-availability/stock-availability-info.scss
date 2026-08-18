@@ -1,0 +1,13 @@
+@use '@carbon/colors';
+@use '@carbon/type';
+
+.inStock {
+  @include type.type-style('body-compact-01');
+  color: colors.$gray-70;
+}
+
+.outOfStock {
+  @include type.type-style('body-compact-01');
+  color: colors.$red-60;
+  font-weight: 600;
+}
