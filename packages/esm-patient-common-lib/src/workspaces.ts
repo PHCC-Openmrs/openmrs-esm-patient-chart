@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import {
   launchWorkspace2,
   navigate,
@@ -60,32 +60,49 @@ export function useStartVisitIfNeeded(patientUuid: string) {
   const { visitContext } = usePatientChartStore(patientUuid);
   const { systemVisitEnabled } = useSystemVisitSetting();
   const isRdeEnabled = useFeatureFlag('rde');
+  // Tracks a start-visit flow already in progress for this patient, so that triggering
+  // it again (e.g. clicking another action button before the first flow's visit form
+  // has been submitted) reuses the same flow instead of opening a second "start visit"
+  // dialog / workspace, which would otherwise race and surface a duplicate discard-changes prompt.
+  const pendingStartVisitPromiseRef = useRef<Promise<boolean> | null>(null);
 
   const startVisitIfNeeded = useCallback(async (): Promise<boolean> => {
     if (!systemVisitEnabled || visitContext) {
       return true;
-    } else {
-      return new Promise<boolean>((resolve) => {
-        if (isRdeEnabled) {
-          const dispose = showModal('visit-context-switcher', {
-            patientUuid,
-            closeModal: () => {
-              dispose();
-              resolve(false);
-            },
-            onAfterVisitSelected: () => {
-              resolve(true);
-            },
-            size: 'sm',
-          });
-        } else {
-          const dispose = showModal('start-visit-dialog', {
-            closeModal: () => dispose(),
-            onVisitStarted: () => resolve(true),
-          });
-        }
-      });
     }
+
+    if (pendingStartVisitPromiseRef.current) {
+      return pendingStartVisitPromiseRef.current;
+    }
+
+    const promise = new Promise<boolean>((resolve) => {
+      const settle = (result: boolean) => {
+        pendingStartVisitPromiseRef.current = null;
+        resolve(result);
+      };
+
+      if (isRdeEnabled) {
+        const dispose = showModal('visit-context-switcher', {
+          patientUuid,
+          closeModal: () => {
+            dispose();
+            settle(false);
+          },
+          onAfterVisitSelected: () => {
+            settle(true);
+          },
+          size: 'sm',
+        });
+      } else {
+        const dispose = showModal('start-visit-dialog', {
+          closeModal: () => dispose(),
+          onVisitStarted: () => settle(true),
+        });
+      }
+    });
+
+    pendingStartVisitPromiseRef.current = promise;
+    return promise;
   }, [visitContext, systemVisitEnabled, isRdeEnabled, patientUuid]);
   return startVisitIfNeeded;
 }
