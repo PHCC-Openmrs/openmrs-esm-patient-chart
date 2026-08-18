@@ -7,7 +7,7 @@ dayjs.extend(duration);
 import { Trans, useTranslation } from 'react-i18next';
 import { Button, InlineLoading, Tag, Toggletip, ToggletipButton, ToggletipContent } from '@carbon/react';
 import { ArrowRight, Information } from '@carbon/react/icons';
-import { ConfigurableLink, formatDate, parseDate, useConfig, type Visit } from '@openmrs/esm-framework';
+import { ConfigurableLink, formatDate, parseDate, useConfig, UserHasAccess, type Visit } from '@openmrs/esm-framework';
 import { interpretBloodPressure, useConceptUnits, useVitalsAndBiometrics, useVitalsConceptMetadata } from '../common';
 import { type ConfigObject } from '../config-schema';
 import { useLaunchVitalsAndBiometricsForm } from '../utils';
@@ -212,18 +212,20 @@ const VitalsHeader: React.FC<VitalsHeaderProps> = ({
             </div>
           ) : null}
           {!hideLinks && (
-            <div className={styles.buttonContainer}>
-              <Button
-                className={styles.recordVitalsButton}
-                data-openmrs-role="Record Vitals"
-                kind="ghost"
-                onClick={launchVitalsAndBiometricsForm}
-                size="sm"
-              >
-                {t('recordVitals', 'Record vitals')}
-                <ArrowRight size={16} className={styles.recordVitalsIconButton} />
-              </Button>
-            </div>
+            <UserHasAccess privilege={['Add Encounters', 'Edit Encounters']}>
+              <div className={styles.buttonContainer}>
+                <Button
+                  className={styles.recordVitalsButton}
+                  data-openmrs-role="Record Vitals"
+                  kind="ghost"
+                  onClick={launchVitalsAndBiometricsForm}
+                  size="sm"
+                >
+                  {t('recordVitals', 'Record vitals')}
+                  <ArrowRight size={16} className={styles.recordVitalsIconButton} />
+                </Button>
+              </div>
+            </UserHasAccess>
           )}
         </div>
         <div className={styles.rowContainer}>
@@ -326,10 +328,12 @@ const VitalsHeader: React.FC<VitalsHeaderProps> = ({
       </div>
 
       {!hideLinks && (
-        <Button className={styles.recordVitalsButton} kind="ghost" onClick={launchVitalsAndBiometricsForm} size="sm">
-          {t('recordVitals', 'Record vitals')}
-          <ArrowRight size={16} className={styles.recordVitalsIconButton} />
-        </Button>
+        <UserHasAccess privilege={['Add Encounters', 'Edit Encounters']}>
+          <Button className={styles.recordVitalsButton} kind="ghost" onClick={launchVitalsAndBiometricsForm} size="sm">
+            {t('recordVitals', 'Record vitals')}
+            <ArrowRight size={16} className={styles.recordVitalsIconButton} />
+          </Button>
+        </UserHasAccess>
       )}
     </div>
   );

@@ -2,7 +2,15 @@ import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, ContentSwitcher, DataTableSkeleton, IconSwitch, InlineLoading } from '@carbon/react';
 import { Add, Analytics, Table } from '@carbon/react/icons';
-import { formatDatetime, parseDate, useConfig, useLayoutType } from '@openmrs/esm-framework';
+import {
+  formatDatetime,
+  parseDate,
+  useConfig,
+  useLayoutType,
+  useSession,
+  userHasAccess,
+  UserHasAccess,
+} from '@openmrs/esm-framework';
 import { CardHeader, EmptyState, ErrorState } from '@openmrs/esm-patient-common-lib';
 import { useLaunchVitalsAndBiometricsForm } from '../utils';
 import { useConceptUnits, useVitalsAndBiometrics, withUnit } from '../common';
@@ -34,6 +42,8 @@ const BiometricsBase: React.FC<BiometricsBaseProps> = ({ patientUuid, patient, p
   const { conceptUnits } = useConceptUnits();
   const launchBiometricsForm = useLaunchVitalsAndBiometricsForm(patientUuid);
   const showBmi = useMemo(() => shouldShowBmi(patient, config.biometrics), [patient, config.biometrics]);
+  const session = useSession();
+  const canRecordBiometrics = userHasAccess(['Add Encounters', 'Edit Encounters'], session?.user);
 
   const tableHeaders: Array<BiometricsTableHeader> = [
     {
@@ -121,14 +131,16 @@ const BiometricsBase: React.FC<BiometricsBaseProps> = ({ patientUuid, patient, p
             </ContentSwitcher>
             <>
               <span className={styles.divider}>|</span>
-              <Button
-                kind="ghost"
-                renderIcon={(props) => <Add size={16} {...props} />}
-                iconDescription="Add biometrics"
-                onClick={launchBiometricsForm}
-              >
-                {t('add', 'Add')}
-              </Button>
+              <UserHasAccess privilege={['Add Encounters', 'Edit Encounters']}>
+                <Button
+                  kind="ghost"
+                  renderIcon={(props) => <Add size={16} {...props} />}
+                  iconDescription="Add biometrics"
+                  onClick={launchBiometricsForm}
+                >
+                  {t('add', 'Add')}
+                </Button>
+              </UserHasAccess>
             </>
           </div>
         </CardHeader>
@@ -153,7 +165,13 @@ const BiometricsBase: React.FC<BiometricsBaseProps> = ({ patientUuid, patient, p
       </div>
     );
   }
-  return <EmptyState displayText={displayText} headerTitle={headerTitle} launchForm={launchBiometricsForm} />;
+  return (
+    <EmptyState
+      displayText={displayText}
+      headerTitle={headerTitle}
+      launchForm={canRecordBiometrics ? launchBiometricsForm : undefined}
+    />
+  );
 };
 
 export default BiometricsBase;
