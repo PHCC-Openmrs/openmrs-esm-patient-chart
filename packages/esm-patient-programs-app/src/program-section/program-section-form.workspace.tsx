@@ -231,14 +231,18 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
                         label={field.label}
                         value={value ?? ''}
                         allowEmpty
+                        min={0}
                         invalid={missingConceptUuids.has(field.conceptUuid)}
                         invalidText={t('fieldRequired', 'This field is required')}
                         onChange={(_event, state) => {
                           // Carbon's NumberInput can emit NaN (e.g. clicking the +/- stepper
                           // while empty) -- without this check that becomes the literal
                           // string "NaN", which the backend rejects for a Numeric concept.
-                          const numericValue = state?.value;
-                          onChange(numericValue != null && !Number.isNaN(numericValue) ? String(numericValue) : '');
+                          // Every number field in this form (MUAC, supplement quantity, gravidity)
+                          // is a non-negative count/measurement, so also clamp out any negative
+                          // value the stepper or manual typing could otherwise produce.
+                          const numericValue = state?.value != null ? Number(state.value) : NaN;
+                          onChange(!Number.isNaN(numericValue) ? String(Math.max(0, numericValue)) : '');
                         }}
                       />
                     );
