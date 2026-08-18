@@ -45,6 +45,8 @@ import {
   useConfig,
   useLayoutType,
   usePagination,
+  useSession,
+  userHasAccess,
   UserIcon,
 } from '@openmrs/esm-framework';
 import { buildMedicationOrder } from '../api';
@@ -109,6 +111,10 @@ const MedicationsDetailsTable: React.FC<MedicationsDetailsTableProps> = ({
 
   const { orders, setOrders } = useOrderBasket<DrugOrderBasketItem>(patient, 'medications');
   const { results, goTo, currentPage } = usePagination(medications, pageSize);
+  const session = useSession();
+  // saveOrder/discontinueOrder both accept either privilege; staging an item
+  // into the order basket has the same requirement regardless of action.
+  const canManageOrders = userHasAccess('Add Orders', session?.user) || userHasAccess('Edit Orders', session?.user);
 
   const tableHeaders = [
     {
@@ -318,7 +324,7 @@ const MedicationsDetailsTable: React.FC<MedicationsDetailsTableProps> = ({
               {t('print', 'Print')}
             </Button>
           )}
-          {showAddButton ?? true ? (
+          {(showAddButton ?? true) && canManageOrders ? (
             <Button
               kind="ghost"
               renderIcon={(props: ComponentProps<typeof AddIcon>) => <AddIcon size={16} {...props} />}
@@ -371,7 +377,7 @@ const MedicationsDetailsTable: React.FC<MedicationsDetailsTableProps> = ({
                           </TableCell>
                         ))}
 
-                        {!isPrinting && medication && (
+                        {!isPrinting && medication && canManageOrders && (
                           <TableCell className="cds--table-column-menu">
                             <OrderBasketItemActions
                               patient={patient}

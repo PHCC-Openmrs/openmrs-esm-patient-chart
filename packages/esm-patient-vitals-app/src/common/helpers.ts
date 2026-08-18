@@ -1,11 +1,22 @@
 import dayjs from 'dayjs';
-import { type OpenmrsResource } from '@openmrs/esm-framework';
+import { type OpenmrsResource, type Session, userHasAccess } from '@openmrs/esm-framework';
 
 import { type ConceptMetadata } from '../common';
 import type { FHIRInterpretation, ObsReferenceRanges, ObservationInterpretation } from './types';
 import { type VitalsBiometricsFormData } from '../vitals-biometrics-form/schema';
 import { type VitalsAndBiometricsFieldValuesMap } from './data.resource';
 import { type BiometricsConfigObject } from '../config-schema';
+
+/**
+ * Recording vitals/biometrics saves both an Encounter and Observations, each
+ * checked independently by the backend (EncounterService.saveEncounter and
+ * ObsService.saveObs), so both must be satisfied - not just the encounter half.
+ */
+export function canRecordVitalsAndBiometrics(user: Session['user'] | undefined): boolean {
+  const hasEncounterPrivilege = userHasAccess('Add Encounters', user) || userHasAccess('Edit Encounters', user);
+  const hasObservationPrivilege = userHasAccess('Add Observations', user) || userHasAccess('Edit Observations', user);
+  return hasEncounterPrivilege && hasObservationPrivilege;
+}
 
 export function calculateBodyMassIndex(weight: number, height: number) {
   if (weight > 0 && height > 0) {

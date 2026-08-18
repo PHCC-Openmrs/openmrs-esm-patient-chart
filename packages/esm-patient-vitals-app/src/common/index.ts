@@ -12,6 +12,7 @@ export {
 export {
   assessValue,
   calculateBodyMassIndex,
+  canRecordVitalsAndBiometrics,
   generatePlaceholder,
   getReferenceRangesForConcept,
   interpretBloodPressure,

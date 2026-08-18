@@ -2,18 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, ContentSwitcher, DataTableSkeleton, IconSwitch, InlineLoading } from '@carbon/react';
 import { Add, Analytics, Table } from '@carbon/react/icons';
-import {
-  formatDatetime,
-  parseDate,
-  useConfig,
-  useLayoutType,
-  useSession,
-  userHasAccess,
-  UserHasAccess,
-} from '@openmrs/esm-framework';
+import { formatDatetime, parseDate, useConfig, useLayoutType, useSession } from '@openmrs/esm-framework';
 import { CardHeader, EmptyState, ErrorState } from '@openmrs/esm-patient-common-lib';
 import { useLaunchVitalsAndBiometricsForm } from '../utils';
-import { useConceptUnits, useVitalsAndBiometrics, withUnit } from '../common';
+import { useConceptUnits, useVitalsAndBiometrics, withUnit, canRecordVitalsAndBiometrics } from '../common';
 import { shouldShowBmi } from '../common/helpers';
 import { type ConfigObject } from '../config-schema';
 import type { BiometricsTableHeader, BiometricsTableRow } from './types';
@@ -43,7 +35,7 @@ const BiometricsBase: React.FC<BiometricsBaseProps> = ({ patientUuid, patient, p
   const launchBiometricsForm = useLaunchVitalsAndBiometricsForm(patientUuid);
   const showBmi = useMemo(() => shouldShowBmi(patient, config.biometrics), [patient, config.biometrics]);
   const session = useSession();
-  const canRecordBiometrics = userHasAccess(['Add Encounters', 'Edit Encounters'], session?.user);
+  const canRecordBiometrics = canRecordVitalsAndBiometrics(session?.user);
 
   const tableHeaders: Array<BiometricsTableHeader> = [
     {
@@ -131,7 +123,7 @@ const BiometricsBase: React.FC<BiometricsBaseProps> = ({ patientUuid, patient, p
             </ContentSwitcher>
             <>
               <span className={styles.divider}>|</span>
-              <UserHasAccess privilege={['Add Encounters', 'Edit Encounters']}>
+              {canRecordBiometrics && (
                 <Button
                   kind="ghost"
                   renderIcon={(props) => <Add size={16} {...props} />}
@@ -140,7 +132,7 @@ const BiometricsBase: React.FC<BiometricsBaseProps> = ({ patientUuid, patient, p
                 >
                   {t('add', 'Add')}
                 </Button>
-              </UserHasAccess>
+              )}
             </>
           </div>
         </CardHeader>

@@ -14,13 +14,11 @@ import {
   useConfig,
   useLayoutType,
   useSession,
-  userHasAccess,
-  UserHasAccess,
 } from '@openmrs/esm-framework';
 import type { ConfigObject } from '../config-schema';
 import type { VitalsTableHeader, VitalsTableRow } from './types';
 import { useLaunchVitalsAndBiometricsForm } from '../utils';
-import { useVitalsAndBiometrics, useConceptUnits, withUnit } from '../common';
+import { useVitalsAndBiometrics, useConceptUnits, withUnit, canRecordVitalsAndBiometrics } from '../common';
 import PaginatedVitals from './paginated-vitals.component';
 import PrintComponent from './print/print.component';
 import VitalsChart from './vitals-chart.component';
@@ -45,7 +43,7 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
   const contentToPrintRef = useRef(null);
   const launchVitalsBiometricsForm = useLaunchVitalsAndBiometricsForm(patientUuid);
   const session = useSession();
-  const canRecordVitals = userHasAccess(['Add Encounters', 'Edit Encounters'], session?.user);
+  const canRecordVitals = canRecordVitalsAndBiometrics(session?.user);
 
   const { excludePatientIdentifierCodeTypes } = useConfig();
   const { data: vitals, error, isLoading, isValidating } = useVitalsAndBiometrics(patientUuid);
@@ -229,7 +227,7 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
                         {t('print', 'Print')}
                       </Button>
                     )}
-                    <UserHasAccess privilege={['Add Encounters', 'Edit Encounters']}>
+                    {canRecordVitals && (
                       <Button
                         kind="ghost"
                         renderIcon={AddIcon}
@@ -238,7 +236,7 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
                       >
                         {t('add', 'Add')}
                       </Button>
-                    </UserHasAccess>
+                    )}
                   </>
                 </div>
               </CardHeader>
