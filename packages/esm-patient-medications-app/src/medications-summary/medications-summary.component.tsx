@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { DataTableSkeleton } from '@carbon/react';
 import { EmptyState, ErrorState, type Order, useLaunchWorkspaceRequiringVisit } from '@openmrs/esm-patient-common-lib';
+import { useSession, userHasAccess } from '@openmrs/esm-framework';
 import { useMedicationOrders } from '../api';
 import { type AddDrugOrderWorkspaceProps } from '../add-drug-order/add-drug-order.workspace';
 import MedicationsDetailsTable from '../components/medications-details-table.component';
@@ -17,7 +18,7 @@ interface MedicationsSectionProps {
   isLoading: boolean;
   isValidating: boolean;
   error: Error | undefined;
-  launchAddDrugWorkspace: () => void;
+  launchAddDrugWorkspace?: () => void;
   headerTitle: string;
   displayText: string;
   tableTitle: string;
@@ -76,6 +77,9 @@ export default function MedicationsSummary({ patient }: MedicationsSummaryProps)
   );
 
   const { futureOrders, activeOrders, pastOrders, error, isLoading, isValidating } = useMedicationOrders(patient?.id);
+  const session = useSession();
+  const canManageOrders = userHasAccess('Add Orders', session?.user) || userHasAccess('Edit Orders', session?.user);
+  const gatedLaunchAddDrugWorkspace = canManageOrders ? launchAddDrugWorkspace : undefined;
 
   return (
     <>
@@ -86,7 +90,7 @@ export default function MedicationsSummary({ patient }: MedicationsSummaryProps)
           isLoading={isLoading}
           isValidating={isValidating}
           error={error}
-          launchAddDrugWorkspace={launchAddDrugWorkspace}
+          launchAddDrugWorkspace={gatedLaunchAddDrugWorkspace}
           headerTitle={t('activeMedicationsHeaderTitle', 'Active medications')}
           displayText={t('activeMedicationsDisplayText', 'active medications')}
           tableTitle={t('activeMedicationsTableTitle', 'Active Medications')}
@@ -102,7 +106,7 @@ export default function MedicationsSummary({ patient }: MedicationsSummaryProps)
           isLoading={isLoading}
           isValidating={isValidating}
           error={error}
-          launchAddDrugWorkspace={launchAddDrugWorkspace}
+          launchAddDrugWorkspace={gatedLaunchAddDrugWorkspace}
           headerTitle={t('futureMedicationsHeaderTitle', 'Upcoming medications')}
           displayText={t('futureMedicationsDisplayText', 'upcoming medications')}
           tableTitle={t('futureMedicationsTableTitle', 'Upcoming Medications')}
@@ -118,7 +122,7 @@ export default function MedicationsSummary({ patient }: MedicationsSummaryProps)
           isLoading={isLoading}
           isValidating={isValidating}
           error={error}
-          launchAddDrugWorkspace={launchAddDrugWorkspace}
+          launchAddDrugWorkspace={gatedLaunchAddDrugWorkspace}
           headerTitle={t('pastMedicationsHeaderTitle', 'Past medications')}
           displayText={t('pastMedicationsDisplayText', 'past medications')}
           tableTitle={t('pastMedicationsTableTitle', 'Past Medications')}
