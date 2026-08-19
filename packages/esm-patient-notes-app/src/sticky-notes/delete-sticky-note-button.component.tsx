@@ -1,6 +1,6 @@
 import React from 'react';
 import { IconButton } from '@carbon/react';
-import { showModal, TrashCanIcon } from '@openmrs/esm-framework';
+import { showModal, TrashCanIcon, UserHasAccess } from '@openmrs/esm-framework';
 import { useTranslation } from 'react-i18next';
 import styles from './delete-sticky-note-button.scss';
 
@@ -24,15 +24,20 @@ const DeleteStickyNote: React.FC<DeleteStickyNoteProps> = ({ noteUuid, mutate, o
     });
   };
   return (
-    <IconButton
-      label={t('deleteStickyNote', 'Delete sticky note')}
-      onClick={handleDelete}
-      kind="ghost"
-      size="sm"
-      align="top-end"
-    >
-      <TrashCanIcon className={styles.deleteIcon} />
-    </IconButton>
+    // Delete Notes exists as a distinct privilege on the instance, but the note
+    // module isn't in openmrs-core, so this hasn't been confirmed against the
+    // actual enforcing REST call the way Conditions/Visits/Orders were.
+    <UserHasAccess privilege="Delete Notes">
+      <IconButton
+        label={t('deleteStickyNote', 'Delete sticky note')}
+        onClick={handleDelete}
+        kind="ghost"
+        size="sm"
+        align="top-end"
+      >
+        <TrashCanIcon className={styles.deleteIcon} />
+      </IconButton>
+    </UserHasAccess>
   );
 };
 

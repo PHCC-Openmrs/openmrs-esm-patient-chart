@@ -1,7 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@carbon/react';
 import { useTranslation } from 'react-i18next';
-import { DocumentIcon, showModal, useConfig, useOnClickOutside } from '@openmrs/esm-framework';
+import {
+  DocumentIcon,
+  showModal,
+  useConfig,
+  useOnClickOutside,
+  useSession,
+  userHasAccess,
+} from '@openmrs/esm-framework';
 import { type ConfigObject } from '../config-schema';
 import { useStickyNote } from './sticky-note.resource';
 import StickyNotePanel from './sticky-note-panel.component';
@@ -15,6 +22,12 @@ const StickyNoteHeaderButton: React.FC<StickyNoteHeaderButtonProps> = ({ patient
   const { t } = useTranslation();
   const [showPanel, setShowPanel] = useState(false);
   const { note, isLoading, error, mutate } = useStickyNote(patientUuid);
+  const session = useSession();
+  // There's no separate "Add Notes" privilege - creating a note uses Edit Notes,
+  // same as editing one. Viewing an existing note only needs Get Notes, so a
+  // view-only user shouldn't lose the button just because they can't create one.
+  const canViewNote = userHasAccess('Get Notes', session?.user) || userHasAccess('Edit Notes', session?.user);
+  const canCreateNote = userHasAccess('Edit Notes', session?.user);
 
   const handleClose = useCallback(() => {
     setShowPanel(false);
@@ -57,6 +70,14 @@ const StickyNoteHeaderButton: React.FC<StickyNoteHeaderButtonProps> = ({ patient
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [showPanel]);
+
+  // Mirrors handleClick's own branching: the same states that open the view
+  // panel there need Get Notes here, and the create-modal path needs Edit Notes.
+  const canShowButton = isLoading || error || note ? canViewNote : canCreateNote;
+
+  if (!canShowButton) {
+    return null;
+  }
 
   return (
     <div className={styles.content} ref={containerRef}>
