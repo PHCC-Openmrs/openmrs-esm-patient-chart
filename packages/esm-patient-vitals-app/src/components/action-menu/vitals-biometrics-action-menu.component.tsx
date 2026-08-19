@@ -1,8 +1,9 @@
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Layer, OverflowMenu, OverflowMenuItem } from '@carbon/react';
-import { launchWorkspace2, showModal, useLayoutType } from '@openmrs/esm-framework';
+import { launchWorkspace2, showModal, useLayoutType, useSession, userHasAccess } from '@openmrs/esm-framework';
 import { patientVitalsBiometricsFormWorkspace } from '../../constants';
+import { canRecordVitalsAndBiometrics } from '../../common';
 import styles from './vitals-biometrics-action-menu.scss';
 
 interface VitalsAndBiometricsActionMenuProps {
@@ -14,6 +15,9 @@ export const VitalsAndBiometricsActionMenu = ({ encounterUuid, patient }: Vitals
   const { t } = useTranslation();
   const patientUuid = patient.id;
   const isTablet = useLayoutType() === 'tablet';
+  const session = useSession();
+  const canEdit = canRecordVitalsAndBiometrics(session?.user);
+  const canDelete = userHasAccess('Edit Encounters', session?.user);
 
   const handleLaunchVitalsAndBiometricsForm = useCallback(() => {
     launchWorkspace2(patientVitalsBiometricsFormWorkspace, {
@@ -31,6 +35,10 @@ export const VitalsAndBiometricsActionMenu = ({ encounterUuid, patient }: Vitals
     });
   }, [encounterUuid, patientUuid]);
 
+  if (!canEdit && !canDelete) {
+    return null;
+  }
+
   return (
     <Layer className={styles.layer}>
       <OverflowMenu
@@ -40,20 +48,24 @@ export const VitalsAndBiometricsActionMenu = ({ encounterUuid, patient }: Vitals
         flipped
         id={encounterUuid}
       >
-        <OverflowMenuItem
-          className={styles.menuItem}
-          id="editVitalsAndBiometrics"
-          onClick={handleLaunchVitalsAndBiometricsForm}
-          itemText={t('edit', 'Edit')}
-        />
-        <OverflowMenuItem
-          className={styles.menuItem}
-          id="deleteVitalsAndBiometrics"
-          itemText={t('delete', 'Delete')}
-          onClick={handleLaunchDeleteVitalsAndBiometricsModal}
-          isDelete
-          hasDivider
-        />
+        {canEdit && (
+          <OverflowMenuItem
+            className={styles.menuItem}
+            id="editVitalsAndBiometrics"
+            onClick={handleLaunchVitalsAndBiometricsForm}
+            itemText={t('edit', 'Edit')}
+          />
+        )}
+        {canDelete && (
+          <OverflowMenuItem
+            className={styles.menuItem}
+            id="deleteVitalsAndBiometrics"
+            itemText={t('delete', 'Delete')}
+            onClick={handleLaunchDeleteVitalsAndBiometricsModal}
+            isDelete
+            hasDivider
+          />
+        )}
       </OverflowMenu>
     </Layer>
   );

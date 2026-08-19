@@ -9,6 +9,8 @@ import {
   showModal,
   showSnackbar,
   useConfig,
+  useSession,
+  userHasAccess,
   type Visit,
 } from '@openmrs/esm-framework';
 import { EmptyState } from '@openmrs/esm-patient-common-lib';
@@ -59,6 +61,12 @@ export const EncounterList: React.FC<EncounterListProps> = ({
 }) => {
   const { t } = useTranslation();
   const { requireActiveVisitForEncounterTile } = useConfig<Pick<ChartConfig, 'requireActiveVisitForEncounterTile'>>();
+  const session = useSession();
+  const canAddEncounter =
+    userHasAccess('Add Encounters', session?.user) && userHasAccess('Edit Encounters', session?.user);
+  const canEditEncounterRow =
+    userHasAccess('Add Observations', session?.user) && userHasAccess('Edit Observations', session?.user);
+  const canDeleteEncounterRow = userHasAccess('Edit Encounters', session?.user);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -192,6 +200,12 @@ export const EncounterList: React.FC<EncounterListProps> = ({
         <OverflowMenu align="left" flipped className={styles.flippedOverflowMenu} data-testid="actions-id">
           {actions.map((actionItem: Action, index: number) => {
             const form = formsJson && actionItem?.form?.name ? formsJson.name === actionItem.form.name : null;
+            if (actionItem.mode === 'edit' && !canEditEncounterRow) {
+              return null;
+            }
+            if (actionItem.mode === 'delete' && !canDeleteEncounterRow) {
+              return null;
+            }
 
             return (
               form && (
@@ -232,6 +246,8 @@ export const EncounterList: React.FC<EncounterListProps> = ({
     t,
     handleDeleteEncounter,
     visit,
+    canEditEncounterRow,
+    canDeleteEncounterRow,
     requireActiveVisitForEncounterTile,
     patientUuid,
   ]);
@@ -246,7 +262,7 @@ export const EncounterList: React.FC<EncounterListProps> = ({
   }, [columns, t]);
 
   const formLauncher = useMemo(() => {
-    if (formsJson) {
+    if (formsJson && canAddEncounter) {
       return (
         <Button
           kind="ghost"
@@ -262,7 +278,7 @@ export const EncounterList: React.FC<EncounterListProps> = ({
       );
     }
     return null;
-  }, [formsJson, displayText, t, visit, requireActiveVisitForEncounterTile]);
+  }, [formsJson, displayText, t, visit, requireActiveVisitForEncounterTile, canAddEncounter]);
 
   if (isLoading === true || isLoadingFormsJson === true) {
     return <DataTableSkeleton rowCount={10} />;
@@ -295,7 +311,7 @@ export const EncounterList: React.FC<EncounterListProps> = ({
           displayText={t(description)}
           headerTitle={t(headerTitle)}
           launchForm={
-            hideFormLauncher || deathStatus
+            hideFormLauncher || deathStatus || !canAddEncounter
               ? null
               : () => launchEncounterForm(formsJson, 'add', '*', requireActiveVisitForEncounterTile, visit)
           }

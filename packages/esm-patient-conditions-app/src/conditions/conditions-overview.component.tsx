@@ -26,6 +26,8 @@ import {
   useConfig,
   useLayoutType,
   usePagination,
+  useSession,
+  userHasAccess,
 } from '@openmrs/esm-framework';
 import { CardHeader, EmptyState, ErrorState, PatientChartPagination } from '@openmrs/esm-patient-common-lib';
 import { ConditionsActionMenu } from './conditions-action-menu.component';
@@ -65,6 +67,8 @@ const ConditionsOverview: React.FC<ConditionsOverviewProps> = ({ patientUuid }) 
 
   const { conditions, error, isLoading, isValidating } = useConditions(patientUuid);
   const [filter, setFilter] = useState<'All' | 'Active' | 'Inactive'>('Active');
+  const session = useSession();
+  const canRecordDiagnoses = userHasAccess('Edit Conditions', session?.user);
   const launchConditionsForm = useCallback(
     () =>
       launchWorkspace2('conditions-form-workspace', {
@@ -172,14 +176,16 @@ const ConditionsOverview: React.FC<ConditionsOverviewProps> = ({ patientUuid }) 
               />
             </div>
             <div className={styles.divider}>|</div>
-            <Button
-              kind="ghost"
-              renderIcon={(props: ComponentProps<typeof AddIcon>) => <AddIcon size={16} {...props} />}
-              iconDescription="Add conditions"
-              onClick={launchConditionsForm}
-            >
-              {t('add', 'Add')}
-            </Button>
+            {canRecordDiagnoses && (
+              <Button
+                kind="ghost"
+                renderIcon={(props: ComponentProps<typeof AddIcon>) => <AddIcon size={16} {...props} />}
+                iconDescription="Add conditions"
+                onClick={launchConditionsForm}
+              >
+                {t('add', 'Add')}
+              </Button>
+            )}
           </div>
         </CardHeader>
         <DataTable
@@ -259,7 +265,13 @@ const ConditionsOverview: React.FC<ConditionsOverviewProps> = ({ patientUuid }) 
       </div>
     );
   }
-  return <EmptyState displayText={displayText} headerTitle={headerTitle} launchForm={launchConditionsForm} />;
+  return (
+    <EmptyState
+      displayText={displayText}
+      headerTitle={headerTitle}
+      launchForm={canRecordDiagnoses ? launchConditionsForm : undefined}
+    />
+  );
 };
 
 export default ConditionsOverview;

@@ -25,6 +25,8 @@ import {
   useLayoutType,
   usePagination,
   launchWorkspace2,
+  useSession,
+  userHasAccess,
 } from '@openmrs/esm-framework';
 import {
   CardHeader,
@@ -56,6 +58,12 @@ const ImmunizationsDetailedSummary: React.FC<ImmunizationsDetailedSummaryProps> 
   const sequenceDefinitions = immunizationsConfig?.sequenceDefinitions;
 
   const { data: existingImmunizations, isLoading, error, isValidating } = useImmunizations(patientUuid);
+  const session = useSession();
+  // Immunizations save via the FHIR Immunization resource, which maps internally to an
+  // Encounter + Obs group - same shape as vitals, so the same combined check applies.
+  const canRecordImmunization =
+    (userHasAccess('Add Encounters', session?.user) || userHasAccess('Edit Encounters', session?.user)) &&
+    (userHasAccess('Add Observations', session?.user) || userHasAccess('Edit Observations', session?.user));
 
   const consolidatedImmunizations = useMemo(() => {
     return linkConfiguredSequences(existingImmunizations, sequenceDefinitions);
@@ -123,7 +131,7 @@ const ImmunizationsDetailedSummary: React.FC<ImmunizationsDetailedSummaryProps> 
           id: immunization.vaccineUuid,
           vaccine: immunization.vaccineName,
           recentVaccination: occurrenceDate,
-          add: (
+          add: canRecordImmunization ? (
             <Button
               hasIconOnly
               iconDescription={t('add', 'Add')}
@@ -145,10 +153,10 @@ const ImmunizationsDetailedSummary: React.FC<ImmunizationsDetailedSummaryProps> 
               renderIcon={(props: ComponentProps<typeof AddIcon>) => <AddIcon size={16} {...props} />}
               size="sm"
             />
-          ),
+          ) : null,
         };
       }),
-    [launchImmunizationsForm, sortedImmunizations, t],
+    [launchImmunizationsForm, sortedImmunizations, t, canRecordImmunization],
   );
 
   const { results: paginatedImmunizations, currentPage, goTo } = usePagination(tableRows, 10);
@@ -171,15 +179,17 @@ const ImmunizationsDetailedSummary: React.FC<ImmunizationsDetailedSummaryProps> 
       <div className={styles.widgetCard}>
         <CardHeader title={headerTitle}>
           <span>{isValidating ? <InlineLoading /> : null}</span>
-          <Button
-            data-testid="add-immunizations-button"
-            iconDescription={t('addImmunizations', 'Add immunizations')}
-            kind="ghost"
-            renderIcon={(props: ComponentProps<typeof AddIcon>) => <AddIcon size={16} {...props} />}
-            onClick={launchImmunizationsForm}
-          >
-            {t('add', 'Add')}
-          </Button>
+          {canRecordImmunization && (
+            <Button
+              data-testid="add-immunizations-button"
+              iconDescription={t('addImmunizations', 'Add immunizations')}
+              kind="ghost"
+              renderIcon={(props: ComponentProps<typeof AddIcon>) => <AddIcon size={16} {...props} />}
+              onClick={launchImmunizationsForm}
+            >
+              {t('add', 'Add')}
+            </Button>
+          )}
         </CardHeader>
 
         <DataTable rows={paginatedImmunizations} headers={tableHeader} size={isTablet ? 'lg' : 'sm'} useZebraStyles>
@@ -247,7 +257,13 @@ const ImmunizationsDetailedSummary: React.FC<ImmunizationsDetailedSummaryProps> 
     );
   }
 
-  return <EmptyState displayText={displayText} headerTitle={headerTitle} launchForm={launchImmunizationsForm} />;
+  return (
+    <EmptyState
+      displayText={displayText}
+      headerTitle={headerTitle}
+      launchForm={canRecordImmunization ? launchImmunizationsForm : undefined}
+    />
+  );
 };
 
 export default ImmunizationsDetailedSummary;

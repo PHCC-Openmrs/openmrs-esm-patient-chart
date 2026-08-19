@@ -18,6 +18,8 @@ import {
   showModal,
   TrashCanIcon,
   useLayoutType,
+  useSession,
+  userHasAccess,
 } from '@openmrs/esm-framework';
 import { immunizationFormSub } from '../utils';
 import { type ImmunizationGrouped } from '../../types';
@@ -44,6 +46,11 @@ const SequenceTable: React.FC<SequenceTableProps> = ({
   const { existingDoses, sequences, vaccineUuid } = immunizationsByVaccine;
   const isTablet = useLayoutType() === 'tablet';
   const responsiveSize = isTablet ? 'md' : 'sm';
+  const session = useSession();
+  const canEditImmunization =
+    (userHasAccess('Add Encounters', session?.user) || userHasAccess('Edit Encounters', session?.user)) &&
+    (userHasAccess('Add Observations', session?.user) || userHasAccess('Edit Observations', session?.user));
+  const canDeleteImmunization = userHasAccess('Edit Encounters', session?.user);
 
   const tableHeaders = useMemo(
     () => [
@@ -96,42 +103,46 @@ const SequenceTable: React.FC<SequenceTableProps> = ({
     note: dose?.note[0]?.text || '--',
     actions: (
       <div className={styles.actionButtons}>
-        <IconButton
-          kind="ghost"
-          label={getCoreTranslation('edit')}
-          onClick={() => {
-            immunizationFormSub.next({
-              vaccineUuid: vaccineUuid,
-              immunizationId: dose.immunizationObsUuid,
-              vaccinationDate: dose.occurrenceDateTime,
-              doseNumber: dose.doseNumber,
-              nextDoseDate: dose.nextDoseDate,
-              note: dose.note[0]?.text,
-              expirationDate: dose.expirationDate,
-              lotNumber: dose.lotNumber,
-              manufacturer: dose.manufacturer,
-              visitId: dose.visitUuid,
-            });
-            launchPatientImmunizationForm();
-          }}
-          size={responsiveSize}
-        >
-          <EditIcon size={16} />
-        </IconButton>
-        <IconButton
-          kind="ghost"
-          label={getCoreTranslation('delete')}
-          onClick={() =>
-            handleDeleteImmunization({
-              doseNumber: dose.doseNumber,
-              immunizationId: dose.immunizationObsUuid,
-              vaccineUuid,
-            })
-          }
-          size={responsiveSize}
-        >
-          <TrashCanIcon size={16} />
-        </IconButton>
+        {canEditImmunization && (
+          <IconButton
+            kind="ghost"
+            label={getCoreTranslation('edit')}
+            onClick={() => {
+              immunizationFormSub.next({
+                vaccineUuid: vaccineUuid,
+                immunizationId: dose.immunizationObsUuid,
+                vaccinationDate: dose.occurrenceDateTime,
+                doseNumber: dose.doseNumber,
+                nextDoseDate: dose.nextDoseDate,
+                note: dose.note[0]?.text,
+                expirationDate: dose.expirationDate,
+                lotNumber: dose.lotNumber,
+                manufacturer: dose.manufacturer,
+                visitId: dose.visitUuid,
+              });
+              launchPatientImmunizationForm();
+            }}
+            size={responsiveSize}
+          >
+            <EditIcon size={16} />
+          </IconButton>
+        )}
+        {canDeleteImmunization && (
+          <IconButton
+            kind="ghost"
+            label={getCoreTranslation('delete')}
+            onClick={() =>
+              handleDeleteImmunization({
+                doseNumber: dose.doseNumber,
+                immunizationId: dose.immunizationObsUuid,
+                vaccineUuid,
+              })
+            }
+            size={responsiveSize}
+          >
+            <TrashCanIcon size={16} />
+          </IconButton>
+        )}
       </div>
     ),
   }));
