@@ -11,7 +11,15 @@ import {
   TableHeader,
   TableRow,
 } from '@carbon/react';
-import { launchWorkspace2, formatDate, formatDatetime, useConfig, usePagination } from '@openmrs/esm-framework';
+import {
+  launchWorkspace2,
+  formatDate,
+  formatDatetime,
+  useConfig,
+  usePagination,
+  useSession,
+  userHasAccess,
+} from '@openmrs/esm-framework';
 import { CardHeader, EmptyState, ErrorState, PatientChartPagination } from '@openmrs/esm-patient-common-lib';
 import { type ConfigObject, type ProgramSectionConfig } from '../config-schema';
 import { useEnrollments } from '../programs/programs.resource';
@@ -40,6 +48,9 @@ const ProgramSectionCard: React.FC<ProgramSectionCardProps> = ({ patientUuid, se
   const { t } = useTranslation();
   const { encounters, error, isLoading } = useProgramSectionEncounters(patientUuid, section.encounterTypeUuid);
   const { age, isLoading: isLoadingAge } = usePatientAge(patientUuid);
+  const session = useSession();
+  const canAddSection =
+    userHasAccess('Add Encounters', session?.user) && userHasAccess('Edit Encounters', session?.user);
 
   // Some fields (e.g. Diagnosis) have two config entries sharing the same concept, one per
   // age band -- only one is ever visible for a given patient, so keying by conceptUuid below
@@ -70,7 +81,7 @@ const ProgramSectionCard: React.FC<ProgramSectionCardProps> = ({ patientUuid, se
       <EmptyState
         displayText={section.sectionTitle.toLowerCase()}
         headerTitle={section.sectionTitle}
-        launchForm={launchForm}
+        launchForm={canAddSection ? launchForm : undefined}
       />
     );
   }
@@ -96,9 +107,11 @@ const ProgramSectionCard: React.FC<ProgramSectionCardProps> = ({ patientUuid, se
   return (
     <div className={styles.widgetCard}>
       <CardHeader title={section.sectionTitle}>
-        <Button kind="ghost" onClick={launchForm}>
-          {t('add', 'Add')}
-        </Button>
+        {canAddSection && (
+          <Button kind="ghost" onClick={launchForm}>
+            {t('add', 'Add')}
+          </Button>
+        )}
       </CardHeader>
       <DataTable rows={tableRows} headers={tableHeaders} size="sm" useZebraStyles>
         {({ rows, headers, getHeaderProps, getRowProps, getTableProps }) => (

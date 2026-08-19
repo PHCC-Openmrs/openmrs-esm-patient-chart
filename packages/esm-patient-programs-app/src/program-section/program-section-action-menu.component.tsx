@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Layer, OverflowMenu, OverflowMenuItem } from '@carbon/react';
-import { launchWorkspace2, showModal, useLayoutType } from '@openmrs/esm-framework';
+import { launchWorkspace2, showModal, useLayoutType, useSession, userHasAccess } from '@openmrs/esm-framework';
 import { type ProgramSectionConfig } from '../config-schema';
 import { type ProgramSectionEncounter } from './program-section.resource';
 import styles from './program-section-action-menu.scss';
@@ -15,6 +15,9 @@ interface ProgramSectionActionMenuProps {
 export const ProgramSectionActionMenu = ({ encounter, section, patientUuid }: ProgramSectionActionMenuProps) => {
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
+  const session = useSession();
+  const canEdit = userHasAccess('Add Observations', session?.user) && userHasAccess('Edit Observations', session?.user);
+  const canDelete = userHasAccess('Edit Encounters', session?.user);
 
   const launchEditForm = useCallback(
     () =>
@@ -37,6 +40,10 @@ export const ProgramSectionActionMenu = ({ encounter, section, patientUuid }: Pr
     });
   }, [encounter.uuid, patientUuid, section.encounterTypeUuid, section.sectionTitle]);
 
+  if (!canEdit && !canDelete) {
+    return null;
+  }
+
   return (
     <Layer className={styles.layer}>
       <OverflowMenu
@@ -47,20 +54,24 @@ export const ProgramSectionActionMenu = ({ encounter, section, patientUuid }: Pr
         size={isTablet ? 'lg' : 'sm'}
         flipped
       >
-        <OverflowMenuItem
-          className={styles.menuItem}
-          id="editSection"
-          onClick={launchEditForm}
-          itemText={t('edit', 'Edit')}
-        />
-        <OverflowMenuItem
-          className={styles.menuItem}
-          id="deleteSection"
-          hasDivider
-          isDelete
-          onClick={launchDeleteDialog}
-          itemText={t('delete', 'Delete')}
-        />
+        {canEdit && (
+          <OverflowMenuItem
+            className={styles.menuItem}
+            id="editSection"
+            onClick={launchEditForm}
+            itemText={t('edit', 'Edit')}
+          />
+        )}
+        {canDelete && (
+          <OverflowMenuItem
+            className={styles.menuItem}
+            id="deleteSection"
+            hasDivider
+            isDelete
+            onClick={launchDeleteDialog}
+            itemText={t('delete', 'Delete')}
+          />
+        )}
       </OverflowMenu>
     </Layer>
   );
