@@ -13,7 +13,15 @@ import {
   TableHeader,
   TableRow,
 } from '@carbon/react';
-import { AddIcon, formatDate, launchWorkspace2, parseDate, useLayoutType } from '@openmrs/esm-framework';
+import {
+  AddIcon,
+  formatDate,
+  launchWorkspace2,
+  parseDate,
+  useLayoutType,
+  useSession,
+  userHasAccess,
+} from '@openmrs/esm-framework';
 import { CardHeader, EmptyState, ErrorState } from '@openmrs/esm-patient-common-lib';
 import { patientAllergiesFormWorkspace } from '../constants';
 import { useAllergies } from './allergy-intolerance.resource';
@@ -34,6 +42,9 @@ const AllergiesDetailedSummary: React.FC<AllergiesDetailedSummaryProps> = ({ pat
   const headerTitle = t('allergies', 'Allergies');
 
   const launchAllergiesForm = useCallback(() => launchWorkspace2(patientAllergiesFormWorkspace), []);
+  const session = useSession();
+  const canAddAllergies =
+    userHasAccess('Add Allergies', session?.user) || userHasAccess('Edit Allergies', session?.user);
 
   const tableHeaders = [
     { key: 'display', header: t('allergen', 'Allergen') },
@@ -73,14 +84,16 @@ const AllergiesDetailedSummary: React.FC<AllergiesDetailedSummaryProps> = ({ pat
       <div className={styles.widgetCard}>
         <CardHeader title={headerTitle}>
           <span>{isValidating ? <InlineLoading /> : null}</span>
-          <Button
-            kind="ghost"
-            renderIcon={(props) => <AddIcon size={16} {...props} />}
-            iconDescription="Add allergies"
-            onClick={launchAllergiesForm}
-          >
-            {t('add', 'Add')}
-          </Button>
+          {canAddAllergies && (
+            <Button
+              kind="ghost"
+              renderIcon={(props) => <AddIcon size={16} {...props} />}
+              iconDescription="Add allergies"
+              onClick={launchAllergiesForm}
+            >
+              {t('add', 'Add')}
+            </Button>
+          )}
         </CardHeader>
         <DataTable rows={tableRows} headers={tableHeaders} isSortable useZebraStyles size={isTablet ? 'lg' : 'sm'}>
           {({ rows, headers, getHeaderProps, getTableProps }) => (
@@ -124,7 +137,13 @@ const AllergiesDetailedSummary: React.FC<AllergiesDetailedSummaryProps> = ({ pat
     );
   }
 
-  return <EmptyState displayText={displayText} headerTitle={headerTitle} launchForm={launchAllergiesForm} />;
+  return (
+    <EmptyState
+      displayText={displayText}
+      headerTitle={headerTitle}
+      launchForm={canAddAllergies ? launchAllergiesForm : undefined}
+    />
+  );
 };
 
 export default AllergiesDetailedSummary;

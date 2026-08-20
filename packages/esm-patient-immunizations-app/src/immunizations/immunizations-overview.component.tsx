@@ -14,7 +14,15 @@ import {
   TableHeader,
   TableRow,
 } from '@carbon/react';
-import { AddIcon, formatDate, launchWorkspace2, parseDate, usePagination } from '@openmrs/esm-framework';
+import {
+  AddIcon,
+  formatDate,
+  launchWorkspace2,
+  parseDate,
+  usePagination,
+  useSession,
+  userHasAccess,
+} from '@openmrs/esm-framework';
 import { CardHeader, EmptyState, ErrorState, PatientChartPagination } from '@openmrs/esm-patient-common-lib';
 import { useImmunizations } from '../hooks/useImmunizations';
 import styles from './immunizations-overview.scss';
@@ -37,6 +45,10 @@ const ImmunizationsOverview: React.FC<ImmunizationsOverviewProps> = ({ patient, 
   const { results: paginatedImmunizations, goTo, currentPage } = usePagination(immunizations ?? [], immunizationsCount);
 
   const launchImmunizationsForm = React.useCallback(() => launchWorkspace2('immunization-form-workspace'), []);
+  const session = useSession();
+  const canRecordImmunization =
+    (userHasAccess('Add Encounters', session?.user) || userHasAccess('Edit Encounters', session?.user)) &&
+    (userHasAccess('Add Observations', session?.user) || userHasAccess('Edit Observations', session?.user));
 
   const tableHeaders = [
     {
@@ -74,14 +86,16 @@ const ImmunizationsOverview: React.FC<ImmunizationsOverviewProps> = ({ patient, 
       <div className={styles.widgetCard}>
         <CardHeader title={headerTitle}>
           <span>{isValidating ? <InlineLoading /> : null}</span>
-          <Button
-            kind="ghost"
-            renderIcon={(props: ComponentProps<typeof AddIcon>) => <AddIcon size={16} {...props} />}
-            iconDescription="Add immunizations"
-            onClick={launchImmunizationsForm}
-          >
-            {t('add', 'Add')}
-          </Button>
+          {canRecordImmunization && (
+            <Button
+              kind="ghost"
+              renderIcon={(props: ComponentProps<typeof AddIcon>) => <AddIcon size={16} {...props} />}
+              iconDescription="Add immunizations"
+              onClick={launchImmunizationsForm}
+            >
+              {t('add', 'Add')}
+            </Button>
+          )}
         </CardHeader>
         <DataTable headers={tableHeaders} rows={tableRows} isSortable size="sm" useZebraStyles>
           {({ rows, headers, getHeaderProps, getTableProps }) => (
@@ -128,7 +142,13 @@ const ImmunizationsOverview: React.FC<ImmunizationsOverviewProps> = ({ patient, 
       </div>
     );
   }
-  return <EmptyState displayText={displayText} headerTitle={headerTitle} launchForm={launchImmunizationsForm} />;
+  return (
+    <EmptyState
+      displayText={displayText}
+      headerTitle={headerTitle}
+      launchForm={canRecordImmunization ? launchImmunizationsForm : undefined}
+    />
+  );
 };
 
 export default ImmunizationsOverview;

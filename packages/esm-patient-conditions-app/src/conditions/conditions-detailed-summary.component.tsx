@@ -16,7 +16,16 @@ import {
   TableRow,
   Tile,
 } from '@carbon/react';
-import { AddIcon, formatDate, launchWorkspace2, parseDate, useLayoutType } from '@openmrs/esm-framework';
+import {
+  AddIcon,
+  formatDate,
+  launchWorkspace2,
+  parseDate,
+  useLayoutType,
+  useSession,
+  userHasAccess,
+  UserHasAccess,
+} from '@openmrs/esm-framework';
 import { CardHeader, EmptyState, ErrorState } from '@openmrs/esm-patient-common-lib';
 import { ConditionsActionMenu } from './conditions-action-menu.component';
 import { type Condition, type ConditionTableHeader, useConditions, useConditionsSorting } from './conditions.resource';
@@ -32,6 +41,8 @@ function ConditionsDetailedSummary({ patient }) {
   const isDesktop = layout === 'small-desktop' || layout === 'large-desktop';
 
   const { conditions, error, isLoading, isValidating } = useConditions(patient.id);
+  const session = useSession();
+  const canRecordDiagnoses = userHasAccess('Edit Conditions', session?.user);
 
   const filteredConditions = useMemo(() => {
     if (!filter || filter == 'All') {
@@ -138,14 +149,16 @@ function ConditionsDetailedSummary({ patient }) {
               />
             </div>
             <div className={styles.divider}>|</div>
-            <Button
-              kind="ghost"
-              renderIcon={(props: ComponentProps<typeof AddIcon>) => <AddIcon size={16} {...props} />}
-              iconDescription="Add conditions"
-              onClick={launchConditionsForm}
-            >
-              {t('add', 'Add')}
-            </Button>
+            <UserHasAccess privilege="Edit Conditions">
+              <Button
+                kind="ghost"
+                renderIcon={(props: ComponentProps<typeof AddIcon>) => <AddIcon size={16} {...props} />}
+                iconDescription="Add conditions"
+                onClick={launchConditionsForm}
+              >
+                {t('add', 'Add')}
+              </Button>
+            </UserHasAccess>
           </div>
         </CardHeader>
         <DataTable
@@ -214,7 +227,13 @@ function ConditionsDetailedSummary({ patient }) {
       </div>
     );
   }
-  return <EmptyState displayText={displayText} headerTitle={headerTitle} launchForm={launchConditionsForm} />;
+  return (
+    <EmptyState
+      displayText={displayText}
+      headerTitle={headerTitle}
+      launchForm={canRecordDiagnoses ? launchConditionsForm : undefined}
+    />
+  );
 }
 
 export default ConditionsDetailedSummary;

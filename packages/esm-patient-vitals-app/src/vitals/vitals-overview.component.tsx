@@ -13,11 +13,12 @@ import {
   parseDate,
   useConfig,
   useLayoutType,
+  useSession,
 } from '@openmrs/esm-framework';
 import type { ConfigObject } from '../config-schema';
 import type { VitalsTableHeader, VitalsTableRow } from './types';
 import { useLaunchVitalsAndBiometricsForm } from '../utils';
-import { useVitalsAndBiometrics, useConceptUnits, withUnit } from '../common';
+import { useVitalsAndBiometrics, useConceptUnits, withUnit, canRecordVitalsAndBiometrics } from '../common';
 import PaginatedVitals from './paginated-vitals.component';
 import PrintComponent from './print/print.component';
 import VitalsChart from './vitals-chart.component';
@@ -41,6 +42,8 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
   const [isPrinting, setIsPrinting] = useState(false);
   const contentToPrintRef = useRef(null);
   const launchVitalsBiometricsForm = useLaunchVitalsAndBiometricsForm(patientUuid);
+  const session = useSession();
+  const canRecordVitals = canRecordVitalsAndBiometrics(session?.user);
 
   const { excludePatientIdentifierCodeTypes } = useConfig();
   const { data: vitals, error, isLoading, isValidating } = useVitalsAndBiometrics(patientUuid);
@@ -224,14 +227,16 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
                         {t('print', 'Print')}
                       </Button>
                     )}
-                    <Button
-                      kind="ghost"
-                      renderIcon={AddIcon}
-                      iconDescription="Add vitals"
-                      onClick={launchVitalsBiometricsForm}
-                    >
-                      {t('add', 'Add')}
-                    </Button>
+                    {canRecordVitals && (
+                      <Button
+                        kind="ghost"
+                        renderIcon={AddIcon}
+                        iconDescription="Add vitals"
+                        onClick={launchVitalsBiometricsForm}
+                      >
+                        {t('add', 'Add')}
+                      </Button>
+                    )}
                   </>
                 </div>
               </CardHeader>
@@ -256,7 +261,11 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
           );
         }
         return (
-          <EmptyState displayText={displayText} headerTitle={headerTitle} launchForm={launchVitalsBiometricsForm} />
+          <EmptyState
+            displayText={displayText}
+            headerTitle={headerTitle}
+            launchForm={canRecordVitals ? launchVitalsBiometricsForm : undefined}
+          />
         );
       })()}
     </>

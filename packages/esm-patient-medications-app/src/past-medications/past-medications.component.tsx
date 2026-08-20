@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { DataTableSkeleton } from '@carbon/react';
 import { EmptyState, ErrorState, useLaunchWorkspaceRequiringVisit } from '@openmrs/esm-patient-common-lib';
+import { useSession, userHasAccess } from '@openmrs/esm-framework';
 import { useMedicationOrders } from '../api';
 import MedicationsDetailsTable from '../components/medications-details-table.component';
 
@@ -14,6 +15,8 @@ const PastMedications: React.FC<PastMedicationsProps> = ({ patient }) => {
   const headerTitle = t('pastMedicationsHeaderTitle', 'Past medications');
   const displayText = t('pastMedicationsDisplayText', 'past medications');
   const launchOrderBasket = useLaunchWorkspaceRequiringVisit(patient.id, 'order-basket');
+  const session = useSession();
+  const canManageOrders = userHasAccess('Add Orders', session?.user) || userHasAccess('Edit Orders', session?.user);
 
   const { pastOrders, error, isLoading, isValidating } = useMedicationOrders(patient?.id);
 
@@ -43,7 +46,7 @@ const PastMedications: React.FC<PastMedicationsProps> = ({ patient }) => {
     <EmptyState
       displayText={displayText}
       headerTitle={headerTitle}
-      launchForm={() => launchOrderBasket({}, { encounterUuid: '' })}
+      launchForm={canManageOrders ? () => launchOrderBasket({}, { encounterUuid: '' }) : undefined}
     />
   );
 };

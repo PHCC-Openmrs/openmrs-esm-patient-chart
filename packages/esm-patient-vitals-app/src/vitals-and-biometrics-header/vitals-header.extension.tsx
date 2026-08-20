@@ -7,8 +7,14 @@ dayjs.extend(duration);
 import { Trans, useTranslation } from 'react-i18next';
 import { Button, InlineLoading, Tag, Toggletip, ToggletipButton, ToggletipContent } from '@carbon/react';
 import { ArrowRight, Information } from '@carbon/react/icons';
-import { ConfigurableLink, formatDate, parseDate, useConfig, type Visit } from '@openmrs/esm-framework';
-import { interpretBloodPressure, useConceptUnits, useVitalsAndBiometrics, useVitalsConceptMetadata } from '../common';
+import { ConfigurableLink, formatDate, parseDate, useConfig, useSession, type Visit } from '@openmrs/esm-framework';
+import {
+  canRecordVitalsAndBiometrics,
+  interpretBloodPressure,
+  useConceptUnits,
+  useVitalsAndBiometrics,
+  useVitalsConceptMetadata,
+} from '../common';
 import { type ConfigObject } from '../config-schema';
 import { useLaunchVitalsAndBiometricsForm } from '../utils';
 import VitalsHeaderItem from './vitals-header-item.component';
@@ -50,6 +56,8 @@ const VitalsHeader: React.FC<VitalsHeaderProps> = ({
   const isActiveVisit = Boolean(visitContext && !visitContext.stopDatetime);
   const launchForm = useLaunchVitalsAndBiometricsForm(patientUuid);
   const showBmi = useMemo(() => shouldShowBmi(patient, config.biometrics), [patient, config.biometrics]);
+  const session = useSession();
+  const canRecordVitals = canRecordVitalsAndBiometrics(session?.user);
 
   const launchVitalsAndBiometricsForm = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -211,7 +219,7 @@ const VitalsHeader: React.FC<VitalsHeaderProps> = ({
               <span>{isValidating ? <InlineLoading /> : null}</span>
             </div>
           ) : null}
-          {!hideLinks && (
+          {!hideLinks && canRecordVitals && (
             <div className={styles.buttonContainer}>
               <Button
                 className={styles.recordVitalsButton}
@@ -325,7 +333,7 @@ const VitalsHeader: React.FC<VitalsHeaderProps> = ({
         <span className={styles.bodyText}>{t('noDataRecorded', 'No data has been recorded for this patient')}</span>
       </div>
 
-      {!hideLinks && (
+      {!hideLinks && canRecordVitals && (
         <Button className={styles.recordVitalsButton} kind="ghost" onClick={launchVitalsAndBiometricsForm} size="sm">
           {t('recordVitals', 'Record vitals')}
           <ArrowRight size={16} className={styles.recordVitalsIconButton} />

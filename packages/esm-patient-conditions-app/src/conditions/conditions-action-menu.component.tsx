@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Layer, OverflowMenu, OverflowMenuItem } from '@carbon/react';
-import { launchWorkspace2, showModal, useLayoutType } from '@openmrs/esm-framework';
+import { launchWorkspace2, showModal, useLayoutType, useSession, userHasAccess } from '@openmrs/esm-framework';
 import { type Condition } from './conditions.resource';
 import styles from './conditions-action-menu.scss';
 
@@ -13,6 +13,10 @@ interface conditionsActionMenuProps {
 export const ConditionsActionMenu = ({ condition, patientUuid }: conditionsActionMenuProps) => {
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
+  const session = useSession();
+  // Both editing and voiding a condition are gated by the same backend
+  // privilege (there's no separate Add/Delete Conditions privilege).
+  const canEditConditions = userHasAccess('Edit Conditions', session?.user);
 
   const launchEditConditionsForm = useCallback(
     () =>
@@ -31,6 +35,10 @@ export const ConditionsActionMenu = ({ condition, patientUuid }: conditionsActio
       patientUuid,
     });
   };
+
+  if (!canEditConditions) {
+    return null;
+  }
 
   return (
     <Layer className={styles.layer}>

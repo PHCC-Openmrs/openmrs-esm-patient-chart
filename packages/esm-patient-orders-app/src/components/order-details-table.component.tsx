@@ -62,6 +62,8 @@ import {
   useConfig,
   useLayoutType,
   usePagination,
+  useSession,
+  userHasAccess,
 } from '@openmrs/esm-framework';
 import { buildGeneralOrder, buildLabOrder, buildMedicationOrder } from '../utils';
 import { ORDER_TYPES, getOrderGrouping, isValidOmrsOrderType } from '../constants/order-types';
@@ -132,6 +134,8 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
   const isTablet = useLayoutType() === 'tablet';
   const responsiveSize = isTablet ? 'lg' : 'md';
   const _launchOrderBasket = useLaunchWorkspaceRequiringVisit(patientUuid, 'order-basket');
+  const session = useSession();
+  const canManageOrders = userHasAccess('Add Orders', session?.user) || userHasAccess('Edit Orders', session?.user);
   const contentToPrintRef = useRef<HTMLDivElement | null>(null);
   const { excludePatientIdentifierCodeTypes } = useConfig();
   const [isPrinting, setIsPrinting] = useState(false);
@@ -405,7 +409,7 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
             <EmptyState
               headerTitle={headerTitle}
               displayText={emptyStateDisplayText}
-              launchForm={() => launchOrderBasketForNewItem()}
+              launchForm={canManageOrders ? () => launchOrderBasketForNewItem() : undefined}
             />
           ) : (
             <div className={styles.widgetCard}>
@@ -427,7 +431,7 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
                       {t('print', 'Print')}
                     </Button>
                   )}
-                  {showAddButton && (
+                  {showAddButton && canManageOrders && (
                     <Button
                       className={styles.addButton}
                       kind="ghost"
@@ -597,6 +601,8 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
 function OrderBasketItemActions({ orderItem, patient }: OrderBasketItemActionsProps) {
   const { t } = useTranslation();
   const isDeclined = orderItem.fulfillerStatus === 'DECLINED';
+  const session = useSession();
+  const canManageOrders = userHasAccess('Add Orders', session?.user) || userHasAccess('Edit Orders', session?.user);
 
   const { grouping, postDataPrepFn } = useMemo(() => {
     if (orderItem.type === ORDER_TYPES.DRUG_ORDER) {
@@ -698,7 +704,7 @@ function OrderBasketItemActions({ orderItem, patient }: OrderBasketItemActionsPr
   }, [orderItem, patient]);
 
   // No actions available for declined orders
-  if (isDeclined) {
+  if (isDeclined || !canManageOrders) {
     return null;
   }
 
