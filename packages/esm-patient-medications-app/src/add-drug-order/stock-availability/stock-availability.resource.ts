@@ -9,15 +9,20 @@ interface StockQuantity {
 async function fetchStockQuantityForDrug(drugUuid: string, locationUuid: string | undefined) {
   // Stock items are keyed by the drug they represent - find the stock item for this
   // drug before we can look up how much of it is on hand.
+  //
+  // Uses v=default rather than a custom representation - this module's stockitem REST
+  // resource doesn't honor arbitrary custom representations like v=custom:(uuid); it
+  // silently returns near-empty objects (missing even `uuid`) instead of erroring, so
+  // the lookup would always look like "no matching stock item" even when one exists.
   const { data: stockItemData } = await openmrsFetch<{ results: Array<{ uuid: string }> }>(
-    `${restBaseUrl}/stockmanagement/stockitem?drugUuid=${drugUuid}&v=custom:(uuid)&limit=1`,
+    `${restBaseUrl}/stockmanagement/stockitem?drugUuid=${drugUuid}&v=default&limit=1`,
   );
   const stockItemUuid = stockItemData.results?.[0]?.uuid;
   if (!stockItemUuid) {
-    // No matching stock item - either the stock management module isn't installed,
-    // or this drug simply isn't tracked as a stock item. Either way, there's nothing
-    // to show.
-    return null;
+    // No matching stock item - treated the same as a stock item with 0 on hand, so a
+    // drug that isn't tracked in stock management reads as "out of stock" rather than
+    // silently showing nothing, which was easy to mistake for the feature not working.
+    return { quantity: 0, quantityUoM: undefined };
   }
 
   const params = new URLSearchParams({ v: 'default', stockItemUuid, groupBy: 'StockItemOnly' });
@@ -33,10 +38,10 @@ async function fetchStockQuantityForDrug(drugUuid: string, locationUuid: string 
 
 /**
  * Looks up how much of a drug is currently on hand at the prescriber's own location,
- * for the "in stock" hint shown on the drug order form. Fails silently (returns
- * `stock: null`) rather than surfacing an error, since the stock management module
- * may not be installed on every deployment and this is a convenience hint, not a
- * required part of ordering.
+ * for the "in stock" hint shown on the drug order form. A drug with no tracked stock
+ * item, or no inventory record, reads as 0 (out of stock) rather than showing nothing.
+ * Only a genuine fetch error (e.g. the stock management module isn't installed on this
+ * deployment) suppresses the hint entirely, via `stock: null` - see the component.
  */
 export function useStockQuantityForDrug(drugUuid: string | undefined) {
   const { sessionLocation } = useSession();
