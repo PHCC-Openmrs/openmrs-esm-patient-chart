@@ -150,11 +150,11 @@ export function useOrderConceptsByUuids(uuids: Array<string>) {
   return results;
 }
 
-export function useLabEncounter(encounterUuid: string) {
+export function useLabEncounter(encounterUuid: string | undefined) {
   const apiUrl = `${restBaseUrl}/encounter/${encounterUuid}?v=${labEncounterRepresentation}`;
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<FetchResponse<Encounter>, Error>(
-    apiUrl,
+    encounterUuid ? apiUrl : null,
     openmrsFetch,
   );
 
@@ -216,7 +216,7 @@ export function useCompletedLabResults(order: Order) {
     isLoading: isLoadingEncounter,
     mutate: mutateLabOrders,
     error: encounterError,
-  } = useLabEncounter(order.encounter.uuid);
+  } = useLabEncounter(order.encounter?.uuid);
   const {
     data: observation,
     isLoading: isLoadingObs,
@@ -241,7 +241,7 @@ export function useCompletedLabResultsArray(order: Order) {
     isLoading: isLoadingEncounter,
     mutate: mutateLabOrders,
     error: encounterError,
-  } = useLabEncounter(order.encounter.uuid);
+  } = useLabEncounter(order.encounter?.uuid);
 
   const obsUuids = encounter?.obs.filter((o) => o?.order.uuid === order?.uuid).map((o) => o.uuid);
 

@@ -626,15 +626,15 @@ function OrderBasketItemActions({ orderItem, patient }: OrderBasketItemActionsPr
   const alreadyInBasket = orders.some((x) => x.uuid === orderItem.uuid);
   const { mutate: globalMutate } = useSWRConfig();
 
-  const windowProps = useMemo(() => ({ encounterUuid: orderItem.encounter.uuid }), [orderItem.encounter.uuid]);
+  const windowProps = useMemo(() => ({ encounterUuid: orderItem.encounter?.uuid }), [orderItem.encounter?.uuid]);
   const groupProps = useMemo(
     () => ({
       patient,
       patientUuid: patient.id,
-      visitContext: orderItem.encounter.visit,
-      mutateVisitContext: invalidateVisitByUuid(globalMutate, orderItem.encounter.visit.uuid),
+      visitContext: orderItem.encounter?.visit,
+      mutateVisitContext: invalidateVisitByUuid(globalMutate, orderItem.encounter?.visit?.uuid),
     }),
-    [patient, orderItem.encounter.visit, globalMutate],
+    [patient, orderItem.encounter?.visit, globalMutate],
   );
 
   const handleCancelOrder = useCallback(() => {
