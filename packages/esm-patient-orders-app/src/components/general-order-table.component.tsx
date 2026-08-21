@@ -26,7 +26,7 @@ const GeneralOrderTable: React.FC<GeneralOrderProps> = ({ order }) => {
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
   const { concept, isLoading: isLoadingConcept } = useOrderConceptByUuid(order.concept.uuid);
-  const { encounter, isLoading: isLoadingResult } = useLabEncounter(order.encounter.uuid);
+  const { encounter, isLoading: isLoadingResult } = useLabEncounter(order.encounter?.uuid);
 
   const tableHeaders: Array<{ key: string; header: string }> = [
     {
