@@ -9,7 +9,7 @@ interface Props {
 
 const VisitDiagnosisCell: React.FC<Props> = ({ visit }) => {
   const diagnoses = dedupeDiagnoses(
-    visit.encounters.flatMap((encounter) => encounter.diagnoses).filter((diagnosis) => !diagnosis.voided),
+    (visit.encounters ?? []).flatMap((encounter) => encounter.diagnoses ?? []).filter((diagnosis) => !diagnosis.voided),
   );
 
   return <DiagnosisTags diagnoses={diagnoses} />;
