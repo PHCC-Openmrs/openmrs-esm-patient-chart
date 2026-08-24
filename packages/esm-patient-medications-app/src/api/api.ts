@@ -218,7 +218,7 @@ export const prepMedicationOrderPostData: PostDataPrepFunction = (
       orderer: orderingProviderUuid,
       concept: order.drug.concept.uuid,
       drug: order.drug.uuid,
-      orderReasonNonCoded: null,
+      orderReasonNonCoded: order.orderReasonNonCoded ?? null,
     };
   } else {
     throw new Error(`Unknown order action ${order.action}. This is a development error.`);

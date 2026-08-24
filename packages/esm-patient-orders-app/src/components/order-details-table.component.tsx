@@ -66,6 +66,8 @@ import {
   userHasAccess,
 } from '@openmrs/esm-framework';
 import { buildGeneralOrder, buildLabOrder, buildMedicationOrder } from '../utils';
+import { useDiscontinuedOrderReasons } from '../hooks/useDiscontinuedOrderReasons';
+import { useMedicationDispenseReasons } from '../hooks/useMedicationDispenseReasons';
 import { ORDER_TYPES, getOrderGrouping, isValidOmrsOrderType } from '../constants/order-types';
 import GeneralOrderTable from './general-order-table.component';
 import MedicationRecord from './medication-record.component';
@@ -138,6 +140,8 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
   const canManageOrders = userHasAccess('Add Orders', session?.user) || userHasAccess('Edit Orders', session?.user);
   const contentToPrintRef = useRef<HTMLDivElement | null>(null);
   const { excludePatientIdentifierCodeTypes } = useConfig();
+  const discontinuedOrderReasons = useDiscontinuedOrderReasons(patientUuid);
+  const medicationDispenseReasons = useMedicationDispenseReasons(patientUuid);
   const [isPrinting, setIsPrinting] = useState(false);
   const { data: orderTypes } = useOrderTypes();
   const [selectedOrderTypeUuid, setSelectedOrderTypeUuid] = useState(null);
@@ -246,8 +250,8 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
       isSortable: false,
     },
     {
-      key: 'reason',
-      header: t('reason', 'Reason'),
+      key: 'reasonForCancelling',
+      header: t('reasonForCancelling', 'Reason for Cancelling'),
       isSortable: false,
     },
   ];
@@ -288,9 +292,9 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
         ) : (
           '--'
         ),
-        reason: <div className={styles.singleLineText}>{order.fulfillerComment || '--'}</div>,
+        reasonForCancelling: discontinuedOrderReasons[order.uuid] || medicationDispenseReasons[order.uuid] || '--',
       })) ?? [],
-    [displayedOrders, t],
+    [displayedOrders, t, discontinuedOrderReasons, medicationDispenseReasons],
   );
 
   const { results: paginatedOrders, goTo, currentPage } = usePagination(tableRows, defaultPageSize);
@@ -638,11 +642,15 @@ function OrderBasketItemActions({ orderItem, patient }: OrderBasketItemActionsPr
   );
 
   const handleCancelOrder = useCallback(() => {
+    const reasonForCancelling = window.prompt(t('reasonForCancellingPrompt', 'Reason for cancelling this order:'));
+    if (reasonForCancelling === null) {
+      return;
+    }
     if (orderItem.type === ORDER_TYPES.DRUG_ORDER) {
       getDrugOrderByUuid(orderItem.uuid)
         .then((res) => {
           const medicationOrder = res.data;
-          const discontinueItem = buildMedicationOrder(medicationOrder, 'DISCONTINUE');
+          const discontinueItem = buildMedicationOrder(medicationOrder, 'DISCONTINUE', reasonForCancelling);
           setOrders([...orders, discontinueItem]);
           launchWorkspace2('order-basket', {}, windowProps, groupProps);
         })
@@ -650,15 +658,15 @@ function OrderBasketItemActions({ orderItem, patient }: OrderBasketItemActionsPr
           console.error('Error cancelling drug order: ', e);
         });
     } else if (orderItem.type === ORDER_TYPES.TEST_ORDER) {
-      const labItem = buildLabOrder(orderItem, 'DISCONTINUE');
+      const labItem = buildLabOrder(orderItem, 'DISCONTINUE', reasonForCancelling);
       setOrders([...orders, labItem]);
       launchWorkspace2('order-basket', {}, windowProps, groupProps);
     } else {
-      const order = buildGeneralOrder(orderItem, 'DISCONTINUE');
+      const order = buildGeneralOrder(orderItem, 'DISCONTINUE', reasonForCancelling);
       setOrders([...orders, order]);
       launchWorkspace2('order-basket', {}, windowProps, groupProps);
     }
-  }, [orderItem, setOrders, orders, windowProps, groupProps]);
+  }, [orderItem, setOrders, orders, windowProps, groupProps, t]);
 
   const handleModifyOrder = useCallback(() => {
     if (orderItem.type === ORDER_TYPES.DRUG_ORDER) {

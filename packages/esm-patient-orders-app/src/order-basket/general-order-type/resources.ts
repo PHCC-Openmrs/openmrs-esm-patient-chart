@@ -72,6 +72,7 @@ export const prepOrderPostData: PostDataPrepFunction = (
       accessionNumber: order.accessionNumber,
       urgency: order.urgency,
       scheduledDate: order.scheduledDate ? toOmrsIsoString(order.scheduledDate) : null,
+      orderReasonNonCoded: order.orderReasonNonCoded ?? null,
     };
   } else {
     throw new Error(`Unknown order action: ${order.action}.`);
