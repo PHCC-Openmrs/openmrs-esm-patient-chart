@@ -250,11 +250,6 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
       isSortable: false,
     },
     {
-      key: 'reason',
-      header: t('reason', 'Reason'),
-      isSortable: false,
-    },
-    {
       key: 'reasonForCancelling',
       header: t('reasonForCancelling', 'Reason for Cancelling'),
       isSortable: false,
@@ -297,7 +292,6 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
         ) : (
           '--'
         ),
-        reason: <div className={styles.singleLineText}>{order.fulfillerComment || '--'}</div>,
         reasonForCancelling: discontinuedOrderReasons[order.uuid] || medicationDispenseReasons[order.uuid] || '--',
       })) ?? [],
     [displayedOrders, t, discontinuedOrderReasons, medicationDispenseReasons],
