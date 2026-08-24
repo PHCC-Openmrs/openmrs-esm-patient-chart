@@ -67,6 +67,7 @@ import {
 } from '@openmrs/esm-framework';
 import { buildGeneralOrder, buildLabOrder, buildMedicationOrder } from '../utils';
 import { useDiscontinuedOrderReasons } from '../hooks/useDiscontinuedOrderReasons';
+import { useMedicationDispenseReasons } from '../hooks/useMedicationDispenseReasons';
 import { ORDER_TYPES, getOrderGrouping, isValidOmrsOrderType } from '../constants/order-types';
 import GeneralOrderTable from './general-order-table.component';
 import MedicationRecord from './medication-record.component';
@@ -140,6 +141,7 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
   const contentToPrintRef = useRef<HTMLDivElement | null>(null);
   const { excludePatientIdentifierCodeTypes } = useConfig();
   const discontinuedOrderReasons = useDiscontinuedOrderReasons(patientUuid);
+  const medicationDispenseReasons = useMedicationDispenseReasons(patientUuid);
   const [isPrinting, setIsPrinting] = useState(false);
   const { data: orderTypes } = useOrderTypes();
   const [selectedOrderTypeUuid, setSelectedOrderTypeUuid] = useState(null);
@@ -296,9 +298,9 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
           '--'
         ),
         reason: <div className={styles.singleLineText}>{order.fulfillerComment || '--'}</div>,
-        reasonForCancelling: discontinuedOrderReasons[order.uuid] || '--',
+        reasonForCancelling: discontinuedOrderReasons[order.uuid] || medicationDispenseReasons[order.uuid] || '--',
       })) ?? [],
-    [displayedOrders, t, discontinuedOrderReasons],
+    [displayedOrders, t, discontinuedOrderReasons, medicationDispenseReasons],
   );
 
   const { results: paginatedOrders, goTo, currentPage } = usePagination(tableRows, defaultPageSize);
