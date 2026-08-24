@@ -107,7 +107,6 @@
   "priorityRequired": "Priority is required",
   "quantity": "Quantity",
   "quantityDispensedOfTotal": "{{dispensed}} of {{total}} {{unit}}",
-  "reason": "Reason",
   "reasonForCancelling": "Reason for Cancelling",
   "reasonForCancellingPrompt": "Reason for cancelling this order:",
   "referenceNumber": "Reference number",
