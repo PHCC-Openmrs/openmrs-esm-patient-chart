@@ -140,6 +140,7 @@ export const prepTestOrderPostData: PostDataPrepFunction = (
       encounter: encounterUuid,
       concept: order.testType.conceptUuid,
       orderReason: order.orderReason,
+      orderReasonNonCoded: order.orderReasonNonCoded ?? null,
       previousOrder: order.previousOrder,
       accessionNumber: order.accessionNumber,
       urgency: order.urgency,

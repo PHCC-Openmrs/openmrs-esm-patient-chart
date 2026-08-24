@@ -41,7 +41,11 @@ function getFutureScheduledDate(order: Order, now = new Date()) {
  * Builds medication order object from the given order object
  * See also same function in esm-patient-medications-app/src/api/api.ts
  */
-export function buildMedicationOrder(order: Order, action?: OrderAction): DrugOrderBasketItem {
+export function buildMedicationOrder(
+  order: Order,
+  action?: OrderAction,
+  orderReasonNonCoded?: string,
+): DrugOrderBasketItem {
   if (!order.drug) {
     throw new Error('Drug order is missing drug information.');
   }
@@ -102,13 +106,14 @@ export function buildMedicationOrder(order: Order, action?: OrderAction): DrugOr
     encounterUuid: order.encounter?.uuid,
     previousOrderDateActivated: action === 'REVISE' ? order.dateActivated : undefined,
     visit: order.encounter.visit,
+    orderReasonNonCoded: action === 'DISCONTINUE' ? orderReasonNonCoded : undefined,
   };
 }
 
 /**
  * Builds lab order object from the given order object
  */
-export function buildLabOrder(order: Order, action?: OrderAction): TestOrderBasketItem {
+export function buildLabOrder(order: Order, action?: OrderAction, orderReasonNonCoded?: string): TestOrderBasketItem {
   return {
     action: action,
     display: order.display,
@@ -127,13 +132,14 @@ export function buildLabOrder(order: Order, action?: OrderAction): TestOrderBask
     scheduledDate: order.scheduledDate ? new Date(order.scheduledDate) : null,
     encounterUuid: order.encounter?.uuid,
     visit: order.encounter.visit,
+    orderReasonNonCoded: action === 'DISCONTINUE' ? orderReasonNonCoded : undefined,
   };
 }
 
 /**
  * Builds general order object from the given order object
  */
-export function buildGeneralOrder(order: Order, action?: OrderAction): OrderBasketItem {
+export function buildGeneralOrder(order: Order, action?: OrderAction, orderReasonNonCoded?: string): OrderBasketItem {
   return {
     action: action,
     display: order.display,
@@ -147,6 +153,7 @@ export function buildGeneralOrder(order: Order, action?: OrderAction): OrderBask
     scheduledDate: order.scheduledDate ? new Date(order.scheduledDate) : null,
     encounterUuid: order.encounter?.uuid,
     visit: order.encounter.visit,
+    orderReasonNonCoded: action === 'DISCONTINUE' ? orderReasonNonCoded : undefined,
   };
 }
 
