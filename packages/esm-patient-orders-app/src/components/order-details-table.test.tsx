@@ -1,7 +1,7 @@
 import React from 'react';
 import { vi, describe, it, expect, test, beforeEach } from 'vitest';
 import { useReactToPrint } from 'react-to-print';
-import { screen, render } from '@testing-library/react';
+import { screen, render, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   type ConfigObject,
@@ -9,6 +9,7 @@ import {
   openmrsFetch,
   useConfig,
   useSession,
+  userHasAccess,
 } from '@openmrs/esm-framework';
 import {
   type Order,
@@ -32,6 +33,7 @@ const mockUseReactToPrint = vi.mocked(useReactToPrint);
 
 mockSession.mockReturnValue(mockSessionDataResponse.data);
 mockOpenmrsFetch.mockImplementation(vi.fn());
+vi.mocked(userHasAccess).mockReturnValue(true);
 
 vi.mock('react-to-print', async () => ({
   ...((await vi.importActual('react-to-print')) as object),
@@ -319,7 +321,13 @@ describe('OrderDetailsTable', () => {
     expect(screen.getByText('Received')).toBeInTheDocument();
     expect(screen.getByText('In progress')).toBeInTheDocument();
     expect(screen.getByText('Completed')).toBeInTheDocument();
-    expect(screen.getByText('--')).toBeInTheDocument();
+
+    const statusColumnIndex = screen
+      .getAllByRole('columnheader')
+      .findIndex((header) => /^status$/i.test(header.textContent ?? ''));
+    const noStatusRow = screen.getAllByRole('row').find((row) => within(row).queryByText('ORD-NUL'));
+    const statusCell = within(noStatusRow).getAllByRole('cell')[statusColumnIndex];
+    expect(statusCell).toHaveTextContent('--');
   });
 
   it('shows medication details when expanding a drug order row', async () => {
