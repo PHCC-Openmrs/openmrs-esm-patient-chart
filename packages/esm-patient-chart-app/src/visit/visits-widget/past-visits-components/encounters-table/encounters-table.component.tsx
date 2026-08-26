@@ -262,7 +262,7 @@ const EncountersTable: React.FC<EncountersTableProps> = ({
                     const encounterAgeInMinutes =
                       (Date.now() - new Date(encounter.rawDatetime).getTime()) / (1000 * 60);
 
-                    const canDeleteEncounter =
+                    const hasEncounterTypeEditAccess =
                       userHasAccess(encounter.editPrivilege, session?.user) &&
                       (encounterEditableDuration === 0 ||
                         (encounterEditableDuration > 0 && encounterAgeInMinutes <= encounterEditableDuration) ||
@@ -270,8 +270,13 @@ const EncountersTable: React.FC<EncountersTableProps> = ({
                           userHasAccess(privilege, session?.user),
                         ));
 
+                    const canDeleteEncounter =
+                      hasEncounterTypeEditAccess && userHasAccess('Delete Encounters', session?.user);
+
                     const canEditEncounter =
-                      canDeleteEncounter && (encounter.form?.uuid || isVisitNoteEncounter(encounter));
+                      hasEncounterTypeEditAccess &&
+                      userHasAccess('Edit Encounters', session?.user) &&
+                      (encounter.form?.uuid || isVisitNoteEncounter(encounter));
 
                     const canPrintEncounter = canPrintEncounters && supportsEmbeddedFormView(encounter);
 
