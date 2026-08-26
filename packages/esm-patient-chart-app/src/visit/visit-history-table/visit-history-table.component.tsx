@@ -68,7 +68,7 @@ const VisitHistoryTable: React.FC<VisitHistoryTableProps> = ({ patientUuid, pati
     return <ErrorState error={error} headerTitle={t('pastVisits', 'Past visits')} />;
   }
 
-  if (visits.length === 0) {
+  if (!visits?.length) {
     return (
       <div className={styles.emptyStateContainer}>
         <EmptyState headerTitle={t('pastVisits', 'Past visits')} displayText={t('visits', 'visits')} />

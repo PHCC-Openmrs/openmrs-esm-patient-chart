@@ -46,36 +46,34 @@ const VisitSummary: React.FC<VisitSummaryProps> = ({ visit, patientUuid }) => {
     const notes: Array<Note> = [];
 
     visit?.encounters?.forEach((enc) => {
-      if (enc.hasOwnProperty('orders')) {
+      if (enc.orders?.length) {
         medications.push(
           ...enc.orders.map((order: Order) => ({
             order,
             provider: {
-              name: enc.encounterProviders.length ? enc.encounterProviders[0].provider.person.display : '',
-              role: enc.encounterProviders.length ? enc.encounterProviders[0].encounterRole.display : '',
+              name: enc.encounterProviders?.length ? enc.encounterProviders[0].provider.person.display : '',
+              role: enc.encounterProviders?.length ? enc.encounterProviders[0].encounterRole.display : '',
             },
           })),
         );
       }
 
       // Check if there is a diagnosis associated with this encounter
-      if (enc.hasOwnProperty('diagnoses')) {
-        if (enc.diagnoses.length > 0) {
-          const validDiagnoses = enc.diagnoses.filter((diagnosis) => !diagnosis.voided);
-          diagnoses.push(...validDiagnoses);
-        }
+      if (enc.diagnoses?.length > 0) {
+        const validDiagnoses = enc.diagnoses.filter((diagnosis) => !diagnosis.voided);
+        diagnoses.push(...validDiagnoses);
       }
 
       // Check for Visit Diagnoses and Notes
-      if (enc.hasOwnProperty('obs')) {
+      if (enc.obs?.length) {
         enc.obs.forEach((obs) => {
           if (config.notesConceptUuids?.includes(obs.concept.uuid)) {
             // Putting all notes in a single array.
             notes.push({
               note: obs.value as string, // TODO: add better typing check
               provider: {
-                name: enc.encounterProviders.length ? enc.encounterProviders[0].provider.person.display : '',
-                role: enc.encounterProviders.length ? enc.encounterProviders[0].encounterRole.display : '',
+                name: enc.encounterProviders?.length ? enc.encounterProviders[0].provider.person.display : '',
+                role: enc.encounterProviders?.length ? enc.encounterProviders[0].encounterRole.display : '',
               },
               time: enc.encounterDatetime ? formatTime(parseDate(enc.encounterDatetime)) : '',
               concept: obs.concept,
