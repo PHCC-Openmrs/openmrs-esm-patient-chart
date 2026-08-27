@@ -197,6 +197,7 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
                         id={`field-${field.conceptUuid}`}
                         labelText={field.label}
                         value={value ? parseDate(value) : null}
+                        maxDate={new Date()}
                         onChange={(date) => onChange(date ? dayjs(date).format() : '')}
                       />
                     );
