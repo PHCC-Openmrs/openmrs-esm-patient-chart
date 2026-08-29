@@ -112,9 +112,7 @@ const MedicationsDetailsTable: React.FC<MedicationsDetailsTableProps> = ({
   const { orders, setOrders } = useOrderBasket<DrugOrderBasketItem>(patient, 'medications');
   const { results, goTo, currentPage } = usePagination(medications, pageSize);
   const session = useSession();
-  // saveOrder/discontinueOrder both accept either privilege; staging an item
-  // into the order basket has the same requirement regardless of action.
-  const canManageOrders = userHasAccess('Add Orders', session?.user) || userHasAccess('Edit Orders', session?.user);
+  const canManageOrders = userHasAccess('Task: patientChart.addDrugOrder', session?.user);
 
   const tableHeaders = [
     {

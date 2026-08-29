@@ -137,7 +137,7 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
   const responsiveSize = isTablet ? 'lg' : 'md';
   const _launchOrderBasket = useLaunchWorkspaceRequiringVisit(patientUuid, 'order-basket');
   const session = useSession();
-  const canManageOrders = userHasAccess('Add Orders', session?.user) || userHasAccess('Edit Orders', session?.user);
+  const canManageOrders = userHasAccess('Task: patientChart.addLabOrder', session?.user);
   const contentToPrintRef = useRef<HTMLDivElement | null>(null);
   const { excludePatientIdentifierCodeTypes } = useConfig();
   const discontinuedOrderReasons = useDiscontinuedOrderReasons(patientUuid);
@@ -606,7 +606,13 @@ function OrderBasketItemActions({ orderItem, patient }: OrderBasketItemActionsPr
   const { t } = useTranslation();
   const isDeclined = orderItem.fulfillerStatus === 'DECLINED';
   const session = useSession();
-  const canManageOrders = userHasAccess('Add Orders', session?.user) || userHasAccess('Edit Orders', session?.user);
+  const canManageOrders =
+    orderItem.type === ORDER_TYPES.DRUG_ORDER
+      ? userHasAccess('Task: patientChart.addDrugOrder', session?.user)
+      : orderItem.type === ORDER_TYPES.TEST_ORDER
+        ? userHasAccess('Task: patientChart.addLabOrder', session?.user)
+        : userHasAccess('Task: patientChart.addDrugOrder', session?.user) ||
+          userHasAccess('Task: patientChart.addLabOrder', session?.user);
 
   const { grouping, postDataPrepFn } = useMemo(() => {
     if (orderItem.type === ORDER_TYPES.DRUG_ORDER) {

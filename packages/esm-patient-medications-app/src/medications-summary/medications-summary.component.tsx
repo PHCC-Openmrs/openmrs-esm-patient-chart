@@ -78,7 +78,7 @@ export default function MedicationsSummary({ patient }: MedicationsSummaryProps)
 
   const { futureOrders, activeOrders, pastOrders, error, isLoading, isValidating } = useMedicationOrders(patient?.id);
   const session = useSession();
-  const canManageOrders = userHasAccess('Add Orders', session?.user) || userHasAccess('Edit Orders', session?.user);
+  const canManageOrders = userHasAccess('Task: patientChart.addDrugOrder', session?.user);
   const gatedLaunchAddDrugWorkspace = canManageOrders ? launchAddDrugWorkspace : undefined;
 
   return (
