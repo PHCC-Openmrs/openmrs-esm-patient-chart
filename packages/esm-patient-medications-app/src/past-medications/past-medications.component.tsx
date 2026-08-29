@@ -16,7 +16,7 @@ const PastMedications: React.FC<PastMedicationsProps> = ({ patient }) => {
   const displayText = t('pastMedicationsDisplayText', 'past medications');
   const launchOrderBasket = useLaunchWorkspaceRequiringVisit(patient.id, 'order-basket');
   const session = useSession();
-  const canManageOrders = userHasAccess('Add Orders', session?.user) || userHasAccess('Edit Orders', session?.user);
+  const canManageOrders = userHasAccess('Task: patientChart.addDrugOrder', session?.user);
 
   const { pastOrders, error, isLoading, isValidating } = useMedicationOrders(patient?.id);
 

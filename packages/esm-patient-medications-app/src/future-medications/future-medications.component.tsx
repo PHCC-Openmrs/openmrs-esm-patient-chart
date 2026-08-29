@@ -18,7 +18,7 @@ const FutureMedications: React.FC<FutureMedicationsProps> = ({ patient }) => {
   const { futureOrders, error, isLoading, isValidating } = useMedicationOrders(patient?.id);
   const launchOrderBasket = useLaunchWorkspaceRequiringVisit(patient.id, 'order-basket');
   const session = useSession();
-  const canManageOrders = userHasAccess('Add Orders', session?.user) || userHasAccess('Edit Orders', session?.user);
+  const canManageOrders = userHasAccess('Task: patientChart.addDrugOrder', session?.user);
 
   if (isLoading) {
     return <DataTableSkeleton role="progressbar" />;
