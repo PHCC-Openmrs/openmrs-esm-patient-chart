@@ -54,6 +54,7 @@ import {
   type MedicationOrderFormData,
   useDrugOrderForm,
 } from './drug-order-form.resource';
+import { useStockQuantityForDrug } from './stock-availability/stock-availability.resource';
 import styles from './drug-order-form.scss';
 
 export interface DrugOrderFormProps {
@@ -219,6 +220,7 @@ export function DrugOrderForm({
   );
 
   const drug = watch('drug') as Drug;
+  const { stock } = useStockQuantityForDrug(drug?.uuid);
   const routeValue = watch('route')?.value;
   const watchedUnit = watch('unit');
   const watchedUnitValue = watchedUnit?.value;
@@ -388,6 +390,26 @@ export function DrugOrderForm({
     [orderConfigObject, initialOrderBasketItem?.drug?.dosageForm],
   );
 
+  // Pharmacy dispenses in the stock item's configured dispensing unit (e.g. Tablet), not
+  // whatever Dose unit a prescriber might otherwise pick from the generic dosing-units
+  // concept set - a mismatch there is what let stock get dispensed/deducted in the wrong
+  // unit (e.g. Box) downstream. When the ordered drug has a matching stock item, lock the
+  // field to that unit instead of leaving it freely editable.
+  const stockDispensingUnitName = stock?.dispensingUnitName;
+  const stockDosingUnit = useMemo(
+    () =>
+      stockDispensingUnitName
+        ? drugDosingUnits.find((u) => u.value?.toLowerCase() === stockDispensingUnitName.toLowerCase()) ?? null
+        : null,
+    [stockDispensingUnitName, drugDosingUnits],
+  );
+
+  useEffect(() => {
+    if (stockDosingUnit) {
+      setValue('unit', stockDosingUnit, { shouldValidate: true });
+    }
+  }, [stockDosingUnit, setValue]);
+
   const drugRoutes: Array<MedicationRoute> = useMemo(() => orderConfigObject?.drugRoutes ?? [], [orderConfigObject]);
 
   const drugDispensingUnits: Array<QuantityUnit> = useMemo(
@@ -400,6 +422,24 @@ export function DrugOrderForm({
       ],
     [orderConfigObject, initialOrderBasketItem?.drug?.dosageForm],
   );
+
+  // "Quantity to dispense" is what actually reaches pharmacy (it becomes the FHIR
+  // dispenseRequest.quantity that seeds the dispense form) - if its unit isn't locked the
+  // same way Dose unit is, a prescriber could still leave/pick a unit stock doesn't
+  // recognize as the dispensing unit, reintroducing the same box/tablet mismatch.
+  const stockQuantityUnit = useMemo(
+    () =>
+      stockDispensingUnitName
+        ? drugDispensingUnits.find((u) => u.value?.toLowerCase() === stockDispensingUnitName.toLowerCase()) ?? null
+        : null,
+    [stockDispensingUnitName, drugDispensingUnits],
+  );
+
+  useEffect(() => {
+    if (stockQuantityUnit) {
+      setValue('quantityUnits', stockQuantityUnit, { shouldValidate: true });
+    }
+  }, [stockQuantityUnit, setValue]);
 
   const durationUnits: Array<DurationUnit> = useMemo(
     () =>
@@ -571,6 +611,7 @@ export function DrugOrderForm({
                           type="comboBox"
                           getValues={getValues}
                           id="dosingUnits"
+                          disabled={Boolean(stockDosingUnit)}
                           shouldFilterItem={filterItemsByName}
                           placeholder={t('editDosageUnitsPlaceholder', 'Unit')}
                           titleText={t('editDosageUnitsTitle', 'Dose unit')}
@@ -773,6 +814,7 @@ export function DrugOrderForm({
                     <ControlledFieldInput
                       control={control}
                       id="dispensingUnits"
+                      disabled={Boolean(stockQuantityUnit)}
                       items={drugDispensingUnits}
                       itemToString={(item: CommonMedicationValueCoded) => item?.value}
                       name="quantityUnits"

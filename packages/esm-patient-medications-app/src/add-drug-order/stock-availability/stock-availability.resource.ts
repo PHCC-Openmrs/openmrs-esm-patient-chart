@@ -4,6 +4,11 @@ import { openmrsFetch, restBaseUrl, useSession } from '@openmrs/esm-framework';
 interface StockQuantity {
   quantity: number;
   quantityUoM?: string;
+  // The stock item's configured dispensing unit (e.g. "Tablet") - the unit prescribers
+  // should be dosing in, as opposed to quantityUoM above (the bulk packaging unit stock
+  // operations record quantity in, e.g. "Box"). Used to lock the order form's Dose unit
+  // field to what pharmacy actually dispenses in, see drug-order-form.component.tsx.
+  dispensingUnitName?: string;
 }
 
 async function fetchStockQuantityForDrug(drugUuid: string, locationUuid: string | undefined) {
@@ -14,15 +19,16 @@ async function fetchStockQuantityForDrug(drugUuid: string, locationUuid: string 
   // resource doesn't honor arbitrary custom representations like v=custom:(uuid); it
   // silently returns near-empty objects (missing even `uuid`) instead of erroring, so
   // the lookup would always look like "no matching stock item" even when one exists.
-  const { data: stockItemData } = await openmrsFetch<{ results: Array<{ uuid: string }> }>(
-    `${restBaseUrl}/stockmanagement/stockitem?drugUuid=${drugUuid}&v=default&limit=1`,
-  );
-  const stockItemUuid = stockItemData.results?.[0]?.uuid;
+  const { data: stockItemData } = await openmrsFetch<{
+    results: Array<{ uuid: string; dispensingUnitName?: string }>;
+  }>(`${restBaseUrl}/stockmanagement/stockitem?drugUuid=${drugUuid}&v=default&limit=1`);
+  const stockItem = stockItemData.results?.[0];
+  const stockItemUuid = stockItem?.uuid;
   if (!stockItemUuid) {
     // No matching stock item - treated the same as a stock item with 0 on hand, so a
     // drug that isn't tracked in stock management reads as "out of stock" rather than
     // silently showing nothing, which was easy to mistake for the feature not working.
-    return { quantity: 0, quantityUoM: undefined };
+    return { quantity: 0, quantityUoM: undefined, dispensingUnitName: undefined };
   }
 
   const params = new URLSearchParams({ v: 'default', stockItemUuid, groupBy: 'StockItemOnly' });
@@ -33,7 +39,11 @@ async function fetchStockQuantityForDrug(drugUuid: string, locationUuid: string 
     `${restBaseUrl}/stockmanagement/stockiteminventory?${params.toString()}`,
   );
   const result = inventoryData.results?.[0];
-  return { quantity: result?.quantity ?? 0, quantityUoM: result?.quantityUoM };
+  return {
+    quantity: result?.quantity ?? 0,
+    quantityUoM: result?.quantityUoM,
+    dispensingUnitName: stockItem.dispensingUnitName,
+  };
 }
 
 /**
