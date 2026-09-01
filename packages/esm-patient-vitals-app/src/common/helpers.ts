@@ -2,7 +2,12 @@ import dayjs from 'dayjs';
 import { type OpenmrsResource, type Session, userHasAccess } from '@openmrs/esm-framework';
 
 import { type ConceptMetadata } from '../common';
-import type { FHIRInterpretation, ObsReferenceRanges, ObservationInterpretation } from './types';
+import type {
+  FHIRInterpretation,
+  ObsReferenceRanges,
+  ObservationInterpretation,
+  PatientVitalsAndBiometrics,
+} from './types';
 import { type VitalsBiometricsFormData } from '../vitals-biometrics-form/schema';
 import { type VitalsAndBiometricsFieldValuesMap } from './data.resource';
 import { type BiometricsConfigObject } from '../config-schema';
@@ -204,6 +209,63 @@ export const getPatientAge = (patient: fhir.Patient): number | null => {
   const birthDate = dayjs(patient.birthDate);
   return birthDate.isValid() ? dayjs().diff(birthDate, 'years') : null;
 };
+
+/**
+ * Fields merged across encounters by `getLatestVitalsAndBiometrics`. Each entry in `vitals`
+ * represents a single encounter, so a form that records only a subset of the vital signs
+ * concept set (e.g. a nutrition assessment encounter that records only MUAC) produces a row
+ * with just that one field set. Excludes `id`, `date` and `bloodPressureRenderInterpretation`,
+ * which are handled separately by the caller.
+ */
+const latestVitalsMergeableFields: Array<keyof PatientVitalsAndBiometrics> = [
+  'note',
+  'systolic',
+  'systolicRenderInterpretation',
+  'diastolic',
+  'diastolicRenderInterpretation',
+  'pulse',
+  'pulseRenderInterpretation',
+  'temperature',
+  'temperatureRenderInterpretation',
+  'spo2',
+  'spo2RenderInterpretation',
+  'height',
+  'heightRenderInterpretation',
+  'weight',
+  'weightRenderInterpretation',
+  'bmi',
+  'bmiRenderInterpretation',
+  'respiratoryRate',
+  'respiratoryRateRenderInterpretation',
+  'muac',
+  'muacRenderInterpretation',
+];
+
+/**
+ * Builds a single "latest known vitals" snapshot by taking, for each field, the value from the
+ * most recent encounter (in `vitals`, assumed sorted newest first) where that field was recorded.
+ * This means an encounter that only records a subset of vitals - e.g. a nutrition assessment
+ * that only records MUAC - no longer blanks out the other, previously-recorded fields.
+ */
+export function getLatestVitalsAndBiometrics(
+  vitals: Array<PatientVitalsAndBiometrics> | undefined,
+): PatientVitalsAndBiometrics | undefined {
+  if (!vitals?.length) {
+    return undefined;
+  }
+
+  const latest: PatientVitalsAndBiometrics = { id: vitals[0].id, date: vitals[0].date };
+
+  for (const encounterVitals of vitals) {
+    for (const field of latestVitalsMergeableFields) {
+      if (latest[field] == null && encounterVitals[field] != null) {
+        (latest as unknown as Record<string, unknown>)[field] = encounterVitals[field];
+      }
+    }
+  }
+
+  return latest;
+}
 
 /**
  * Determines whether BMI should be shown for the given patient,

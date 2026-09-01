@@ -10,6 +10,7 @@ import { ArrowRight, Information } from '@carbon/react/icons';
 import { ConfigurableLink, formatDate, parseDate, useConfig, useSession, type Visit } from '@openmrs/esm-framework';
 import {
   canRecordVitalsAndBiometrics,
+  getLatestVitalsAndBiometrics,
   interpretBloodPressure,
   useConceptUnits,
   useVitalsAndBiometrics,
@@ -50,7 +51,7 @@ const VitalsHeader: React.FC<VitalsHeaderProps> = ({
   const { conceptUnits } = useConceptUnits();
   const { data: vitals, isLoading, isValidating } = useVitalsAndBiometrics(patientUuid, 'both');
   const { conceptRanges, conceptRangeMap } = useVitalsConceptMetadata(patientUuid);
-  const latestVitals = vitals?.[0];
+  const latestVitals = useMemo(() => getLatestVitalsAndBiometrics(vitals), [vitals]);
   const [showDetailsPanel, setShowDetailsPanel] = useState(false);
   const toggleDetailsPanel = () => setShowDetailsPanel(!showDetailsPanel);
   const isActiveVisit = Boolean(visitContext && !visitContext.stopDatetime);

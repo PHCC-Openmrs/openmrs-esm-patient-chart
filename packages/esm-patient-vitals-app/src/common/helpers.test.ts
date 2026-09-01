@@ -1,6 +1,6 @@
-import { assessValue, interpretBloodPressure, prepareObsForSubmission } from './helpers';
+import { assessValue, getLatestVitalsAndBiometrics, interpretBloodPressure, prepareObsForSubmission } from './helpers';
 import { vi, describe, it, expect } from 'vitest';
-import type { ObsReferenceRanges } from './types';
+import type { ObsReferenceRanges, PatientVitalsAndBiometrics } from './types';
 import type { VitalsAndBiometricsFieldValuesMap } from './data.resource';
 
 const temperatureRange: ObsReferenceRanges = {
@@ -95,6 +95,64 @@ describe('interpretBloodPressure', () => {
 
   it('returns "normal" when conceptMetadata is undefined', () => {
     expect(interpretBloodPressure(200, 130, concepts, undefined)).toBe('normal');
+  });
+});
+
+describe('getLatestVitalsAndBiometrics', () => {
+  it('returns undefined when there are no vitals', () => {
+    expect(getLatestVitalsAndBiometrics(undefined)).toBeUndefined();
+    expect(getLatestVitalsAndBiometrics([])).toBeUndefined();
+  });
+
+  it('returns the full row unchanged when the latest encounter has every field', () => {
+    const vitals: Array<PatientVitalsAndBiometrics> = [
+      { id: 'enc-1', date: '2026-08-30', systolic: 120, diastolic: 80, pulse: 72, weight: 70, height: 170 },
+    ];
+
+    expect(getLatestVitalsAndBiometrics(vitals)).toEqual(vitals[0]);
+  });
+
+  it('backfills fields missing from the latest encounter with values from older encounters', () => {
+    // Simulates a nutrition assessment encounter (only MUAC) recorded after a full vitals encounter.
+    const vitals: Array<PatientVitalsAndBiometrics> = [
+      { id: 'enc-2', date: '2026-08-31', muac: 21 },
+      { id: 'enc-1', date: '2026-08-30', systolic: 120, diastolic: 80, pulse: 72, weight: 70, height: 170 },
+    ];
+
+    const result = getLatestVitalsAndBiometrics(vitals);
+
+    // The id/date reflect the most recent encounter (activity freshness)...
+    expect(result.id).toBe('enc-2');
+    expect(result.date).toBe('2026-08-31');
+    // ...but every field is populated instead of only MUAC.
+    expect(result.muac).toBe(21);
+    expect(result.systolic).toBe(120);
+    expect(result.diastolic).toBe(80);
+    expect(result.pulse).toBe(72);
+    expect(result.weight).toBe(70);
+    expect(result.height).toBe(170);
+  });
+
+  it('prefers the most recent value for a field over older ones', () => {
+    const vitals: Array<PatientVitalsAndBiometrics> = [
+      { id: 'enc-3', date: '2026-09-01', muac: 22 },
+      { id: 'enc-2', date: '2026-08-31', muac: 21, weight: 71 },
+      { id: 'enc-1', date: '2026-08-30', muac: 20, weight: 70 },
+    ];
+
+    const result = getLatestVitalsAndBiometrics(vitals);
+
+    expect(result.muac).toBe(22);
+    expect(result.weight).toBe(71);
+  });
+
+  it('preserves a value of 0 instead of treating it as missing', () => {
+    const vitals: Array<PatientVitalsAndBiometrics> = [
+      { id: 'enc-2', date: '2026-08-31', muac: 21 },
+      { id: 'enc-1', date: '2026-08-30', respiratoryRate: 0 },
+    ];
+
+    expect(getLatestVitalsAndBiometrics(vitals).respiratoryRate).toBe(0);
   });
 });
 
