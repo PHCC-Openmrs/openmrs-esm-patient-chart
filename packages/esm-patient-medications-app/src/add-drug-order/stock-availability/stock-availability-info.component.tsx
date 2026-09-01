@@ -17,6 +17,11 @@ const StockAvailabilityInfo: React.FC<StockAvailabilityInfoProps> = ({ drug }) =
   }
 
   const isOutOfStock = stock.quantity <= 0;
+  // stock.quantity is in the bulk packaging unit (quantityUoM, e.g. "Box") - convert it
+  // into the dispensing unit (e.g. "Tablet") prescribers actually think in, using the
+  // number of dispensing units per quantityUoM.
+  const dispensingQuantity = stock.quantity * (stock.quantityFactor ?? 1);
+  const dispensingUnit = stock.dispensingUnitName ?? stock.quantityUoM ?? '';
 
   return (
     <span className={isOutOfStock ? styles.outOfStock : styles.inStock}>
@@ -24,8 +29,8 @@ const StockAvailabilityInfo: React.FC<StockAvailabilityInfoProps> = ({ drug }) =
       {isOutOfStock
         ? t('drugOutOfStock', 'Out of stock')
         : t('drugStockAvailable', 'In stock: {{quantity}} {{unit}}', {
-            quantity: stock.quantity,
-            unit: stock.quantityUoM ?? '',
+            quantity: dispensingQuantity.toLocaleString(),
+            unit: dispensingUnit,
           })}
     </span>
   );

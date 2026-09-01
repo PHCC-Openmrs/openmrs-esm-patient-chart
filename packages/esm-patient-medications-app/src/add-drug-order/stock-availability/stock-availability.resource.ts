@@ -4,6 +4,10 @@ import { openmrsFetch, restBaseUrl, useSession } from '@openmrs/esm-framework';
 interface StockQuantity {
   quantity: number;
   quantityUoM?: string;
+  // How many dispensing units (see dispensingUnitName below) make up one quantityUoM -
+  // e.g. 30 if quantityUoM is "Box" and the dispensing unit is "Tablet". Lets the "in
+  // stock" hint be converted from the bulk packaging unit into the dispensing unit.
+  quantityFactor?: number;
   // The stock item's configured dispensing unit (e.g. "Tablet") - the unit prescribers
   // should be dosing in, as opposed to quantityUoM above (the bulk packaging unit stock
   // operations record quantity in, e.g. "Box"). Used to lock the order form's Dose unit
@@ -31,9 +35,15 @@ async function fetchStockQuantityForDrug(drugUuid: string, locationUuid: string 
     return { quantity: 0, quantityUoM: undefined, dispensingUnitName: undefined };
   }
 
+  // Uses dispenseLocationUuid rather than locationUuid: the ordering location itself often
+  // isn't a stock-tracked party (e.g. an outpatient clinic), so a plain locationUuid lookup
+  // resolves to no party and reads as 0 on hand. dispenseLocationUuid instead walks up the
+  // location's tree for a "Main Pharmacy"/"Dispensary"-tagged party (falling back to any
+  // Main Pharmacy location org-wide), matching how the pharmacy dispensing screens resolve
+  // stock for a given location.
   const params = new URLSearchParams({ v: 'default', stockItemUuid, groupBy: 'StockItemOnly' });
   if (locationUuid) {
-    params.set('locationUuid', locationUuid);
+    params.set('dispenseLocationUuid', locationUuid);
   }
   const { data: inventoryData } = await openmrsFetch<{ results: Array<StockQuantity> }>(
     `${restBaseUrl}/stockmanagement/stockiteminventory?${params.toString()}`,
@@ -42,6 +52,7 @@ async function fetchStockQuantityForDrug(drugUuid: string, locationUuid: string 
   return {
     quantity: result?.quantity ?? 0,
     quantityUoM: result?.quantityUoM,
+    quantityFactor: result?.quantityFactor,
     dispensingUnitName: stockItem.dispensingUnitName,
   };
 }
