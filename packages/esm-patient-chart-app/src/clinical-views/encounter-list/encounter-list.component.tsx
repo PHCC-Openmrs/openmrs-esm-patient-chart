@@ -62,11 +62,9 @@ export const EncounterList: React.FC<EncounterListProps> = ({
   const { t } = useTranslation();
   const { requireActiveVisitForEncounterTile } = useConfig<Pick<ChartConfig, 'requireActiveVisitForEncounterTile'>>();
   const session = useSession();
-  const canAddEncounter =
-    userHasAccess('Add Encounters', session?.user) && userHasAccess('Edit Encounters', session?.user);
-  const canEditEncounterRow =
-    userHasAccess('Add Observations', session?.user) && userHasAccess('Edit Observations', session?.user);
-  const canDeleteEncounterRow = userHasAccess('Edit Encounters', session?.user);
+  const canAddEncounter = userHasAccess('Task: patientChart.recordClinicalViewEncounter', session?.user);
+  const canEditEncounterRow = userHasAccess('Task: patientChart.recordClinicalViewEncounter', session?.user);
+  const canDeleteEncounterRow = userHasAccess('Task: patientChart.recordClinicalViewEncounter', session?.user);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);

@@ -12,11 +12,7 @@ const VisitNoteActionButton: React.FC<PatientChartWorkspaceActionButtonProps> = 
 
   const startVisitIfNeeded = useStartVisitIfNeeded(patientUuid);
   const session = useSession();
-  // Saving a visit note creates an Encounter (and Observations), so the gate
-  // needs to match what saveEncounter actually requires - not Get Forms,
-  // which only covers reading the form definition to render it.
-  const canRecordVisitNote =
-    userHasAccess('Add Encounters', session?.user) || userHasAccess('Edit Encounters', session?.user);
+  const canRecordVisitNote = userHasAccess('Task: patientChart.recordVisitNote', session?.user);
 
   if (!canRecordVisitNote) {
     return null;
