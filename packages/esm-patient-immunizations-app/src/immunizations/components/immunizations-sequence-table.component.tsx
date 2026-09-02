@@ -47,10 +47,8 @@ const SequenceTable: React.FC<SequenceTableProps> = ({
   const isTablet = useLayoutType() === 'tablet';
   const responsiveSize = isTablet ? 'md' : 'sm';
   const session = useSession();
-  const canEditImmunization =
-    (userHasAccess('Add Encounters', session?.user) || userHasAccess('Edit Encounters', session?.user)) &&
-    (userHasAccess('Add Observations', session?.user) || userHasAccess('Edit Observations', session?.user));
-  const canDeleteImmunization = userHasAccess('Edit Encounters', session?.user);
+  const canEditImmunization = userHasAccess('Task: patientChart.recordImmunizations', session?.user);
+  const canDeleteImmunization = userHasAccess('Task: patientChart.recordImmunizations', session?.user);
 
   const tableHeaders = useMemo(
     () => [
