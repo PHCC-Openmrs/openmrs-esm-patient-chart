@@ -275,7 +275,7 @@ const EncountersTable: React.FC<EncountersTableProps> = ({
 
                     const canEditEncounter =
                       hasEncounterTypeEditAccess &&
-                      userHasAccess('Edit Encounters', session?.user) &&
+                      userHasAccess('Task: patientChart.editEncounter', session?.user) &&
                       (encounter.form?.uuid || isVisitNoteEncounter(encounter));
 
                     const canPrintEncounter = canPrintEncounters && supportsEmbeddedFormView(encounter);
