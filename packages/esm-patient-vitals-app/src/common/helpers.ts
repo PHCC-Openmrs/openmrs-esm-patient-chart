@@ -8,14 +8,15 @@ import { type VitalsAndBiometricsFieldValuesMap } from './data.resource';
 import { type BiometricsConfigObject } from '../config-schema';
 
 /**
- * Recording vitals/biometrics saves both an Encounter and Observations, each
- * checked independently by the backend (EncounterService.saveEncounter and
- * ObsService.saveObs), so both must be satisfied - not just the encounter half.
+ * Gated on a dedicated privilege rather than the generic Add/Edit Encounters +
+ * Add/Edit Observations checks, since those are shared with unrelated features
+ * (lab results, orders, etc.) and would otherwise grant vitals/biometrics access
+ * as a side effect. Whoever holds this privilege must also hold Add/Edit
+ * Encounters and Add/Edit Observations, since the backend still requires those
+ * for the actual save (EncounterService.saveEncounter and ObsService.saveObs).
  */
 export function canRecordVitalsAndBiometrics(user: Session['user'] | undefined): boolean {
-  const hasEncounterPrivilege = userHasAccess('Add Encounters', user) || userHasAccess('Edit Encounters', user);
-  const hasObservationPrivilege = userHasAccess('Add Observations', user) || userHasAccess('Edit Observations', user);
-  return hasEncounterPrivilege && hasObservationPrivilege;
+  return userHasAccess('Task: patientChart.recordVitalsAndBiometrics', user);
 }
 
 export function calculateBodyMassIndex(weight: number, height: number) {

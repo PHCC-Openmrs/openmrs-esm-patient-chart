@@ -46,9 +46,7 @@ const ImmunizationsOverview: React.FC<ImmunizationsOverviewProps> = ({ patient, 
 
   const launchImmunizationsForm = React.useCallback(() => launchWorkspace2('immunization-form-workspace'), []);
   const session = useSession();
-  const canRecordImmunization =
-    (userHasAccess('Add Encounters', session?.user) || userHasAccess('Edit Encounters', session?.user)) &&
-    (userHasAccess('Add Observations', session?.user) || userHasAccess('Edit Observations', session?.user));
+  const canRecordImmunization = userHasAccess('Task: patientChart.recordImmunizations', session?.user);
 
   const tableHeaders = [
     {

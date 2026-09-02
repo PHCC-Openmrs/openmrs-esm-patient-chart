@@ -17,7 +17,7 @@ export const VitalsAndBiometricsActionMenu = ({ encounterUuid, patient }: Vitals
   const isTablet = useLayoutType() === 'tablet';
   const session = useSession();
   const canEdit = canRecordVitalsAndBiometrics(session?.user);
-  const canDelete = userHasAccess('Edit Encounters', session?.user);
+  const canDelete = userHasAccess('Task: patientChart.recordVitalsAndBiometrics', session?.user);
 
   const handleLaunchVitalsAndBiometricsForm = useCallback(() => {
     launchWorkspace2(patientVitalsBiometricsFormWorkspace, {

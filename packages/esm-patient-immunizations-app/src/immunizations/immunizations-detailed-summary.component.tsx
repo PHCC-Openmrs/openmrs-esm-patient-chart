@@ -59,11 +59,7 @@ const ImmunizationsDetailedSummary: React.FC<ImmunizationsDetailedSummaryProps> 
 
   const { data: existingImmunizations, isLoading, error, isValidating } = useImmunizations(patientUuid);
   const session = useSession();
-  // Immunizations save via the FHIR Immunization resource, which maps internally to an
-  // Encounter + Obs group - same shape as vitals, so the same combined check applies.
-  const canRecordImmunization =
-    (userHasAccess('Add Encounters', session?.user) || userHasAccess('Edit Encounters', session?.user)) &&
-    (userHasAccess('Add Observations', session?.user) || userHasAccess('Edit Observations', session?.user));
+  const canRecordImmunization = userHasAccess('Task: patientChart.recordImmunizations', session?.user);
 
   const consolidatedImmunizations = useMemo(() => {
     return linkConfiguredSequences(existingImmunizations, sequenceDefinitions);
