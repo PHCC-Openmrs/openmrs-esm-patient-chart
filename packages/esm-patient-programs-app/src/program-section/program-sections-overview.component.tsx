@@ -49,8 +49,7 @@ const ProgramSectionCard: React.FC<ProgramSectionCardProps> = ({ patientUuid, se
   const { encounters, error, isLoading } = useProgramSectionEncounters(patientUuid, section.encounterTypeUuid);
   const { age, isLoading: isLoadingAge } = usePatientAge(patientUuid);
   const session = useSession();
-  const canAddSection =
-    userHasAccess('Add Encounters', session?.user) && userHasAccess('Edit Encounters', session?.user);
+  const canAddSection = userHasAccess('Task: patientChart.recordProgramSection', session?.user);
 
   // Some fields (e.g. Diagnosis) have two config entries sharing the same concept, one per
   // age band -- only one is ever visible for a given patient, so keying by conceptUuid below

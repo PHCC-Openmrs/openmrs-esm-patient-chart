@@ -16,8 +16,8 @@ export const ProgramSectionActionMenu = ({ encounter, section, patientUuid }: Pr
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
   const session = useSession();
-  const canEdit = userHasAccess('Add Observations', session?.user) && userHasAccess('Edit Observations', session?.user);
-  const canDelete = userHasAccess('Edit Encounters', session?.user);
+  const canEdit = userHasAccess('Task: patientChart.recordProgramSection', session?.user);
+  const canDelete = userHasAccess('Task: patientChart.recordProgramSection', session?.user);
 
   const launchEditForm = useCallback(
     () =>
