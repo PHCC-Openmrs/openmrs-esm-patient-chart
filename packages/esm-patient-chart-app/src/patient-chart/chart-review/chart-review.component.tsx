@@ -83,17 +83,18 @@ const ChartReview: React.FC<ChartReviewProps> = ({ patientUuid, patient, view, s
   const extensionStore = useExtensionStore();
 
   const dashboards = useMemo(() => {
-    if (!('patient-chart-dashboard-slot' in extensionStore.slots)) {
+    const topLevelAssignedExtensions = extensionStore.slots['patient-chart-dashboard-slot']?.assignedExtensions;
+
+    if (!topLevelAssignedExtensions) {
       return [];
     }
 
-    return extensionStore.slots['patient-chart-dashboard-slot'].assignedExtensions
+    return topLevelAssignedExtensions
       .flatMap((e) => {
         if (e.config?.slotName) {
-          if (e.config.slotName in extensionStore.slots) {
-            return extensionStore.slots[e.config.slotName].assignedExtensions.map((e) =>
-              getDashboardDefinition(e.meta, e.config, e.moduleName, e.name),
-            );
+          const nestedAssignedExtensions = extensionStore.slots[e.config.slotName]?.assignedExtensions;
+          if (nestedAssignedExtensions) {
+            return nestedAssignedExtensions.map((e) => getDashboardDefinition(e.meta, e.config, e.moduleName, e.name));
           } else {
             registerExtensionSlot('@openmrs/esm-patient-chart-app', e.config.slotName);
             // Since we register the new extension slot, we need to force a re-render with the
