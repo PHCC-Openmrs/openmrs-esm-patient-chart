@@ -82,25 +82,31 @@ interface ChartReviewProps {
 const ChartReview: React.FC<ChartReviewProps> = ({ patientUuid, patient, view, setDashboardLayoutMode }) => {
   const extensionStore = useExtensionStore();
 
-  const dashboards = extensionStore.slots['patient-chart-dashboard-slot'].assignedExtensions
-    .flatMap((e) => {
-      if (e.config?.slotName) {
-        if (e.config.slotName in extensionStore.slots) {
-          return extensionStore.slots[e.config.slotName].assignedExtensions.map((e) =>
-            getDashboardDefinition(e.meta, e.config, e.moduleName, e.name),
-          );
-        } else {
-          registerExtensionSlot('@openmrs/esm-patient-chart-app', e.config.slotName);
-          // Since we register the new extension slot, we need to force a re-render with the
-          // update extensionStore. Throwing the promise will trigger suspense and since the
-          // promise immediately resolves, it should re-render on the next tic.
-          throw Promise.resolve();
-        }
-      }
+  const dashboards = useMemo(() => {
+    if (!('patient-chart-dashboard-slot' in extensionStore.slots)) {
+      return [];
+    }
 
-      return getDashboardDefinition(e.meta, e.config, e.moduleName, e.name);
-    })
-    .filter(Boolean);
+    return extensionStore.slots['patient-chart-dashboard-slot'].assignedExtensions
+      .flatMap((e) => {
+        if (e.config?.slotName) {
+          if (e.config.slotName in extensionStore.slots) {
+            return extensionStore.slots[e.config.slotName].assignedExtensions.map((e) =>
+              getDashboardDefinition(e.meta, e.config, e.moduleName, e.name),
+            );
+          } else {
+            registerExtensionSlot('@openmrs/esm-patient-chart-app', e.config.slotName);
+            // Since we register the new extension slot, we need to force a re-render with the
+            // update extensionStore. Throwing the promise will trigger suspense and since the
+            // promise immediately resolves, it should re-render on the next tic.
+            throw Promise.resolve();
+          }
+        }
+
+        return getDashboardDefinition(e.meta, e.config, e.moduleName, e.name);
+      })
+      .filter(Boolean);
+  }, [extensionStore.slots]);
 
   const defaultDashboard = dashboards.filter((dashboard) => Boolean(dashboard.path))?.[0];
   const resolvedView = resolveView(view);
@@ -114,10 +120,6 @@ const ChartReview: React.FC<ChartReviewProps> = ({ patientUuid, patient, view, s
       setDashboardLayoutMode(activeDashboard.layoutMode ?? 'contained');
     }
   }, [dashboard, defaultDashboard, setDashboardLayoutMode]);
-
-  if (!('patient-chart-dashboard-slot' in extensionStore.slots)) {
-    return null;
-  }
 
   if (!defaultDashboard) {
     return null;
