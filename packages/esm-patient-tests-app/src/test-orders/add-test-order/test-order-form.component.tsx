@@ -4,7 +4,6 @@ import {
   Button,
   ButtonSet,
   Column,
-  ComboBox,
   Form,
   Grid,
   Layer,
@@ -35,7 +34,7 @@ import {
   useLayoutType,
   type Workspace2DefinitionProps,
 } from '@openmrs/esm-framework';
-import { prepTestOrderPostData, useOrderReasons } from '../api';
+import { prepTestOrderPostData } from '../api';
 import { ordersEqual } from './test-order';
 import { type ConfigObject } from '../../config-schema';
 import styles from './test-order-form.scss';
@@ -77,12 +76,6 @@ export function LabOrderForm({
   const config = useConfig<ConfigObject>();
   const { orderType } = useOrderType(orderTypeUuid);
   const { mutate: mutateOrders } = useMutatePatientOrders(patient.id);
-  const orderReasonRequired = useMemo(
-    () =>
-      (config.labTestsWithOrderReasons?.find((c) => c.labTestUuid === initialOrder?.testType?.conceptUuid) || {})
-        .required,
-    [config.labTestsWithOrderReasons, initialOrder?.testType?.conceptUuid],
-  );
 
   const labOrderFormSchema = useMemo(
     () =>
@@ -100,26 +93,20 @@ export function LabOrderForm({
               invalid_type_error: t('testTypeRequired', 'Test type is required'),
             },
           ),
-          orderReason: orderReasonRequired
-            ? z
-                .string({
-                  required_error: t('orderReasonRequired', 'Order reason is required'),
-                })
-                .refine((value) => !!value, t('orderReasonRequired', 'Order reason is required'))
-            : z.string().optional(),
+          orderReasonNonCoded: z.string().nullish(),
           scheduledDate: z.date({}).nullish(),
         })
         .refine((data) => data.urgency !== 'ON_SCHEDULED_DATE' || Boolean(data.scheduledDate), {
           message: t('scheduledDateRequired', 'Scheduled date is required'),
           path: ['scheduledDate'],
         }),
-    [orderReasonRequired, t],
+    [t],
   );
 
   const {
     control,
     handleSubmit,
-    formState: { errors, defaultValues, isDirty, isSubmitting },
+    formState: { errors, isDirty, isSubmitting },
     setValue,
     watch,
   } = useForm<TestOrderBasketItem>({
@@ -132,21 +119,6 @@ export function LabOrderForm({
   });
 
   const isScheduledDateRequired = watch('urgency') === 'ON_SCHEDULED_DATE';
-
-  const orderReasonUuids =
-    (config.labTestsWithOrderReasons?.find((c) => c.labTestUuid === defaultValues?.testType?.conceptUuid) || {})
-      .orderReasons || [];
-
-  const { orderReasons } = useOrderReasons(orderReasonUuids);
-
-  const filterItemsByName = useCallback((menu) => {
-    const inputValue = menu?.inputValue?.toLowerCase();
-    const itemDisplay = menu?.item?.display?.toLowerCase();
-    if (!inputValue) {
-      return true;
-    }
-    return itemDisplay?.includes(inputValue);
-  }, []);
 
   const saveLabOrderToBasket = useCallback(
     (data: TestOrderBasketItem) => {
@@ -331,33 +303,28 @@ export function LabOrderForm({
             </Column>
           </Grid>
         )}
-        {orderReasons.length > 0 && (
-          <Grid className={styles.gridRow}>
-            <Column lg={16} md={8} sm={4}>
-              <InputWrapper>
-                <Controller
-                  name="orderReason"
-                  control={control}
-                  render={({ field: { onBlur, onChange } }) => (
-                    <ComboBox
-                      id="orderReasonInput"
-                      invalid={!!errors.orderReason}
-                      invalidText={errors.orderReason?.message}
-                      items={orderReasons}
-                      itemToString={(item) => item?.display}
-                      onBlur={onBlur}
-                      onChange={({ selectedItem }) => onChange(selectedItem?.uuid || '')}
-                      selectedItem={null}
-                      shouldFilterItem={filterItemsByName}
-                      size={responsiveSize}
-                      titleText={t('orderReason', 'Order reason')}
-                    />
-                  )}
-                />
-              </InputWrapper>
-            </Column>
-          </Grid>
-        )}
+        <Grid className={styles.gridRow}>
+          <Column lg={16} md={8} sm={4}>
+            <InputWrapper>
+              <Controller
+                name="orderReasonNonCoded"
+                control={control}
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    id="orderReasonInput"
+                    invalid={!!errors.orderReasonNonCoded}
+                    invalidText={errors.orderReasonNonCoded?.message}
+                    labelText={t('orderReason', 'Order reason')}
+                    onBlur={onBlur}
+                    onChange={onChange}
+                    size={responsiveSize}
+                    value={value ?? ''}
+                  />
+                )}
+              />
+            </InputWrapper>
+          </Column>
+        </Grid>
         <Grid className={styles.gridRow}>
           <Column lg={16} md={8} sm={4}>
             <InputWrapper>
