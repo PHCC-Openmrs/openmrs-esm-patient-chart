@@ -292,7 +292,8 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
         ) : (
           '--'
         ),
-        reasonForCancelling: discontinuedOrderReasons[order.uuid] || medicationDispenseReasons[order.uuid] || '--',
+        reasonForCancelling:
+          order.fulfillerComment || discontinuedOrderReasons[order.uuid] || medicationDispenseReasons[order.uuid] || '--',
       })) ?? [],
     [displayedOrders, t, discontinuedOrderReasons, medicationDispenseReasons],
   );
