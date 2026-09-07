@@ -16,6 +16,7 @@ import {
 } from '@openmrs/esm-framework';
 import { type ConfigObject } from '../../config-schema';
 import { prepMedicationOrderPostData, useMedicationOrders } from '../../api';
+import { useStockItemsExistForDrugs } from '../stock-availability/stock-availability.resource';
 import { ordersEqual } from './helpers';
 import {
   type DrugSearchResult,
@@ -53,6 +54,18 @@ export default function OrderBasketSearchResults({
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
   const { drugs, isLoading, error } = useDrugSearch(searchTerm);
+  const drugUuids = useMemo(() => drugs?.map((drug) => drug.uuid) ?? [], [drugs]);
+  // Filtering only kicks in once the stock check resolves for a given drug - until then
+  // (or if the stock management module isn't installed) the drug is shown as usual, same
+  // as how the "In stock" hint on the order form fades in rather than blocking the page.
+  const { stockItemExistsByDrugUuid } = useStockItemsExistForDrugs(drugUuids);
+  // Only drop drugs that are confirmed to have no stock item at all - a drug with a
+  // stock item but zero units on hand still belongs in the list (see "Out of stock" hint
+  // on the order form). `false` is the only value that means "confirmed absent".
+  const stockedDrugs = useMemo(
+    () => drugs?.filter((drug) => stockItemExistsByDrugUuid.get(drug.uuid) !== false),
+    [drugs, stockItemExistsByDrugUuid],
+  );
 
   if (!searchTerm) {
     return <div className={styles.container}></div>;
@@ -79,7 +92,7 @@ export default function OrderBasketSearchResults({
     );
   }
 
-  if (drugs?.length === 0) {
+  if (stockedDrugs?.length === 0) {
     return (
       <Tile className={styles.emptyState}>
         <div>
@@ -105,7 +118,7 @@ export default function OrderBasketSearchResults({
       <div className={styles.orderBasketSearchResultsHeader}>
         <span className={styles.searchResultsCount}>
           {t('searchResultsMatchesForTerm', '{{count}} results for "{{searchTerm}}"', {
-            count: drugs?.length,
+            count: stockedDrugs?.length,
             searchTerm,
           })}
         </span>
@@ -114,7 +127,7 @@ export default function OrderBasketSearchResults({
         </Button>
       </div>
       <div className={styles.resultsContainer}>
-        {drugs?.map((drug) => (
+        {stockedDrugs?.map((drug) => (
           <DrugSearchResultItem
             key={drug.uuid}
             patient={patient}

@@ -1,4 +1,6 @@
+import { useMemo } from 'react';
 import useSWR from 'swr';
+import useSWRImmutable from 'swr/immutable';
 import { openmrsFetch, restBaseUrl, useSession } from '@openmrs/esm-framework';
 
 interface StockQuantity {
@@ -80,3 +82,50 @@ export function useStockQuantityForDrug(drugUuid: string | undefined) {
     error,
   };
 }
+
+// `null` means "couldn't be determined" (e.g. stock management isn't installed on this
+// deployment, or the request failed) - callers should treat that the same as "exists",
+// since we can't tell the drug apart from one that's simply untracked-but-present.
+async function stockItemExistsForDrug(drugUuid: string): Promise<boolean | null> {
+  try {
+    // v=default, not a custom representation - see the note in fetchStockQuantityForDrug
+    // above about this resource silently returning near-empty results otherwise.
+    const { data } = await openmrsFetch<{ results: Array<{ uuid: string }> }>(
+      `${restBaseUrl}/stockmanagement/stockitem?drugUuid=${drugUuid}&v=default&limit=1`,
+    );
+    return (data.results?.length ?? 0) > 0;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Looks up, for each of the given drug UUIDs, whether a Stock Management stock item is
+ * registered for it at all - a drug can have zero units on hand and still count as
+ * "exists". Used to keep the drug search from listing/offering drugs that were never
+ * added to Stock Management in the first place.
+ */
+export function useStockItemsExistForDrugs(drugUuids: Array<string>) {
+  const sortedUuids = useMemo(() => [...(drugUuids ?? [])].sort(), [drugUuids]);
+  const cacheKey = sortedUuids.length ? ['stock-item-exists-for-drugs', ...sortedUuids] : null;
+
+  // Immutable: which drug a stock item represents doesn't change while the workspace is
+  // open, so there's nothing to gain from revalidating on focus/reconnect - and each
+  // revalidation costs one request per drug (this module's stockitem resource only
+  // accepts a single drugUuid per request).
+  const { data, isLoading } = useSWRImmutable(cacheKey, async () => {
+    const entries = await Promise.all(
+      sortedUuids.map(async (uuid) => [uuid, await stockItemExistsForDrug(uuid)] as const),
+    );
+    return new Map(entries);
+  });
+
+  return {
+    stockItemExistsByDrugUuid: data ?? emptyStockItemExistence,
+    isLoading,
+  };
+}
+
+// Stable reference so callers memoizing on the returned map don't recompute every render
+// while the lookup is still in flight.
+const emptyStockItemExistence: ReadonlyMap<string, boolean | null> = new Map();
