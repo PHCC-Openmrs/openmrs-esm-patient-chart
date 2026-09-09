@@ -147,7 +147,6 @@ export const prepMedicationOrderPostData: PostDataPrepFunction = (
       dosingInstructions: order.isFreeTextDosage ? order.freeTextDosage : order.patientInstructions,
       concept: order.drug.concept.uuid,
       ...startDateFragment,
-      orderReasonNonCoded: order.indication,
     };
   } else if (order.action === 'RENEW') {
     return {
@@ -176,7 +175,6 @@ export const prepMedicationOrderPostData: PostDataPrepFunction = (
       dosingInstructions: order.isFreeTextDosage ? order.freeTextDosage : order.patientInstructions,
       concept: order.drug.concept.uuid,
       ...startDateFragment,
-      orderReasonNonCoded: order.indication,
     };
   } else if (order.action === 'REVISE') {
     return {
@@ -205,7 +203,6 @@ export const prepMedicationOrderPostData: PostDataPrepFunction = (
       dosingInstructions: order.isFreeTextDosage ? order.freeTextDosage : order.patientInstructions,
       concept: order?.drug?.concept?.uuid,
       ...startDateFragment,
-      orderReasonNonCoded: order.indication,
     };
   } else if (order.action === 'DISCONTINUE') {
     return {
@@ -288,7 +285,6 @@ export function buildMedicationOrder(order: Order, action: OrderAction): DrugOrd
       : null,
     pillsDispensed: order.quantity,
     numRefills: order.numRefills,
-    indication: order.orderReasonNonCoded,
     quantityUnits: order.quantityUnits
       ? {
           value: order.quantityUnits.display,

@@ -3,10 +3,9 @@ import { useForm, type UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { parseDate, useConfig } from '@openmrs/esm-framework';
+import { parseDate } from '@openmrs/esm-framework';
 import { type Drug, type DrugOrderBasketItem, type OrderAction } from '@openmrs/esm-patient-common-lib';
 import { useRequireOutpatientQuantity } from '../api';
-import { type ConfigObject } from '../config-schema';
 
 /**
  * Returns the earliest selectable Start date for the drug order form. For REVISE,
@@ -63,7 +62,6 @@ export function drugOrderBasketItemToFormValue(
     pillsDispensed: item?.pillsDispensed ?? null,
     quantityUnits: item?.quantityUnits,
     numRefills: item?.numRefills ?? null,
-    indication: item?.indication,
     frequency: item?.frequency,
     scheduledDate,
   };
@@ -72,7 +70,6 @@ export function drugOrderBasketItemToFormValue(
 function useCreateMedicationOrderFormSchema() {
   const { t } = useTranslation();
   const { requireOutpatientQuantity } = useRequireOutpatientQuantity();
-  const { requireIndication } = useConfig<ConfigObject>();
 
   const schema = useMemo(() => {
     const comboSchema = {
@@ -135,11 +132,6 @@ function useCreateMedicationOrderFormSchema() {
       asNeededCondition: z.string().nullable(),
       duration: z.number().nullable(),
       durationUnit: z.object({ ...comboSchema }).nullable(),
-      indication: requireIndication
-        ? z.string().refine((value) => value !== '', {
-            message: t('indicationErrorMessage', 'Indication is required'),
-          })
-        : z.string().nullish(),
       scheduledDate: z.date(),
       frequency: z.object(
         { ...frequencySchema },
@@ -212,7 +204,7 @@ function useCreateMedicationOrderFormSchema() {
     });
 
     return z.discriminatedUnion('isFreeTextDosage', [nonFreeTextDosageSchema, freeTextDosageSchema]);
-  }, [requireIndication, requireOutpatientQuantity, t]);
+  }, [requireOutpatientQuantity, t]);
 
   return schema;
 }

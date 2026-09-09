@@ -90,7 +90,6 @@ const completeMedicationOrderFields: Partial<DrugOrderBasketItem> = {
   frequency: { valueCoded: 'once-daily-uuid', value: 'Once daily', frequencyPerDay: 1 },
   duration: 7,
   durationUnit: { valueCoded: '1072AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', value: 'Days' },
-  indication: 'Pain',
   pillsDispensed: 7,
   quantityUnits: { valueCoded: '1513AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', value: 'Tablet' },
   numRefills: 0,
@@ -810,7 +809,6 @@ describe('DrugOrderForm - required field validation', () => {
     expect(await screen.findByText('Dosage is required')).toBeInTheDocument();
     expect(screen.getByText('Route is required')).toBeInTheDocument();
     expect(screen.getByText('Frequency is required')).toBeInTheDocument();
-    expect(screen.getByText('Indication is required')).toBeInTheDocument();
     expect(screen.getByText('Quantity to dispense is required')).toBeInTheDocument();
     expect(screen.getByText('Number of refills is required')).toBeInTheDocument();
     expect(onSave).not.toHaveBeenCalled();

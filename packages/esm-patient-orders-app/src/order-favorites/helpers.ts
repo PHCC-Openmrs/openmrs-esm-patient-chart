@@ -44,7 +44,6 @@ export function buildBasketItem(
     pillsDispensed: null,
     numRefills: null,
     freeTextDosage: '',
-    indication: '',
     visit,
   };
 }

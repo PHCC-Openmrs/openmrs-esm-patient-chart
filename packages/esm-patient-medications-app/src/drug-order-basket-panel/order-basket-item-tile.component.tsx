@@ -78,12 +78,6 @@ export default function OrderBasketItemTile({ orderBasketItem, onItemClick, onRe
             </span>
           )}
           <span className={styles.label01}>
-            {orderBasketItem.indication && (
-              <>
-                <span className={styles.indicationLabel}>{t('indication', 'Indication').toUpperCase()}</span>{' '}
-                <span className={styles.dosageInfo}>{orderBasketItem.indication}</span>
-              </>
-            )}
             {!!orderBasketItem.orderError && (
               <>
                 <br />
