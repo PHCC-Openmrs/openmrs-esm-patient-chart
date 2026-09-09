@@ -96,7 +96,6 @@ export function buildMedicationOrder(
       : null,
     pillsDispensed: order.quantity,
     numRefills: order.numRefills,
-    indication: order.orderReasonNonCoded,
     quantityUnits: order.quantityUnits
       ? {
           value: order.quantityUnits.display,

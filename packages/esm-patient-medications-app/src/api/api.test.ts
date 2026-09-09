@@ -51,7 +51,6 @@ const drugOrderBasketItem: DrugOrderBasketItem = {
   duration: 10,
   pillsDispensed: 10,
   numRefills: 1,
-  indication: 'Pain',
   isFreeTextDosage: false,
   freeTextDosage: '',
   visit: { uuid: 'visit-uuid' } as Order['encounter']['visit'],

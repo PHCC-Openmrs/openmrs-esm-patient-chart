@@ -37,11 +37,6 @@ export const configSchema = {
     _default: 300,
     _validators: [validator((v: unknown) => typeof v === 'number' && v > 0, 'Must be greater than zero')],
   },
-  requireIndication: {
-    _type: Type.Boolean,
-    _description: 'Whether to require an indication when placing a medication order',
-    _default: true,
-  },
   durationUnitsDaysMap: {
     _type: Type.Object,
     _description:
@@ -82,7 +77,6 @@ export interface ConfigObject {
   orderTypeUuid: string;
   showPrintButton: boolean;
   debounceDelayInMs: number;
-  requireIndication: boolean;
   durationUnitsDaysMap: Record<string, number>;
   drugCategoryConceptSets: Array<string>;
   minimumCharacterLengthForDrugSearch: number;

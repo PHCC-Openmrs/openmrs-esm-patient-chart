@@ -361,7 +361,6 @@ export function DrugOrderForm({
       isQuantityManual: isManualOverride,
       quantityUnits: data.quantityUnits,
       numRefills: data.numRefills,
-      indication: data.indication,
       frequency: data.frequency,
       scheduledDate,
       action: initialOrderBasketItem?.action ?? 'NEW',
@@ -849,21 +848,6 @@ export function DrugOrderForm({
                         labelText={t('prescriptionRefills', 'Prescription refills')}
                       />
                     )}
-                  </InputWrapper>
-                </Column>
-              </Grid>
-              <Grid className={styles.gridRow}>
-                <Column lg={16} md={6} sm={4}>
-                  <InputWrapper>
-                    <ControlledFieldInput
-                      control={control}
-                      name="indication"
-                      type="textInput"
-                      id="indication"
-                      labelText={t('indication', 'Indication')}
-                      placeholder={t('indicationPlaceholder', 'e.g. "Hypertension"')}
-                      maxLength={150}
-                    />
                   </InputWrapper>
                 </Column>
               </Grid>

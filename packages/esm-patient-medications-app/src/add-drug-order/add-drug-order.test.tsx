@@ -210,8 +210,6 @@ describe('AddDrugOrderWorkspace drug search', () => {
     await user.click(openFormButton);
 
     expect(screen.getByText(/Order Form/i)).toBeInTheDocument();
-    const indicationField = screen.getByRole('textbox', { name: 'Indication' });
-    await user.type(indicationField, 'Hypertension');
     const saveFormButton = screen.getByText(/Save order/i);
     await user.click(saveFormButton);
 
@@ -225,7 +223,6 @@ describe('AddDrugOrderWorkspace drug search', () => {
             mockDrugOrderTemplateApiData[mockDrugSearchResultApiData[0].uuid][0],
           ),
           scheduledDate: undefined,
-          indication: 'Hypertension',
         }),
       ]),
     );
