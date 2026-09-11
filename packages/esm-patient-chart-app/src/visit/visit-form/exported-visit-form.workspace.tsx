@@ -38,8 +38,11 @@ import {
 } from '@openmrs/esm-framework';
 import {
   createOfflineVisitForPatient,
+  createProgramEnrollment,
   invalidateCurrentVisit,
+  invalidateProgramEnrollments,
   invalidateVisitAndEncounterData,
+  SERVICE_VISIT_ATTRIBUTE_TYPE_UUID,
   useActivePatientEnrollment,
 } from '@openmrs/esm-patient-common-lib';
 import { MemoizedRecommendedVisitType } from './recommended-visit-type.component';
@@ -64,6 +67,7 @@ import { useVisitAttributeTypes } from '../hooks/useVisitAttributeType';
 import { useHasPatientCompletedAVisit } from '../visits-widget/visit.resource';
 import BaseVisitType from './base-visit-type.component';
 import LocationSelector from './location-selector.component';
+import ServiceSelector from './service-selector.component';
 import VisitAttributeTypeFields from './visit-attribute-type.component';
 import VisitDateTimeSection from './visit-date-time.component';
 import styles from './visit-form.scss';
@@ -276,7 +280,9 @@ const ExportedVisitForm: React.FC<Workspace2DefinitionProps<ExportedVisitFormPro
               createVisitAttribute(visitUuid, attributeType, value).catch((error) => {
                 showSnackbar({
                   title: t('errorCreatingVisitAttribute', 'Error creating the {{attributeName}} visit attribute', {
-                    attributeName: visitAttributeTypes?.find((type) => type.uuid === attributeType)?.display,
+                    attributeName:
+                      visitAttributeTypes?.find((type) => type.uuid === attributeType)?.display ??
+                      (attributeType === SERVICE_VISIT_ATTRIBUTE_TYPE_UUID ? t('service', 'Service') : attributeType),
                   }),
                   kind: 'error',
                   isLowContrast: false,
@@ -307,6 +313,7 @@ const ExportedVisitForm: React.FC<Workspace2DefinitionProps<ExportedVisitFormPro
         visitStopDate,
         visitStopTime,
         visitStopTimeFormat,
+        serviceProgram,
       } = data;
 
       const { handleCreateExtraVisitInfo, attributes: extraAttributes } = extraVisitInfo ?? {};
@@ -315,10 +322,20 @@ const ExportedVisitForm: React.FC<Workspace2DefinitionProps<ExportedVisitFormPro
       const startDatetime = convertToDate(visitStartDate, visitStartTime, visitStartTimeFormat);
       const stopDatetime = convertToDate(visitStopDate, visitStopTime, visitStopTimeFormat);
 
+      // The Service field isn't part of the config-driven visitAttributes map (it has its own
+      // dedicated selector), so fold it in here under its attribute-type UUID -- this both goes
+      // into the new-visit inline payload below and reaches handleVisitAttributes on edits.
+      // The attribute type allows only one occurrence, so multiple selected services are joined
+      // into a single comma-separated value (split back out in visit-form.resource.ts and by
+      // esm-patient-programs-app's visit-ended listener).
+      const visitAttributesWithService = serviceProgram?.length
+        ? { ...visitAttributes, [SERVICE_VISIT_ATTRIBUTE_TYPE_UUID]: serviceProgram.join(',') }
+        : visitAttributes;
+
       // For new visits, include attributes in the payload for atomic creation (avoids orphaned visits).
       // For edits, attributes are managed separately (backend rejects inline updates with maxOccurs).
       const formAttributes = !visitToEdit
-        ? Object.entries(visitAttributes)
+        ? Object.entries(visitAttributesWithService)
             .filter(([, value]) => value)
             .map(([attributeType, value]) => ({ attributeType, value }))
         : [];
@@ -393,31 +410,74 @@ const ExportedVisitForm: React.FC<Workspace2DefinitionProps<ExportedVisitFormPro
             invalidateCurrentVisit(globalMutate, patientUuid);
 
             const visitAttributesRequest = visitToEdit
-              ? handleVisitAttributes(visitAttributes, response.data.uuid).then((visitAttributesResponses) => {
-                  if (visitAttributesResponses.length > 0) {
-                    showSnackbar({
-                      isLowContrast: true,
-                      kind: 'success',
-                      title: t(
-                        'additionalVisitInformationUpdatedSuccessfully',
-                        'Additional visit information updated successfully',
-                      ),
-                    });
-                  }
-                })
+              ? handleVisitAttributes(visitAttributesWithService, response.data.uuid).then(
+                  (visitAttributesResponses) => {
+                    if (visitAttributesResponses.length > 0) {
+                      showSnackbar({
+                        isLowContrast: true,
+                        kind: 'success',
+                        title: t(
+                          'additionalVisitInformationUpdatedSuccessfully',
+                          'Additional visit information updated successfully',
+                        ),
+                      });
+                    }
+                  },
+                )
               : Promise.resolve();
 
             const onVisitCreatedOrUpdatedRequests = [...visitFormCallbacks.values()].map((callbacks) =>
               callbacks.onVisitCreatedOrUpdated(visit),
             );
 
-            await Promise.all([visitAttributesRequest, ...onVisitCreatedOrUpdatedRequests]);
+            // Starting a visit for one or more Services opens a matching program enrollment for
+            // each, completed in turn when the visit ends (see esm-patient-programs-app's
+            // visit-ended listener). Always a new episode per service, even if the patient
+            // already has one active in that program -- each visit is its own episode for
+            // reporting. The visit itself is not rolled back if this fails; it already exists
+            // and must stand.
+            const programEnrollmentRequest =
+              !visitToEdit && serviceProgram?.length
+                ? Promise.all(
+                    serviceProgram.map((programUuid) =>
+                      createProgramEnrollment(
+                        {
+                          patient: patientUuid,
+                          program: programUuid,
+                          dateEnrolled: visit.startDatetime ?? new Date().toISOString(),
+                          dateCompleted: null,
+                          location: visitLocation?.uuid,
+                          states: [],
+                        },
+                        abortController,
+                      ),
+                    ),
+                  )
+                    .then(() => {
+                      invalidateProgramEnrollments(globalMutate, patientUuid);
+                    })
+                    .catch((error) => {
+                      showSnackbar({
+                        title: t('serviceEnrollmentError', 'Could not enroll the patient in the selected service'),
+                        kind: 'error',
+                        isLowContrast: false,
+                        subtitle: getErrorDescription(error),
+                      });
+                    })
+                : Promise.resolve();
+
+            await Promise.all([visitAttributesRequest, programEnrollmentRequest, ...onVisitCreatedOrUpdatedRequests]);
             await handleCreateExtraVisitInfo?.();
             await closeWorkspace({ discardUnsavedChanges: true });
             if (!visitToEdit) {
               window.dispatchEvent(
                 new CustomEvent('visit-started', { detail: { patientUuid, visitUuid: visit.uuid } }),
               );
+            } else if (hasStopTime) {
+              // Editing an ongoing visit to "past" ends it -- let listeners that react to a visit
+              // ending (e.g. completing this visit's service enrollment) know, same as
+              // end-visit-dialog.modal.tsx does for the primary end-visit action.
+              window.dispatchEvent(new CustomEvent('visit-ended', { detail: { patientUuid, visitUuid: visit.uuid } }));
             }
             onVisitStarted?.(visit);
           })
@@ -592,6 +652,11 @@ const ExportedVisitForm: React.FC<Workspace2DefinitionProps<ExportedVisitFormPro
 
                   {/* This field lets the user select a location for the visit. The location is required for the visit to be saved. Defaults to the active session location */}
                   <LocationSelector control={control} />
+
+                  {/* Lets the user select which service(s) (programs) this visit is for. At least one is required
+                      for new visits; see the "serviceProgram" handling in onSubmit for how this drives program
+                      enrollment. */}
+                  <ServiceSelector />
 
                   {/* Lists available program types. This feature is dependent on the `showRecommendedVisitTypeTab` config being set
                 to true. */}

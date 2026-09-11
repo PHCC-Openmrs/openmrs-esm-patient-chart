@@ -15,10 +15,6 @@ export const ADULT_MUAC_DIAGNOSIS_OPTIONS = ['Malnourished', 'Normal'];
 export const RECEIVED_SUPPLEMENT_CONCEPT_UUID = '54064b9a-39de-4dee-8984-56c58341d461';
 
 export const configSchema = {
-  hideAddProgramButton: {
-    _type: Type.Boolean,
-    _default: false,
-  },
   showProgramStatusField: {
     _type: Type.Boolean,
     _description:
@@ -47,17 +43,17 @@ export const configSchema = {
       {
         // Sexual Reproductive Health (SRH) -- only offered at Deir Al-Balah PHCC, not Beir 19 point.
         programUuid: 'f73376c9-7bdf-44e5-ba97-ddf4db5bc9f9',
-        allowedLocationUuids: ['ba34b45c-0a0d-4000-9624-ab6fd419f778'],
+        allowedLocationUuids: ['de3b87c1-9688-4162-bfc5-d5eeccf3354d'],
       },
       {
         // Primary Health Care -- only offered at Deir Al-Balah PHCC, not Beir 19 point.
         programUuid: 'bd6b8c0a-49c9-4f98-afea-8b8fcd999688',
-        allowedLocationUuids: ['ba34b45c-0a0d-4000-9624-ab6fd419f778'],
+        allowedLocationUuids: ['de3b87c1-9688-4162-bfc5-d5eeccf3354d'],
       },
       {
         // Pediatric Consultation -- only offered at Deir Al-Balah PHCC, not Beir 19 point.
         programUuid: '9138885e-f9f4-4981-b1fb-ef3d022228bd',
-        allowedLocationUuids: ['ba34b45c-0a0d-4000-9624-ab6fd419f778'],
+        allowedLocationUuids: ['de3b87c1-9688-4162-bfc5-d5eeccf3354d'],
       },
       // Nutrition Registration has no entry here -- an empty/missing restriction means it's
       // offered everywhere, including Beir 19 point. This makes it the only service visible
@@ -359,7 +355,6 @@ export interface ProgramSectionConfig {
 }
 
 export interface ConfigObject {
-  hideAddProgramButton: boolean;
   showProgramStatusField: boolean;
   programsLocationRestrictions: Array<ProgramLocationRestriction>;
   programSections: Array<ProgramSectionConfig>;

@@ -1,8 +1,12 @@
 import useSWR from 'swr';
-import { filter, includes, map, uniqBy } from 'lodash-es';
+import { filter, includes, map } from 'lodash-es';
 import { openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
+import { createProgramEnrollment, filterProgramsByLocation } from '@openmrs/esm-patient-common-lib';
 import type { PatientProgram, Program, ProgramWorkflowState, ProgramsFetchResponse } from '../types';
-import type { ProgramLocationRestriction } from '../config-schema';
+
+// Re-exported for existing importers -- the implementations now live in esm-patient-common-lib
+// so esm-patient-chart-app's start-visit form can share them (see useServicePrograms.tsx).
+export { createProgramEnrollment, filterProgramsByLocation };
 
 export const customRepresentation = `custom:(uuid,display,program,dateEnrolled,dateCompleted,location:(uuid,display),states:(startDate,endDate,voided,state:(uuid,concept:(display))))`;
 
@@ -13,6 +17,9 @@ export function useEnrollments(patientUuid: string) {
     openmrsFetch,
   );
 
+  // Every visit now creates its own enroll+complete episode (see the start-visit form's Service
+  // field), so a patient can have several enrollments in the same program -- show each one
+  // rather than collapsing to the latest, so Care Services reflects full visit history.
   const formattedEnrollments =
     data?.data?.results.length > 0
       ? data?.data.results.sort((a, b) => (b.dateEnrolled > a.dateEnrolled ? 1 : -1))
@@ -21,7 +28,7 @@ export function useEnrollments(patientUuid: string) {
   const activeEnrollments = formattedEnrollments?.filter((enrollment) => !enrollment.dateCompleted);
 
   return {
-    data: data ? uniqBy(formattedEnrollments, (program) => program?.program?.uuid) : null,
+    data: data ? formattedEnrollments : null,
     error,
     isLoading,
     isValidating,
@@ -49,42 +56,6 @@ export function useAvailablePrograms(enrollments?: Array<PatientProgram>) {
     isLoading,
     eligiblePrograms,
   };
-}
-
-// Restricts a program to specific locations, keyed by program UUID -- mirrors
-// filterFormsByLocation in esm-patient-forms-app/src/hooks/use-forms.ts, since OpenMRS
-// Programs have no native location-restriction field.
-export function filterProgramsByLocation<T extends { uuid: string }>(
-  programs: Array<T> | undefined,
-  programsLocationRestrictions: Array<ProgramLocationRestriction> | undefined,
-  currentLocationUuid: string | undefined,
-): Array<T> | undefined {
-  if (!programsLocationRestrictions?.length) {
-    return programs;
-  }
-
-  return programs?.filter((program) => {
-    const restriction = programsLocationRestrictions.find((r) => r.programUuid === program.uuid);
-    if (!restriction || !restriction.allowedLocationUuids?.length) {
-      return true;
-    }
-    return Boolean(currentLocationUuid) && restriction.allowedLocationUuids.includes(currentLocationUuid);
-  });
-}
-
-export function createProgramEnrollment(payload, abortController) {
-  if (!payload) {
-    return null;
-  }
-  const { program, patient, dateEnrolled, dateCompleted, location, states } = payload;
-  return openmrsFetch(`${restBaseUrl}/programenrollment`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: { program, patient, dateEnrolled, dateCompleted, location, states },
-    signal: abortController.signal,
-  });
 }
 
 export function updateProgramEnrollment(programEnrollmentUuid: string, payload, abortController) {
@@ -133,6 +104,53 @@ export const usePrograms = (patientUuid: string) => {
     eligiblePrograms,
   };
 };
+
+// A single row in the Care Services table, representing every enrollment the patient has ever
+// had in one program collapsed into one line -- since each visit now opens its own enrollment
+// episode for a program (see the start-visit form's Service field), a per-episode "Date
+// enrolled" column would repeat the same program once per visit. `count` is how many episodes
+// (visits) that program has been selected for, and `lastDateEnrolled` is the most recent one --
+// i.e. the last time the patient came in for that service.
+export interface ProgramEnrollmentGroup {
+  uuid: string;
+  display: string;
+  location?: PatientProgram['location'];
+  count: number;
+  lastDateEnrolled: string;
+  dateCompleted: string | null;
+  states?: Array<ProgramWorkflowState>;
+}
+
+export function groupEnrollmentsByProgram(
+  enrollments: Array<PatientProgram> | null | undefined,
+): Array<ProgramEnrollmentGroup> {
+  if (!enrollments?.length) {
+    return [];
+  }
+
+  const episodesByProgramUuid = new Map<string, Array<PatientProgram>>();
+  for (const enrollment of enrollments) {
+    const key = enrollment.program?.uuid ?? enrollment.uuid;
+    const episodes = episodesByProgramUuid.get(key);
+    if (episodes) {
+      episodes.push(enrollment);
+    } else {
+      episodesByProgramUuid.set(key, [enrollment]);
+    }
+  }
+
+  // `enrollments` arrives sorted by dateEnrolled descending (see useEnrollments above), so each
+  // program's episodes are already in that order -- the first one is the most recent.
+  return [...episodesByProgramUuid.values()].map(([latestEpisode, ...otherEpisodes]) => ({
+    uuid: latestEpisode.uuid,
+    display: latestEpisode.display,
+    location: latestEpisode.location,
+    count: otherEpisodes.length + 1,
+    lastDateEnrolled: latestEpisode.dateEnrolled,
+    dateCompleted: latestEpisode.dateCompleted,
+    states: latestEpisode.states,
+  }));
+}
 
 export const findLastState = (states: ProgramWorkflowState[]): ProgramWorkflowState => {
   const activeStates = states.filter((state) => !state.voided);
