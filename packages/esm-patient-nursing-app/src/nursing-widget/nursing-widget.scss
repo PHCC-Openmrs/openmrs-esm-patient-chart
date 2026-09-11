@@ -1,0 +1,40 @@
+@use '@carbon/colors';
+@use '@carbon/layout';
+
+.widgetCard {
+  background-color: colors.$white;
+  border: 1px solid colors.$gray-20;
+}
+
+.backgroundDataFetchingIndicator {
+  align-items: center;
+  display: flex;
+  flex: 1 1 0%;
+  justify-content: end;
+}
+
+.table {
+  td {
+    border-top: 1px solid colors.$gray-20;
+    border-bottom: none !important;
+    vertical-align: top;
+  }
+}
+
+.tableContainer {
+  a {
+    text-decoration: none;
+  }
+}
+
+.multiValue {
+  display: flex;
+  flex-direction: column;
+  row-gap: layout.$spacing-01;
+}
+
+.wrappedText {
+  white-space: pre-wrap;
+  max-width: 20rem;
+  display: inline-block;
+}
