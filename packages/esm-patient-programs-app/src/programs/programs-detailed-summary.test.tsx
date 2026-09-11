@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import { screen, within } from '@testing-library/react';
 import { getDefaultsFromConfigSchema, launchWorkspace2, openmrsFetch, useConfig } from '@openmrs/esm-framework';
 import { ErrorState } from '@openmrs/esm-patient-common-lib';
-import { mockCareProgramsResponse, mockEnrolledInAllProgramsResponse, mockEnrolledProgramsResponse } from '__mocks__';
 import { mockPatient, renderWithSwr, waitForLoadingToFinish } from 'tools';
 import { type ConfigObject, configSchema } from '../config-schema';
 import ProgramsDetailedSummary from './programs-detailed-summary.component';
@@ -13,20 +12,57 @@ const mockLaunchWorkspace = vi.mocked(launchWorkspace2);
 const mockUseConfig = vi.mocked(useConfig<ConfigObject>);
 const mockOpenmrsFetch = openmrsFetch as Mock;
 
+// Two episodes of the same program (Nutrition Registration), from two separate visits -- each
+// visit's Service selection opens its own enrollment (see the start-visit form), so Care
+// Services collapses them into one row per program with a visit count and a last-visited date
+// rather than one row per episode.
+const mockNutritionEpisodes = [
+  {
+    uuid: 'episode-2-uuid',
+    program: {
+      uuid: '2433ebba-8ffb-11f1-a103-1afee95a890c',
+      display: 'Nutrition Registration',
+      name: 'Nutrition Registration',
+      allWorkflows: [],
+    },
+    display: 'Nutrition Registration',
+    location: { uuid: 'de3b87c1-9688-4162-bfc5-d5eeccf3354d', display: 'Deir Al-Balah PHCC' },
+    dateEnrolled: '2026-08-11T10:27:14.000+0000',
+    dateCompleted: null,
+    states: [],
+  },
+  {
+    uuid: 'episode-1-uuid',
+    program: {
+      uuid: '2433ebba-8ffb-11f1-a103-1afee95a890c',
+      display: 'Nutrition Registration',
+      name: 'Nutrition Registration',
+      allWorkflows: [],
+    },
+    display: 'Nutrition Registration',
+    location: { uuid: 'de3b87c1-9688-4162-bfc5-d5eeccf3354d', display: 'Deir Al-Balah PHCC' },
+    dateEnrolled: '2026-08-05T10:54:26.000+0000',
+    dateCompleted: '2026-08-05T12:00:00.000+0000',
+    states: [],
+  },
+];
+
 describe('ProgramsDetailedSummary', () => {
-  it('renders an empty state view when the patient is not enrolled into any programs', async () => {
+  it('renders an empty state view when the patient is not enrolled into any services', async () => {
     mockOpenmrsFetch.mockReturnValueOnce({ data: { results: [] } });
 
     renderWithSwr(<ProgramsDetailedSummary patientUuid={mockPatient.id} />);
 
     await waitForLoadingToFinish();
 
-    expect(screen.getByText(/Care Programs/i)).toBeInTheDocument();
-    expect(screen.getByText(/There are no program enrollments to display for this patient/i)).toBeInTheDocument();
-    expect(screen.getByText(/Record program enrollments/i)).toBeInTheDocument();
+    expect(screen.getByText(/Care Services/i)).toBeInTheDocument();
+    expect(screen.getByText(/There are no service enrollments to display for this patient/i)).toBeInTheDocument();
+    // Services are now only added via the start-visit form, so the empty state offers no
+    // "Add"/"Record" action.
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it('renders an error state view if there is a problem fetching program enrollments', async () => {
+  it('renders an error state view if there is a problem fetching service enrollments', async () => {
     const error = {
       message: 'You are not logged in',
       response: {
@@ -41,68 +77,56 @@ describe('ProgramsDetailedSummary', () => {
 
     await waitForLoadingToFinish();
 
-    expect(ErrorState).toHaveBeenCalledWith(expect.objectContaining({ error, headerTitle: 'Care Programs' }), {});
+    expect(ErrorState).toHaveBeenCalledWith(expect.objectContaining({ error, headerTitle: 'Care Services' }), {});
   });
 
-  it('renders a detailed tabular summary of the patient program enrollments', async () => {
+  it('renders one row per service, collapsing repeat visits into a count and a last date', async () => {
     const user = userEvent.setup();
 
-    mockOpenmrsFetch.mockReturnValueOnce({ data: { results: mockEnrolledProgramsResponse } });
+    mockOpenmrsFetch.mockReturnValueOnce({ data: { results: mockNutritionEpisodes } });
 
     renderWithSwr(<ProgramsDetailedSummary patientUuid={mockPatient.id} />);
 
     await waitForLoadingToFinish();
 
-    expect(screen.getByText(/Care Programs/i)).toBeInTheDocument();
+    expect(screen.getByText(/Care Services/i)).toBeInTheDocument();
     expect(screen.getByRole('table')).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: /active programs/i })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: /date enrolled/i })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /active services/i })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /count/i })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /last date/i })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: /status/i })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /date enrolled/i })).not.toBeInTheDocument();
 
-    const addButton = screen.getByRole('button', { name: /Add/ });
-    expect(addButton).toBeInTheDocument();
-    const row = screen.getByRole('row', { name: /hiv care and treatment/i });
-    expect(row).toBeInTheDocument();
-    expect(within(row).getByRole('cell', { name: /16-Jan-2020/i })).toBeInTheDocument();
+    // No "Add" button anywhere -- services are only ever added from the start-visit form.
+    expect(screen.queryByRole('button', { name: /add/i })).not.toBeInTheDocument();
+
+    // Two episodes for the same program collapse into a single row...
+    const rows = screen.getAllByRole('row', { name: /nutrition registration/i });
+    expect(rows).toHaveLength(1);
+    const row = rows[0];
+
+    // ...counting both visits...
+    expect(within(row).getByRole('cell', { name: '2' })).toBeInTheDocument();
+    // ...showing the most recent visit's date as "Last date"...
+    expect(within(row).getByRole('cell', { name: /11-Aug-2026/i })).toBeInTheDocument();
+    // ...and the most recent episode's status (still active, even though the older one completed).
     expect(within(row).getByRole('cell', { name: /active$/i })).toBeInTheDocument();
+
     const actionMenuButton = within(row).getByRole('button', { name: /options$/i });
     expect(actionMenuButton).toBeInTheDocument();
 
-    await user.click(actionMenuButton);
-
-    // Clicking "Add" launches the programs form in a workspace
-    expect(addButton).toBeEnabled();
-    await user.click(addButton);
-
-    expect(mockLaunchWorkspace).toHaveBeenCalledWith('programs-form-workspace');
-
+    // The row's actions act on the most recent episode.
     await user.click(actionMenuButton);
     await user.click(screen.getByText('Edit'));
 
     expect(mockLaunchWorkspace).toHaveBeenCalledWith('programs-form-workspace', {
-      programEnrollmentId: mockEnrolledProgramsResponse[0].uuid,
-      workspaceTitle: 'Edit program enrollment',
+      programEnrollmentId: 'episode-2-uuid',
+      workspaceTitle: 'Edit service enrollment',
     });
   });
 
-  it('renders a notification when the patient is enrolled in all available programs', async () => {
-    mockOpenmrsFetch.mockReturnValueOnce({ data: { results: mockEnrolledInAllProgramsResponse } });
-    mockOpenmrsFetch.mockReturnValueOnce({ data: { results: mockCareProgramsResponse } });
-
-    renderWithSwr(<ProgramsDetailedSummary patientUuid={mockPatient.id} />);
-
-    await waitForLoadingToFinish();
-
-    expect(screen.getByRole('row', { name: /hiv care and treatment/i })).toBeInTheDocument();
-    expect(screen.getByRole('row', { name: /hiv differentiated care/i })).toBeInTheDocument();
-    expect(screen.getByRole('row', { name: /oncology screening and diagnosis/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /add/i })).toBeDisabled();
-    expect(screen.getByText(/enrolled in all programs/i)).toBeInTheDocument();
-    expect(screen.getByText(/there are no more programs left to enroll this patient in/i)).toBeInTheDocument();
-  });
-
-  it('conditionally renders the programs status field', async () => {
-    mockOpenmrsFetch.mockReturnValueOnce({ data: { results: mockEnrolledProgramsResponse } });
+  it('conditionally renders the service status field', async () => {
+    mockOpenmrsFetch.mockReturnValueOnce({ data: { results: mockNutritionEpisodes } });
 
     mockUseConfig.mockReturnValue({
       ...getDefaultsFromConfigSchema(configSchema),
@@ -113,6 +137,6 @@ describe('ProgramsDetailedSummary', () => {
 
     await waitForLoadingToFinish();
 
-    expect(screen.getByRole('columnheader', { name: /program status/i })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /service status/i })).toBeInTheDocument();
   });
 });

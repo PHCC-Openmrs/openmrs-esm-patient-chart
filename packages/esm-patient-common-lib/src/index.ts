@@ -10,6 +10,7 @@ export * from './offline/visit';
 export * from './orders';
 export * from './pagination';
 export * from './patient-summary/patient-summary-extension-order';
+export * from './programs/program-enrollment.resource';
 export * from './programs/usePatientProgramEnrollment';
 export * from './store/patient-chart-store';
 export * from './time-helper';

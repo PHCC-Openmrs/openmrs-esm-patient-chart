@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json.openmrs.org/routes.schema.json",
+  "backendDependencies": {
+    "webservices.rest": ">=2.2.0"
+  },
+  "extensions": [
+    {
+      "name": "nursing-dashboard",
+      "component": "nursingDashboardLink",
+      "slot": "patient-chart-dashboard-slot",
+      "order": 3,
+      "meta": {
+        "slot": "patient-chart-nursing-dashboard-slot",
+        "path": "nursing"
+      }
+    },
+    {
+      "name": "nursing-overview-widget",
+      "component": "nursingOverview",
+      "slot": "patient-chart-summary-dashboard-slot",
+      "meta": {
+        "fullWidth": true
+      },
+      "order": 4
+    },
+    {
+      "name": "nursing-details-widget",
+      "component": "nursingMain",
+      "slot": "patient-chart-nursing-dashboard-slot",
+      "meta": {
+        "title": "Nursing",
+        "view": "nursing",
+        "fullWidth": true
+      },
+      "order": 1
+    }
+  ],
+  "pages": [],
+  "workspaces2": [
+    {
+      "name": "patient-nursing-form-workspace",
+      "component": "nursingFormWorkspace",
+      "window": "patient-nursing-form-workspace"
+    }
+  ],
+  "workspaceWindows2": [
+    {
+      "name": "patient-nursing-form-workspace",
+      "group": "patient-chart"
+    }
+  ],
+  "modals": [
+    {
+      "name": "nursing-delete-confirmation-modal",
+      "component": "nursingDeleteConfirmationModal"
+    }
+  ]
+}

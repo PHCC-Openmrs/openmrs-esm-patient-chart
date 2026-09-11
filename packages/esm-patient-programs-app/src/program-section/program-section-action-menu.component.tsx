@@ -10,14 +10,22 @@ interface ProgramSectionActionMenuProps {
   encounter: ProgramSectionEncounter;
   section: ProgramSectionConfig;
   patientUuid: string;
+  isActive: boolean;
 }
 
-export const ProgramSectionActionMenu = ({ encounter, section, patientUuid }: ProgramSectionActionMenuProps) => {
+export const ProgramSectionActionMenu = ({
+  encounter,
+  section,
+  patientUuid,
+  isActive,
+}: ProgramSectionActionMenuProps) => {
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
   const session = useSession();
-  const canEdit = userHasAccess('Task: patientChart.recordProgramSection', session?.user);
-  const canDelete = userHasAccess('Task: patientChart.recordProgramSection', session?.user);
+  // A completed enrollment's section is shown for history, but only the currently active
+  // enrollment for this program can have its records edited or deleted.
+  const canEdit = isActive && userHasAccess('Task: patientChart.recordProgramSection', session?.user);
+  const canDelete = isActive && userHasAccess('Task: patientChart.recordProgramSection', session?.user);
 
   const launchEditForm = useCallback(
     () =>

@@ -16,7 +16,7 @@ import {
   useVisitTypes,
   type Visit,
 } from '@openmrs/esm-framework';
-import { time12HourFormatRegex, type amPm } from '@openmrs/esm-patient-common-lib';
+import { SERVICE_VISIT_ATTRIBUTE_TYPE_UUID, time12HourFormatRegex, type amPm } from '@openmrs/esm-patient-common-lib';
 import { useDefaultVisitLocation } from '../hooks/useDefaultVisitLocation';
 import { useOfflineVisitType } from '../hooks/useOfflineVisitType';
 import { type ChartConfig } from '../../config-schema';
@@ -38,6 +38,12 @@ export type VisitFormData = {
     display?: string;
     uuid?: string;
   };
+  // The Service(s) (programs) this visit is for -- program UUIDs. At least one is required for
+  // new visits; see service-selector.component.tsx and SERVICE_VISIT_ATTRIBUTE_TYPE_UUID. Stored
+  // on the visit as a single comma-separated attribute value (the attribute type allows only one
+  // occurrence), joined/split at the edges of the form in exported-visit-form.workspace.tsx and
+  // here respectively.
+  serviceProgram: Array<string>;
   visitAttributes: {
     [x: string]: string;
   };
@@ -242,6 +248,19 @@ export function useVisitFormSchemaAndDefaultValues(visitToEdit: Visit, earliestA
       visitStopTimeFormat: stopDateTime.timeFormat,
       visitType: visitToEdit?.visitType?.uuid ?? emrConfiguration?.atFacilityVisitType?.uuid,
       visitLocation: visitToEdit?.location ?? defaultVisitLocation ?? {},
+      serviceProgram: (() => {
+        const serviceAttribute = visitToEdit?.attributes?.find(
+          (attribute) => attribute.attributeType.uuid === SERVICE_VISIT_ATTRIBUTE_TYPE_UUID,
+        );
+        const value = serviceAttribute?.value;
+        const rawValue = typeof value === 'object' ? (value as { uuid?: string })?.uuid ?? '' : value ?? '';
+        return rawValue
+          ? rawValue
+              .split(',')
+              .map((uuid) => uuid.trim())
+              .filter(Boolean)
+          : [];
+      })(),
       visitAttributes:
         visitToEdit?.attributes.reduce(
           (acc, curr) => ({
@@ -278,6 +297,11 @@ export function useVisitFormSchemaAndDefaultValues(visitToEdit: Visit, earliestA
           display: z.string(),
           uuid: z.string({ required_error: t('visitLocationRequired', 'Visit location is required') }),
         }),
+        // Required only when starting a new visit -- an existing visit's service(s) were fixed
+        // when it started, so editing it stays possible without forcing a (re-)selection.
+        serviceProgram: visitToEdit
+          ? z.array(z.string()).optional()
+          : z.array(z.string()).min(1, t('serviceRequired', 'At least one service is required')),
         visitAttributes: z.object(visitAttributes),
       })
       .superRefine((data, ctx) => {

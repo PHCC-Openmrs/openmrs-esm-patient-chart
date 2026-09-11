@@ -42,14 +42,17 @@ interface ProgramSectionsOverviewProps {
 interface ProgramSectionCardProps {
   patientUuid: string;
   section: ProgramSectionConfig;
+  isActive: boolean;
 }
 
-const ProgramSectionCard: React.FC<ProgramSectionCardProps> = ({ patientUuid, section }) => {
+const ProgramSectionCard: React.FC<ProgramSectionCardProps> = ({ patientUuid, section, isActive }) => {
   const { t } = useTranslation();
   const { encounters, error, isLoading } = useProgramSectionEncounters(patientUuid, section.encounterTypeUuid);
   const { age, isLoading: isLoadingAge } = usePatientAge(patientUuid);
   const session = useSession();
-  const canAddSection = userHasAccess('Task: patientChart.recordProgramSection', session?.user);
+  // Editing is only offered for the enrollment episode that's currently active -- a completed
+  // enrollment's section still shows its history, but as a read-only record of that visit.
+  const canAddSection = isActive && userHasAccess('Task: patientChart.recordProgramSection', session?.user);
 
   // Some fields (e.g. Diagnosis) have two config entries sharing the same concept, one per
   // age band -- only one is ever visible for a given patient, so keying by conceptUuid below
@@ -100,7 +103,14 @@ const ProgramSectionCard: React.FC<ProgramSectionCardProps> = ({ patientUuid, se
     id: encounter.uuid,
     date: formatDatetime(new Date(encounter.encounterDatetime)),
     ...Object.fromEntries(visibleFields.map((field) => [field.conceptUuid, formatFieldValue(encounter, field)])),
-    actions: <ProgramSectionActionMenu encounter={encounter} section={section} patientUuid={patientUuid} />,
+    actions: (
+      <ProgramSectionActionMenu
+        encounter={encounter}
+        section={section}
+        patientUuid={patientUuid}
+        isActive={isActive}
+      />
+    ),
   }));
 
   return (
@@ -149,19 +159,27 @@ const ProgramSectionCard: React.FC<ProgramSectionCardProps> = ({ patientUuid, se
 
 const ProgramSectionsOverview: React.FC<ProgramSectionsOverviewProps> = ({ patientUuid }) => {
   const { programSections } = useConfig<ConfigObject>();
-  const { activeEnrollments } = useEnrollments(patientUuid);
+  const { data: enrollments, activeEnrollments } = useEnrollments(patientUuid);
 
   // Co-located here (rather than a separate always-present extension) since this widget
   // already knows the patient's active enrollments -- see program-summary-widget-rules.ts
   // for why this needs the imperative attach/detach API instead of a declarative condition.
   useProgramSummaryWidgetRules(patientUuid);
 
+  // A section's widget stays visible for the life of the patient's history with that service --
+  // not just while it's active -- so a completed enrollment (e.g. a past SRH episode) still
+  // shows its recorded data. Only the active set below gates whether it can be edited.
+  const enrolledProgramNames = useMemo(
+    () => new Set((enrollments ?? []).map((enrollment) => enrollment.program?.name)),
+    [enrollments],
+  );
+
   const activeProgramNames = useMemo(
     () => new Set((activeEnrollments ?? []).map((enrollment) => enrollment.program?.name)),
     [activeEnrollments],
   );
 
-  const eligibleSections = programSections.filter((section) => activeProgramNames.has(section.programName));
+  const eligibleSections = programSections.filter((section) => enrolledProgramNames.has(section.programName));
 
   if (!eligibleSections.length) {
     return null;
@@ -170,7 +188,12 @@ const ProgramSectionsOverview: React.FC<ProgramSectionsOverviewProps> = ({ patie
   return (
     <div className={styles.container}>
       {eligibleSections.map((section) => (
-        <ProgramSectionCard key={section.programName} patientUuid={patientUuid} section={section} />
+        <ProgramSectionCard
+          key={section.programName}
+          patientUuid={patientUuid}
+          section={section}
+          isActive={activeProgramNames.has(section.programName)}
+        />
       ))}
     </div>
   );

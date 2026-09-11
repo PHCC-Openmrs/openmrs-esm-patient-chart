@@ -2,6 +2,7 @@ import { defineConfigSchema, getAsyncLifecycle, getSyncLifecycle } from '@openmr
 import { createDashboardLink } from '@openmrs/esm-patient-common-lib';
 import { configSchema } from './config-schema';
 import { dashboardMeta } from './dashboard.meta';
+import { completeVisitServiceEnrollment } from './programs/complete-visit-service';
 import programsOverviewComponent from './programs/programs-overview.component';
 import programsDetailedSummaryComponent from './programs/programs-detailed-summary.component';
 import programSectionsOverviewComponent from './program-section/program-sections-overview.component';
@@ -17,6 +18,13 @@ export const importTranslation = require.context('../translations', false, /.jso
 
 export function startupApp() {
   defineConfigSchema(moduleName, configSchema);
+
+  // Completes the program enrollment the start-visit form created for this visit's Service.
+  // See completeVisitServiceEnrollment's doc comment for why this listens on the same
+  // `visit-ended` event esm-service-queues-app uses, instead of a cross-app import.
+  window.addEventListener('visit-ended', (event: CustomEvent<{ patientUuid: string; visitUuid: string }>) => {
+    completeVisitServiceEnrollment(event.detail?.visitUuid);
+  });
 }
 
 export const programsOverview = getSyncLifecycle(programsOverviewComponent, options);

@@ -1,12 +1,10 @@
-import React, { type ComponentProps, useCallback, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import classNames from 'classnames';
 import { useTranslation } from 'react-i18next';
 import {
-  Button,
   DataTable,
   DataTableSkeleton,
   InlineLoading,
-  InlineNotification,
   Table,
   TableBody,
   TableCell,
@@ -16,17 +14,14 @@ import {
   TableRow,
 } from '@carbon/react';
 import {
-  AddIcon,
   type ConfigObject,
   formatDate,
-  formatDatetime,
   useConfig,
   useLayoutType,
   isDesktop as desktopLayout,
-  launchWorkspace2,
 } from '@openmrs/esm-framework';
 import { CardHeader, EmptyState, ErrorState } from '@openmrs/esm-patient-common-lib';
-import { findLastState, usePrograms } from './programs.resource';
+import { findLastState, groupEnrollmentsByProgram, usePrograms } from './programs.resource';
 import { ProgramsActionMenu } from './programs-action-menu.component';
 import styles from './programs-detailed-summary.scss';
 
@@ -36,14 +31,16 @@ interface ProgramsDetailedSummaryProps {
 
 const ProgramsDetailedSummary: React.FC<ProgramsDetailedSummaryProps> = ({ patientUuid }) => {
   const { t } = useTranslation();
-  const { hideAddProgramButton, showProgramStatusField } = useConfig<ConfigObject>();
+  const { showProgramStatusField } = useConfig<ConfigObject>();
   const layout = useLayoutType();
   const isTablet = layout === 'tablet';
   const isDesktop = desktopLayout(layout);
   const displayText = t('programEnrollmentsLower', 'service enrollments');
   const headerTitle = t('carePrograms', 'Care Services');
 
-  const { enrollments, isLoading, error, isValidating, availablePrograms } = usePrograms(patientUuid);
+  const { enrollments, isLoading, error, isValidating } = usePrograms(patientUuid);
+
+  const groupedEnrollments = useMemo(() => groupEnrollmentsByProgram(enrollments), [enrollments]);
 
   const tableHeaders = useMemo(() => {
     const headers = [
@@ -56,8 +53,12 @@ const ProgramsDetailedSummary: React.FC<ProgramsDetailedSummaryProps> = ({ patie
         header: t('location', 'Location'),
       },
       {
-        key: 'dateEnrolled',
-        header: t('dateEnrolled', 'Date enrolled'),
+        key: 'count',
+        header: t('count', 'Count'),
+      },
+      {
+        key: 'lastDate',
+        header: t('lastDate', 'Last date'),
       },
       {
         key: 'status',
@@ -75,37 +76,27 @@ const ProgramsDetailedSummary: React.FC<ProgramsDetailedSummaryProps> = ({ patie
 
   const tableRows = useMemo(
     () =>
-      enrollments?.map((program) => {
-        const state = program ? findLastState(program.states) : null;
+      groupedEnrollments.map((group) => {
+        const state = group ? findLastState(group.states ?? []) : null;
         return {
-          id: program.uuid,
-          display: program.display,
-          location: program.location?.display ?? '--',
-          dateEnrolled: formatDatetime(new Date(program.dateEnrolled)),
-          status: program.dateCompleted
-            ? `${t('completedOn', 'Completed On')} ${formatDate(new Date(program.dateCompleted))}`
+          id: group.uuid,
+          display: group.display,
+          location: group.location?.display ?? '--',
+          count: group.count,
+          lastDate: formatDate(new Date(group.lastDateEnrolled)),
+          status: group.dateCompleted
+            ? `${t('completedOn', 'Completed On')} ${formatDate(new Date(group.dateCompleted))}`
             : t('active', 'Active'),
           state: state ? state.state.concept.display : '--',
         };
       }),
-    [enrollments, t],
+    [groupedEnrollments, t],
   );
 
-  const enrollmentsByUuid = useMemo(
-    () => new Map(enrollments?.map((enrollment) => [enrollment.uuid, enrollment]) ?? []),
-    [enrollments],
+  const groupsByUuid = useMemo(
+    () => new Map(groupedEnrollments.map((group) => [group.uuid, group])),
+    [groupedEnrollments],
   );
-
-  const launchProgramsForm = useCallback(() => launchWorkspace2('programs-form-workspace'), []);
-
-  const isEnrolledInAllPrograms = useMemo(() => {
-    if (!availablePrograms?.length || !enrollments?.length) {
-      return false;
-    }
-
-    const activeEnrollments = enrollments.filter((enrollment) => !enrollment.dateCompleted);
-    return activeEnrollments.length === availablePrograms.length;
-  }, [availablePrograms, enrollments]);
 
   if (isLoading) {
     return <DataTableSkeleton role="progressbar" compact={isDesktop} zebra />;
@@ -115,31 +106,12 @@ const ProgramsDetailedSummary: React.FC<ProgramsDetailedSummaryProps> = ({ patie
     return <ErrorState error={error} headerTitle={headerTitle} />;
   }
 
-  if (enrollments?.length) {
+  if (groupedEnrollments.length) {
     return (
       <div className={styles.widgetCard}>
         <CardHeader title={headerTitle}>
           <span>{isValidating ? <InlineLoading /> : null}</span>
-          {hideAddProgramButton ? null : (
-            <Button
-              disabled={isEnrolledInAllPrograms}
-              kind="ghost"
-              renderIcon={(props: ComponentProps<typeof AddIcon>) => <AddIcon size={16} {...props} />}
-              iconDescription={t('addPrograms', 'Add services')}
-              onClick={launchProgramsForm}
-            >
-              {t('add', 'Add')}
-            </Button>
-          )}
         </CardHeader>
-        {isEnrolledInAllPrograms && (
-          <InlineNotification
-            style={{ minWidth: '100%', margin: '0', padding: '0' }}
-            lowContrast
-            subtitle={t('noEligibleEnrollments', 'There are no more services left to enroll this patient in')}
-            title={t('fullyEnrolled', 'Enrolled in all services')}
-          />
-        )}
         <DataTable rows={tableRows} headers={tableHeaders} isSortable size={isTablet ? 'lg' : 'sm'} useZebraStyles>
           {({ rows, headers, getHeaderProps, getTableProps, getRowProps }) => (
             <TableContainer>
@@ -161,16 +133,16 @@ const ProgramsDetailedSummary: React.FC<ProgramsDetailedSummaryProps> = ({ patie
                 </TableHead>
                 <TableBody>
                   {rows.map((row) => {
-                    const enrollment = enrollmentsByUuid.get(row.id);
+                    const group = groupsByUuid.get(row.id);
 
                     return (
                       <TableRow key={row.id} {...getRowProps({ row })}>
                         {row.cells.map((cell) => (
                           <TableCell key={cell.id}>{cell.value?.content ?? cell.value}</TableCell>
                         ))}
-                        {enrollment && (
+                        {group && (
                           <TableCell className="cds--table-column-menu">
-                            <ProgramsActionMenu patientUuid={patientUuid} programEnrollmentId={enrollment.uuid} />
+                            <ProgramsActionMenu patientUuid={patientUuid} programEnrollmentId={group.uuid} />
                           </TableCell>
                         )}
                       </TableRow>
@@ -185,7 +157,7 @@ const ProgramsDetailedSummary: React.FC<ProgramsDetailedSummaryProps> = ({ patie
     );
   }
 
-  return <EmptyState displayText={displayText} headerTitle={headerTitle} launchForm={launchProgramsForm} />;
+  return <EmptyState displayText={displayText} headerTitle={headerTitle} />;
 };
 
 export default ProgramsDetailedSummary;
