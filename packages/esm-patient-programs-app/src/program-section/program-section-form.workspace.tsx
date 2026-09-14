@@ -4,6 +4,7 @@ import { Button, ButtonSet, Form, FormLabel, NumberInput, Select, SelectItem, St
 import { useForm, useWatch, Controller } from 'react-hook-form';
 import dayjs from 'dayjs';
 import {
+  formatDate,
   getCoreTranslation,
   OpenmrsDatePicker,
   parseDate,
@@ -18,6 +19,7 @@ import {
   findObsFormValue,
   saveProgramSectionEncounter,
   updateProgramSectionEncounter,
+  useLatestObsValues,
   useProgramSectionEncounters,
   usePatientAge,
   type ProgramSectionEncounter,
@@ -39,6 +41,22 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
   const isEditing = !!encounterToEdit;
   const { age, isLoading: isLoadingAge } = usePatientAge(patientUuid);
   const { mutateEncounters } = useProgramSectionEncounters(patientUuid, section.encounterTypeUuid);
+
+  // Source concepts for fields computed from data recorded elsewhere in the patient's record
+  // rather than from a sibling field -- e.g. EDD and gestational age, both derived from the LMP
+  // captured in the SRH Assessment section.
+  const latestObsConceptUuids = useMemo(
+    () => section.fields.map((field) => field.autofillFromLatestObsConceptUuid).filter(Boolean),
+    [section.fields],
+  );
+  const { latestObsValues, isLoading: isLoadingLatestObs } = useLatestObsValues(patientUuid, latestObsConceptUuids);
+
+  // Date-relative autofills are computed as of the encounter being recorded, so editing an old
+  // encounter recomputes them against that encounter's date rather than today.
+  const referenceDate = useMemo(
+    () => (encounterToEdit ? new Date(encounterToEdit.encounterDatetime) : new Date()),
+    [encounterToEdit],
+  );
 
   // Some fields (e.g. Diagnosis) have two config entries sharing the same concept, one per
   // age band (e.g. <=5 read-only/autofilled, >5 manually chosen) -- only one is ever visible
@@ -77,19 +95,22 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
         }
         return;
       }
-      if (!field.autofillFromConceptUuid || !field.autofillRule) {
+      if (!field.autofillRule || (!field.autofillFromConceptUuid && !field.autofillFromLatestObsConceptUuid)) {
         return;
       }
-      const sourceValue = formValues[field.autofillFromConceptUuid] ?? '';
-      const computedValue = computeAutofillValue(field.autofillRule, sourceValue);
+      const sourceValue = field.autofillFromLatestObsConceptUuid
+        ? latestObsValues[field.autofillFromLatestObsConceptUuid] ?? ''
+        : formValues[field.autofillFromConceptUuid] ?? '';
+      const computedValue = computeAutofillValue(field.autofillRule, sourceValue, referenceDate);
       if (computedValue !== (formValues[field.conceptUuid] ?? '')) {
         setValue(field.conceptUuid, computedValue);
       }
     });
-    // Only re-run when the watched form values change -- ageEligibleFields/isFieldVisible/setValue
-    // are stable for the lifetime of this workspace instance (derived from the fixed `section` prop).
+    // Only re-run when the watched form values or the looked-up source obs change --
+    // ageEligibleFields/isFieldVisible/setValue/referenceDate are stable for the lifetime of this
+    // workspace instance (derived from the fixed `section`/`encounterToEdit` props).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formValues]);
+  }, [formValues, latestObsValues]);
 
   // Clear the "missing" flag on a field as soon as it's filled in, rather than only on the next
   // failed submit attempt.
@@ -102,10 +123,12 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
 
   const onSubmit = useCallback(
     async (values: Record<string, string>) => {
-      // Every currently-visible field is mandatory -- fields hidden by age or a
+      // Every currently-visible field is mandatory unless it's explicitly marked `optional`
+      // (free-text notes, measurements that only apply to part of a pregnancy, values computed
+      // from data the patient may not have on record yet). Fields hidden by age or a
       // visibleWhenConceptUuid condition (e.g. the supplement fields when "Received
       // supplement" is "No") are correctly excluded, since they don't apply to this patient.
-      const missingFields = visibleFields.filter((field) => !values[field.conceptUuid]);
+      const missingFields = visibleFields.filter((field) => !field.optional && !values[field.conceptUuid]);
       if (missingFields.length > 0) {
         setMissingConceptUuids(new Set(missingFields.map((field) => field.conceptUuid)));
         showSnackbar({
@@ -164,7 +187,7 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
     ? t('editSectionTitle', 'Edit {{sectionTitle}}', { sectionTitle: section.sectionTitle })
     : section.sectionTitle;
 
-  if (isLoadingAge) {
+  if (isLoadingAge || isLoadingLatestObs) {
     return (
       <Workspace2 title={workspaceTitle} hasUnsavedChanges={false}>
         <div className={styles.formContainer} />
@@ -183,10 +206,14 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
                 control={control}
                 render={({ field: { onChange, value } }) => {
                   if (field.readOnly) {
+                    // An autofilled date holds a raw timestamp -- show it the way the date picker
+                    // and the summary table would, not as an ISO string.
+                    const displayValue =
+                      field.controlType === 'date' && value ? formatDate(parseDate(value), { time: false }) : value;
                     return (
                       <div className={styles.readOnlyField}>
                         <FormLabel>{field.label}</FormLabel>
-                        <p className={styles.readOnlyValue}>{value || '--'}</p>
+                        <p className={styles.readOnlyValue}>{displayValue || '--'}</p>
                       </div>
                     );
                   }

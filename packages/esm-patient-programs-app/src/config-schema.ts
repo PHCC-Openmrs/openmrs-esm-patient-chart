@@ -14,6 +14,13 @@ export const ADULT_MUAC_DIAGNOSIS_OPTIONS = ['Malnourished', 'Normal'];
 // (concept, Text datatype, Finding class -- same shape as the Oedema concept below).
 export const RECEIVED_SUPPLEMENT_CONCEPT_UUID = '54064b9a-39de-4dee-8984-56c58341d461';
 
+// Every SRH section below hangs off this one program enrolment.
+const SRH_PROGRAM_NAME = 'Sexual Reproductive Health (SRH)';
+
+// Last Menstrual Period, captured in the SRH Assessment section. The Ultrasound section's EDD and
+// "Number of Weeks" are both derived from the patient's latest value for it rather than re-asking.
+export const SRH_LMP_CONCEPT_UUID = '74e7e6b0-a0c6-461e-a4ef-205dafc77240';
+
 export const configSchema = {
   showProgramStatusField: {
     _type: Type.Boolean,
@@ -129,11 +136,20 @@ export const configSchema = {
               "If set, this field's value is computed from another field in the same section (matched by concept " +
               'UUID) using autofillRule, instead of being entered directly.',
           },
+          autofillFromLatestObsConceptUuid: {
+            _type: Type.UUID,
+            _description:
+              "If set, this field's value is computed by autofillRule from the patient's most recently recorded " +
+              'observation for this concept -- anywhere in their record, including other sections -- instead of ' +
+              'from a field in this section. Takes precedence over autofillFromConceptUuid.',
+          },
           autofillRule: {
             _type: Type.String,
             _description:
-              "Name of the computation used to derive this field's value from the autofillFromConceptUuid field. " +
-              'Currently supported: "muacNutritionCategory", "muacAdultDiagnosis", "supplementTypeToProject".',
+              "Name of the computation used to derive this field's value from its autofill source " +
+              '(autofillFromConceptUuid, or autofillFromLatestObsConceptUuid). Currently supported: ' +
+              '"muacNutritionCategory", "muacAdultDiagnosis", "supplementTypeToProject", "lmpToEdd", ' +
+              '"lmpToGestationalWeeks".',
           },
           visibleWhenConceptUuid: {
             _type: Type.UUID,
@@ -147,6 +163,14 @@ export const configSchema = {
               'The value (option text, or answer concept UUID for a coded select) that visibleWhenConceptUuid ' +
               "must have for this field to be shown. Ignored if visibleWhenConceptUuid isn't set.",
             _default: '',
+          },
+          optional: {
+            _type: Type.Boolean,
+            _description:
+              'Whether this field may be left blank. Fields are required by default; set this for notes, ' +
+              'measurements that only apply to some visits, and autofilled values whose source may not be on ' +
+              'record yet.',
+            _default: false,
           },
           persist: {
             _type: Type.Boolean,
@@ -280,12 +304,12 @@ export const configSchema = {
         ],
       },
       {
-        programName: 'Sexual Reproductive Health (SRH)',
+        programName: SRH_PROGRAM_NAME,
         sectionTitle: 'SRH Assessment',
         encounterTypeUuid: '20f20572-92d4-4cd2-a800-6dff5d39b044',
         fields: [
           {
-            conceptUuid: '74e7e6b0-a0c6-461e-a4ef-205dafc77240',
+            conceptUuid: SRH_LMP_CONCEPT_UUID,
             label: 'LMP (Last Menstrual Period)',
             controlType: 'date',
             options: [],
@@ -310,6 +334,277 @@ export const configSchema = {
             minAge: 0,
             maxAge: 200,
             readOnly: false,
+          },
+        ],
+      },
+      {
+        // Obstetric ultrasound findings. Measurements (FL/CRL/BPD/AC) and the gestational-age
+        // fields are optional: which of them a scan yields depends on how far along the
+        // pregnancy is, so requiring all of them would block a valid early- or late-term scan.
+        programName: SRH_PROGRAM_NAME,
+        sectionTitle: 'Ultrasound',
+        encounterTypeUuid: '367f7663-1ec7-4802-befc-b5097cee30b1',
+        fields: [
+          {
+            conceptUuid: '1baaf8f0-7b59-40d5-8aec-1af2436be3a4',
+            label: 'Fetuses',
+            controlType: 'select',
+            options: ['Foetus:1', 'Not Defined'],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+          },
+          {
+            conceptUuid: 'd31d549f-77f2-41fe-9463-d6f9cd5f39de',
+            label: 'Fetal Heart Pulsation',
+            controlType: 'select',
+            options: ['Not Set', '+ve', '-ve', '+ve/ -ve'],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+          },
+          {
+            conceptUuid: '151f6ad3-83d6-4e99-8f9f-87253a569cbf',
+            label: 'Presentation',
+            controlType: 'select',
+            options: ['Not Defined', 'Cephalic', 'Breech', 'Shoulder', 'Transversus'],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+          },
+          {
+            conceptUuid: 'e5b825c6-8d33-4493-9afd-0162944e3094',
+            label: 'Lie Fetuses',
+            controlType: 'select',
+            options: ['Not Defined', 'Longitudinal', 'Obliques', 'Transverse'],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+          },
+          {
+            conceptUuid: 'a8adc088-44db-4800-91d4-ed159666cea0',
+            label: 'Fetal Gender',
+            controlType: 'select',
+            options: ['Unknown', 'Male', 'Female'],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+          },
+          {
+            conceptUuid: '9ccb470d-4698-410c-80e8-ddf71626b9c8',
+            label: 'FL',
+            controlType: 'number',
+            options: [],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+            optional: true,
+          },
+          {
+            conceptUuid: '1ccd71c9-7cff-4cb4-8250-f259c163a411',
+            label: 'CRL',
+            controlType: 'number',
+            options: [],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+            optional: true,
+          },
+          {
+            conceptUuid: 'd7dd0030-62b3-4519-8e85-7d0cd65b5589',
+            label: 'BPD',
+            controlType: 'number',
+            options: [],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+            optional: true,
+          },
+          {
+            conceptUuid: 'af646e85-e5f4-4b10-8a8b-5711c3de1022',
+            label: 'AC',
+            controlType: 'number',
+            options: [],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+            optional: true,
+          },
+          {
+            conceptUuid: '93f1d86b-6937-4fa7-8698-a405a4d31b17',
+            label: 'G Week',
+            controlType: 'number',
+            options: [],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+            optional: true,
+          },
+          {
+            conceptUuid: 'e0765aa2-90bb-41ea-a033-6c9ccf25ab8d',
+            label: 'G Days',
+            controlType: 'number',
+            options: [],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+            optional: true,
+          },
+          {
+            conceptUuid: '649772f8-7212-409b-bf63-fc0c20ecd80e',
+            label: 'Placenta',
+            controlType: 'text',
+            options: [],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+            optional: true,
+          },
+          {
+            conceptUuid: '6f0229ef-ddf2-452b-ae74-e42cc2d900af',
+            label: 'Amniotic Fluid',
+            controlType: 'select',
+            options: ['Not Defined', 'Adequate', 'Polyhydramnios', 'Oligohydramnios'],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+          },
+          {
+            // Calculated from the LMP recorded in SRH Assessment: LMP + 9 months + 7 days.
+            conceptUuid: '21eea22d-7aef-4238-8203-a987fbf08d35',
+            label: 'EDD',
+            controlType: 'date',
+            options: [],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: true,
+            optional: true,
+            autofillFromLatestObsConceptUuid: SRH_LMP_CONCEPT_UUID,
+            autofillRule: 'lmpToEdd',
+          },
+          {
+            // Calculated from the LMP recorded in SRH Assessment: every 7 whole days elapsed
+            // since the LMP counts as one completed week.
+            conceptUuid: 'ccb5e545-2c8e-4082-a9a0-fddc01a0f088',
+            label: 'Number of Weeks',
+            controlType: 'number',
+            options: [],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: true,
+            optional: true,
+            autofillFromLatestObsConceptUuid: SRH_LMP_CONCEPT_UUID,
+            autofillRule: 'lmpToGestationalWeeks',
+          },
+          {
+            conceptUuid: '26bcbe57-ac91-4763-a249-1e530acb237f',
+            label: 'Referrals',
+            controlType: 'select',
+            options: ['ANC cases', 'Deliveries', 'Newborns', 'Other'],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+            optional: true,
+          },
+          {
+            conceptUuid: '0983ec3a-3fdc-4398-a511-aaac695db09d',
+            label: 'Notes',
+            controlType: 'text',
+            options: [],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+            optional: true,
+          },
+        ],
+      },
+      {
+        programName: SRH_PROGRAM_NAME,
+        sectionTitle: 'STI and Gyna',
+        encounterTypeUuid: '871dd5ad-4d3a-4170-a985-181d10394c44',
+        fields: [
+          {
+            // Optional: only applies to a patient who has recently delivered.
+            conceptUuid: '9311d1f3-ec8b-41a7-9893-fe8f3071c792',
+            label: 'PNC',
+            controlType: 'select',
+            options: ['<72 H', '>72 H'],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+            optional: true,
+          },
+          {
+            conceptUuid: '22199eac-e76a-47b5-81b3-75e969b01468',
+            label: 'STI',
+            controlType: 'select',
+            options: ['Yes', 'No'],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+          },
+          {
+            conceptUuid: '1d1b1ebe-fa60-4f17-8ba2-c75830944a82',
+            label: 'Gyna',
+            controlType: 'select',
+            options: ['Yes', 'No'],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+          },
+          {
+            conceptUuid: '98018a2e-f03d-48ad-a002-a95f0e52f010',
+            label: 'PCC',
+            controlType: 'select',
+            options: ['Yes', 'No'],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+          },
+          {
+            conceptUuid: 'f0438e22-6224-4d50-8646-7b1845b122f8',
+            label: 'Notes',
+            controlType: 'text',
+            options: [],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+            optional: true,
+          },
+        ],
+      },
+      {
+        programName: SRH_PROGRAM_NAME,
+        sectionTitle: 'Family Planning',
+        encounterTypeUuid: '9602cc2d-f411-4318-87dd-7ab3a204127e',
+        fields: [
+          {
+            conceptUuid: '0ea3ad8b-1e24-461a-b421-093b078af199',
+            label: 'Visit Type',
+            controlType: 'select',
+            options: ['New', 'Follow'],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+          },
+          {
+            conceptUuid: '11b4fb9c-97f1-4ca8-bfe6-63e769cee6fb',
+            label: 'Kind of Contraseption',
+            controlType: 'select',
+            options: ['COCP', 'POP', 'Emergency contraceptives', 'Injectable', 'Male Condom', 'IUCD'],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+          },
+          {
+            conceptUuid: 'b1285f61-04ac-40a2-903f-994d2e2151c9',
+            label: 'Notes',
+            controlType: 'text',
+            options: [],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+            optional: true,
           },
         ],
       },
@@ -340,7 +635,9 @@ export interface ProgramSectionField {
   minAge: number;
   maxAge: number;
   readOnly: boolean;
+  optional?: boolean;
   autofillFromConceptUuid?: string;
+  autofillFromLatestObsConceptUuid?: string;
   autofillRule?: string;
   visibleWhenConceptUuid?: string;
   visibleWhenValue?: string;
