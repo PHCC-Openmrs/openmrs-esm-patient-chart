@@ -10,6 +10,7 @@ import { type VitalsBiometricsFormData } from './schema';
 import styles from './vitals-biometrics-input.scss';
 
 type fieldId =
+  | 'bloodGlucose'
   | 'computedBodyMassIndex'
   | 'diastolicBloodPressure'
   | 'generalPatientNote'

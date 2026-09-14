@@ -22,6 +22,12 @@ export const configSchema = {
       _type: Type.ConceptUuid,
       _default: '5092AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
     },
+    bloodGlucoseUuid: {
+      _type: Type.ConceptUuid,
+      _default: '887AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+      _description:
+        'Numeric concept recording the blood glucose reading taken alongside vitals. Defaults to the CIEL "Serum glucose" concept; point this at whichever glucose concept your implementation records at the point of care.',
+    },
     heightUuid: {
       _type: Type.ConceptUuid,
       _default: '5090AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
@@ -137,6 +143,7 @@ export interface ConfigObject {
     pulseUuid: string;
     temperatureUuid: string;
     oxygenSaturationUuid: string;
+    bloodGlucoseUuid: string;
     heightUuid: string;
     weightUuid: string;
     respiratoryRateUuid: string;
