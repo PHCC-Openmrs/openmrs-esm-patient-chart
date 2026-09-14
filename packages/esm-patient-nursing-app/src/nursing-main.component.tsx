@@ -1,26 +1,21 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import NursingProceduresOverview from './nursing-procedures/nursing-procedures-overview.component';
+import NursingSections from './nursing-sections/nursing-sections.component';
 
 interface NursingMainProps {
   patientUuid: string;
 }
 
 /**
- * The Nursing dashboard page. Every nursing encounter is recorded through a single form, so
- * the dashboard shows that list once rather than repeating it per section.
+ * The Nursing dashboard page. Shows every section of the nursing form as its own table, so a
+ * record is visible here whichever sections it filled in.
  */
 const NursingMain: React.FC<NursingMainProps> = ({ patientUuid }) => {
   const { t } = useTranslation();
   const pageUrl = `$\{openmrsSpaBase}/patient/${patientUuid}/chart/nursing`;
 
   return (
-    <NursingProceduresOverview
-      patientUuid={patientUuid}
-      pageSize={10}
-      pageUrl={pageUrl}
-      urlLabel={t('seeAll', 'See all')}
-    />
+    <NursingSections patientUuid={patientUuid} pageSize={10} pageUrl={pageUrl} urlLabel={t('seeAll', 'See all')} />
   );
 };
 
