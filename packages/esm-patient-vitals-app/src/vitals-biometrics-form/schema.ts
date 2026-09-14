@@ -6,6 +6,7 @@ export const VitalsAndBiometricsFormSchema = z
     diastolicBloodPressure: z.number(),
     respiratoryRate: z.number(),
     oxygenSaturation: z.number(),
+    bloodGlucose: z.number(),
     pulse: z.number(),
     temperature: z.number(),
     generalPatientNote: z.string(),

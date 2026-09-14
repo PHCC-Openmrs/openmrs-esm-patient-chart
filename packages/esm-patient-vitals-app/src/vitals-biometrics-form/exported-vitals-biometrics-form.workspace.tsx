@@ -122,6 +122,7 @@ const ExportedVitalsAndBiometricsForm: React.FC<Workspace2DefinitionProps<Vitals
   const diastolicBloodPressure = watch('diastolicBloodPressure');
   const respiratoryRate = watch('respiratoryRate');
   const oxygenSaturation = watch('oxygenSaturation');
+  const bloodGlucose = watch('bloodGlucose');
   const temperature = watch('temperature');
   const pulse = watch('pulse');
   const weight = watch('weight');
@@ -168,6 +169,7 @@ const ExportedVitalsAndBiometricsForm: React.FC<Workspace2DefinitionProps<Vitals
       diastolicBloodPressureRange: conceptRangeMap.get(config.concepts.diastolicBloodPressureUuid),
       systolicBloodPressureRange: conceptRangeMap.get(config.concepts.systolicBloodPressureUuid),
       oxygenSaturationRange: conceptRangeMap.get(config.concepts.oxygenSaturationUuid),
+      bloodGlucoseRange: conceptRangeMap.get(config.concepts.bloodGlucoseUuid),
       respiratoryRateRange: conceptRangeMap.get(config.concepts.respiratoryRateUuid),
       temperatureRange: conceptRangeMap.get(config.concepts.temperatureUuid),
       weightRange: conceptRangeMap.get(config.concepts.weightUuid),
@@ -513,6 +515,36 @@ const ExportedVitalsAndBiometricsForm: React.FC<Workspace2DefinitionProps<Vitals
                   showErrorMessage={showErrorMessage}
                   label={t('spo2', 'SpO2')}
                   unitSymbol={conceptUnits.get(config.concepts.oxygenSaturationUuid) ?? ''}
+                />
+              </Column>
+              <Column>
+                <VitalsAndBiometricsInput
+                  control={control}
+                  fieldProperties={[
+                    {
+                      name: t('bloodGlucose', 'Blood glucose'),
+                      type: 'number',
+                      min: concepts.bloodGlucoseRange?.lowAbsolute,
+                      max: concepts.bloodGlucoseRange?.hiAbsolute,
+                      id: 'bloodGlucose',
+                    },
+                  ]}
+                  interpretation={
+                    bloodGlucose != null
+                      ? assessValue(
+                          bloodGlucose,
+                          getReferenceRangesForConcept(config.concepts.bloodGlucoseUuid, conceptRanges),
+                        )
+                      : undefined
+                  }
+                  isValueWithinReferenceRange={
+                    bloodGlucose != null
+                      ? isValueWithinReferenceRange(conceptRanges, config.concepts['bloodGlucoseUuid'], bloodGlucose)
+                      : true
+                  }
+                  showErrorMessage={showErrorMessage}
+                  label={t('bloodGlucose', 'Blood glucose')}
+                  unitSymbol={conceptUnits.get(config.concepts.bloodGlucoseUuid) ?? ''}
                 />
               </Column>
             </Row>

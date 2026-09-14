@@ -104,12 +104,7 @@ const ProgramSectionCard: React.FC<ProgramSectionCardProps> = ({ patientUuid, se
     date: formatDatetime(new Date(encounter.encounterDatetime)),
     ...Object.fromEntries(visibleFields.map((field) => [field.conceptUuid, formatFieldValue(encounter, field)])),
     actions: (
-      <ProgramSectionActionMenu
-        encounter={encounter}
-        section={section}
-        patientUuid={patientUuid}
-        isActive={isActive}
-      />
+      <ProgramSectionActionMenu encounter={encounter} section={section} patientUuid={patientUuid} isActive={isActive} />
     ),
   }));
 
@@ -124,7 +119,9 @@ const ProgramSectionCard: React.FC<ProgramSectionCardProps> = ({ patientUuid, se
       </CardHeader>
       <DataTable rows={tableRows} headers={tableHeaders} size="sm" useZebraStyles>
         {({ rows, headers, getHeaderProps, getRowProps, getTableProps }) => (
-          <TableContainer>
+          // A wide section (Ultrasound records 17 fields) scrolls sideways rather than
+          // squeezing every column or pushing the chart's own layout out.
+          <TableContainer className={styles.tableContainer}>
             <Table aria-label={section.sectionTitle} {...getTableProps()}>
               <TableHead>
                 <TableRow>
@@ -188,8 +185,10 @@ const ProgramSectionsOverview: React.FC<ProgramSectionsOverviewProps> = ({ patie
   return (
     <div className={styles.container}>
       {eligibleSections.map((section) => (
+        // A program can contribute several sections (SRH has Assessment, Ultrasound, STI and
+        // Gyna, and Family Planning), so the encounter type -- not the program -- identifies one.
         <ProgramSectionCard
-          key={section.programName}
+          key={section.encounterTypeUuid}
           patientUuid={patientUuid}
           section={section}
           isActive={activeProgramNames.has(section.programName)}

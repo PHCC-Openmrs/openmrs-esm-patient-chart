@@ -90,6 +90,7 @@ function getInterpretationKey(header: string) {
 export function useVitalsConceptMetadata(patientUuid: string) {
   const {
     concepts: {
+      bloodGlucoseUuid,
       diastolicBloodPressureUuid,
       oxygenSaturationUuid,
       pulseUuid,
@@ -99,7 +100,7 @@ export function useVitalsConceptMetadata(patientUuid: string) {
     },
   } = useConfig<ConfigObject>();
 
-  const apiUrl = `${restBaseUrl}/conceptreferencerange/?patient=${patientUuid}&concept=${systolicBloodPressureUuid},${diastolicBloodPressureUuid},${pulseUuid},${temperatureUuid},${oxygenSaturationUuid},${respiratoryRateUuid}&v=full`;
+  const apiUrl = `${restBaseUrl}/conceptreferencerange/?patient=${patientUuid}&concept=${systolicBloodPressureUuid},${diastolicBloodPressureUuid},${pulseUuid},${temperatureUuid},${oxygenSaturationUuid},${respiratoryRateUuid},${bloodGlucoseUuid}&v=full`;
 
   const { data, error, isLoading } = useSWRImmutable<{ data: any }, Error>(patientUuid ? apiUrl : null, openmrsFetch);
 
@@ -190,7 +191,9 @@ export function useVitalsOrBiometricsConcepts(mode: VitalsAndBiometricsMode) {
     // These keys are not individual observation concepts for the FHIR query:
     // generalPatientNoteUuid is fetched separately to avoid note-only encounters
     // polluting the vitals list; vitalSignsConceptSetUuid is a concept set, not an obs concept.
-    const excludedFromQuery = new Set(['generalPatientNoteUuid', 'vitalSignsConceptSetUuid']);
+    // bloodGlucoseUuid is recorded on the vitals form but has no column in the vitals table
+    // yet, so including it would surface glucose-only encounters as rows of dashes.
+    const excludedFromQuery = new Set(['bloodGlucoseUuid', 'generalPatientNoteUuid', 'vitalSignsConceptSetUuid']);
 
     if (!concepts) {
       return [];

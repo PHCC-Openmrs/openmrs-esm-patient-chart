@@ -1,0 +1,7 @@
+@use '@carbon/layout';
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  row-gap: layout.$spacing-05;
+}

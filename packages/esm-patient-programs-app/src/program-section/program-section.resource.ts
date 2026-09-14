@@ -1,4 +1,6 @@
+import { useMemo } from 'react';
 import useSWR from 'swr';
+import dayjs from 'dayjs';
 import { openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
 
 export interface ProgramSectionObservation {
@@ -143,6 +145,59 @@ export function usePatientAge(patientUuid: string) {
   return { age: data?.data?.person?.age, isLoading };
 }
 
+interface LatestObsResult {
+  concept: { uuid: string };
+  value: string | number | { uuid: string; display: string };
+  obsDatetime: string;
+}
+
+/**
+ * The patient's most recently recorded value for each of `conceptUuids`, keyed by concept UUID
+ * (missing/never-recorded concepts are simply absent from the map).
+ *
+ * This backs `autofillFromLatestObsConceptUuid`: unlike `autofillFromConceptUuid`, which reads a
+ * sibling field of the form being filled in, this reads a concept the patient already has on
+ * record from a *different* section -- e.g. the Ultrasound section's EDD is derived from the LMP
+ * captured earlier in SRH Assessment, rather than asking for it again.
+ *
+ * One request per concept: the REST obs search takes a single concept, and in practice this is a
+ * one- or two-concept lookup.
+ */
+export function useLatestObsValues(patientUuid: string, conceptUuids: Array<string>) {
+  // Sorted + de-duplicated so the SWR key is stable across renders regardless of field order.
+  const uniqueConceptUuids = useMemo(
+    () => [...new Set(conceptUuids.filter(Boolean))].sort(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [conceptUuids.join(',')],
+  );
+
+  const { data, isLoading } = useSWR<Record<string, string>, Error>(
+    patientUuid && uniqueConceptUuids.length ? ['programSectionLatestObs', patientUuid, ...uniqueConceptUuids] : null,
+    async () => {
+      const entries = await Promise.all(
+        uniqueConceptUuids.map(async (conceptUuid) => {
+          const response = await openmrsFetch<{ results: Array<LatestObsResult> }>(
+            `${restBaseUrl}/obs?patient=${patientUuid}&concept=${conceptUuid}&v=custom:(concept:(uuid),value,obsDatetime)`,
+          );
+          // The REST obs search makes no ordering guarantee, so pick the newest here rather than
+          // trusting the first result.
+          const latest = (response?.data?.results ?? [])
+            .slice()
+            .sort((a, b) => (a.obsDatetime > b.obsDatetime ? -1 : 1))[0];
+          const value = latest ? (typeof latest.value === 'object' ? latest.value.uuid : String(latest.value)) : '';
+          return [conceptUuid, value] as const;
+        }),
+      );
+      return Object.fromEntries(entries);
+    },
+  );
+
+  // Memoised so callers can safely use this map as an effect dependency.
+  const latestObsValues = useMemo(() => data ?? {}, [data]);
+
+  return { latestObsValues, isLoading };
+}
+
 // Malnutrition Categories by MUAC (6-59 months): SAM < 11.5cm, MAM 11.5-<12.5cm, Normal >= 12.5cm.
 function muacNutritionCategory(muacValue: string): string {
   const muac = Number(muacValue);
@@ -183,12 +238,53 @@ function supplementTypeToProject(supplementAnswerConceptUuid: string): string {
   return isRutfOrRucf ? 'UNICEF' : 'WFP';
 }
 
-const AUTOFILL_RULES: Record<string, (sourceValue: string) => string> = {
+/**
+ * Expected Date of Delivery from the last menstrual period, by Naegele's rule as specified for
+ * the SRH Ultrasound section: LMP + 9 months + 7 days. dayjs clamps a month overflow to the end
+ * of the target month (e.g. an LMP of 31 May gives 28/29 Feb + 7 days), so no manual correction
+ * is needed.
+ */
+function lmpToEdd(lmpValue: string): string {
+  const lmp = dayjs(lmpValue);
+  if (!lmpValue || !lmp.isValid()) {
+    return '';
+  }
+  return lmp.add(9, 'month').add(7, 'day').format();
+}
+
+/**
+ * Completed weeks elapsed since the last menstrual period -- every 7 whole days counts as one
+ * week. Measured against `referenceDate` (the encounter's own date, not "now"), so re-opening an
+ * old encounter to edit it doesn't silently age its recorded gestation.
+ */
+function lmpToGestationalWeeks(lmpValue: string, referenceDate: Date): string {
+  const lmp = dayjs(lmpValue).startOf('day');
+  if (!lmpValue || !lmp.isValid()) {
+    return '';
+  }
+  const elapsedDays = dayjs(referenceDate).startOf('day').diff(lmp, 'day');
+  if (elapsedDays < 0) {
+    return '';
+  }
+  return String(Math.floor(elapsedDays / 7));
+}
+
+const AUTOFILL_RULES: Record<string, (sourceValue: string, referenceDate: Date) => string> = {
   muacNutritionCategory,
   muacAdultDiagnosis,
   supplementTypeToProject,
+  lmpToEdd,
+  lmpToGestationalWeeks,
 };
 
-export function computeAutofillValue(autofillRule: string, sourceValue: string): string {
-  return AUTOFILL_RULES[autofillRule]?.(sourceValue) ?? '';
+/**
+ * `referenceDate` is the date the value is being computed *as of* -- the encounter's date when
+ * editing, today when recording a new one. Only date-relative rules use it.
+ */
+export function computeAutofillValue(
+  autofillRule: string,
+  sourceValue: string,
+  referenceDate: Date = new Date(),
+): string {
+  return AUTOFILL_RULES[autofillRule]?.(sourceValue, referenceDate) ?? '';
 }
