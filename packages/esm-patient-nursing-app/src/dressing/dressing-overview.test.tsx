@@ -35,13 +35,13 @@ beforeEach(() => {
 });
 
 describe('DressingOverview', () => {
-  it('renders an empty state when the patient has no dressing records', async () => {
+  it('renders an empty state when the patient has no dressing or other measure records', async () => {
     mockRecords([]);
 
     renderWithSwr(<DressingOverview patientUuid="patient-uuid" />);
     await waitForLoadingToFinish();
 
-    expect(screen.getByRole('heading', { name: /dressing/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /dressing and other measures/i })).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
@@ -86,5 +86,63 @@ describe('DressingOverview', () => {
 
     expect(screen.getAllByRole('row')).toHaveLength(2); // header + the one encounter with a dressing
     expect(screen.getByText('Calmex')).toBeInTheDocument();
+  });
+
+  it('renders the other measures with their units and links to the ECG attachment', async () => {
+    mockRecords([
+      {
+        id: 'encounter-1',
+        date: '2026-09-10T10:00:00.000+0000',
+        ointments: [],
+        ecgImage: 'attachment-uuid',
+        spirometry: 6,
+        monofilament: 4,
+      },
+    ]);
+
+    renderWithSwr(<DressingOverview patientUuid="patient-uuid" />);
+    await waitForLoadingToFinish();
+
+    expect(screen.getByRole('columnheader', { name: /spirometry \(g\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /monofilament \(l\)/i })).toBeInTheDocument();
+    expect(screen.getByText('6')).toBeInTheDocument();
+    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /view ecg/i })).toHaveAttribute(
+      'href',
+      expect.stringContaining('attachment-uuid'),
+    );
+  });
+
+  it('shows a record whose only detail is an other measure', async () => {
+    mockRecords([
+      {
+        id: 'encounter-1',
+        date: '2026-09-10T10:00:00.000+0000',
+        ointments: [],
+        spirometry: 0,
+      },
+    ]);
+
+    renderWithSwr(<DressingOverview patientUuid="patient-uuid" />);
+    await waitForLoadingToFinish();
+
+    expect(screen.getAllByRole('row')).toHaveLength(2); // header + the one encounter with a measurement
+    expect(screen.getByText('0')).toBeInTheDocument();
+  });
+
+  it('leaves out encounters that recorded neither a dressing nor an other measure', async () => {
+    mockRecords([
+      {
+        id: 'encounter-1',
+        date: '2026-09-10T10:00:00.000+0000',
+        ointments: [],
+        oral: 'Paracetamol 500mg',
+      },
+    ]);
+
+    renderWithSwr(<DressingOverview patientUuid="patient-uuid" />);
+    await waitForLoadingToFinish();
+
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 });

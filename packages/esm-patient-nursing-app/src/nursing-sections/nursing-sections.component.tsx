@@ -1,4 +1,5 @@
 import React from 'react';
+import DressingOverview from '../dressing/dressing-overview.component';
 import NursingProceduresOverview from '../nursing-procedures/nursing-procedures-overview.component';
 import styles from './nursing-sections.scss';
 
@@ -10,15 +11,16 @@ interface NursingSectionsProps {
 }
 
 /**
- * Nursing procedure records for the patient. Dressing and Other Measures fields can still be
- * recorded via the shared nursing form, but are no longer shown as separate cards here since
- * they all launched the same combined form.
+ * The two cards for the nursing form's three sections -- Dressing and Other Measures share one
+ * table, Nursing Procedures gets its own. A nursing encounter can record any mix of the three,
+ * so both cards have to be rendered for a saved record to be visible somewhere.
  */
 const NursingSections: React.FC<NursingSectionsProps> = ({ patientUuid, pageSize, pageUrl, urlLabel }) => {
   const sectionProps = { patientUuid, pageSize, pageUrl, urlLabel };
 
   return (
     <div className={styles.sections}>
+      <DressingOverview {...sectionProps} />
       <NursingProceduresOverview {...sectionProps} />
     </div>
   );
