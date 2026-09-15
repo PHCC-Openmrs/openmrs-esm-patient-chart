@@ -4,9 +4,10 @@ import { capitalize } from 'lodash-es';
 import { Button, ModalBody, ModalFooter, Checkbox } from '@carbon/react';
 import { useReactToPrint } from 'react-to-print';
 import { useTranslation } from 'react-i18next';
-import { useSession, formatDatetime, parseDate } from '@openmrs/esm-framework';
+import { useSession, usePatient, formatDatetime, parseDate } from '@openmrs/esm-framework';
 import { type Order } from '@openmrs/esm-patient-common-lib';
 import PrintableReport from '../print-preview/print-preview.component';
+import careLogo from '../../../assets/care-logo.png';
 import styles from './print-results-modal.scss';
 
 type PrintResultsModalProps = {
@@ -45,16 +46,38 @@ const PrintResultsModal: React.FC<PrintResultsModalProps> = ({ orders, closeModa
     onAfterPrint: () => {
       setIsPrinting(false);
     },
+    // useReactToPrint's own default pageStyle sets `@page { margin: 0; }`, but passing a custom
+    // pageStyle here REPLACES that default entirely rather than merging with it, so that rule has
+    // to be restored explicitly below. Without it, the browser's default print margins apply on
+    // top of an unconstrained root width, which is what caused the printed report to render in a
+    // narrow column instead of filling the page.
     pageStyle: `
-      @media print {
-        body {
-          height: auto !important;
+      @page {
+        size: auto;
+        margin: 0;
       }
 
+      @media print {
+        html, body {
+          height: auto !important;
+          width: 100% !important;
+        }
+
+        .${styles.printContent} {
+          width: 100% !important;
+          max-width: 100% !important;
+        }
       }
     `,
   });
   const firstOrder = filteredOrders[0];
+  const { patient } = usePatient(firstOrder?.patient?.uuid);
+  const nationalId = patient?.identifier?.find(
+    (identifier) =>
+      identifier.type?.text === 'National ID' ||
+      identifier.type?.coding?.some((coding) => coding.display === 'National ID'),
+  )?.value;
+
   return (
     <>
       <ModalBody className={classNames(styles.modalBody, styles.modalContentWrapper)}>
@@ -83,29 +106,41 @@ const PrintResultsModal: React.FC<PrintResultsModalProps> = ({ orders, closeModa
             <div className={styles.printContent}>
               {filteredOrders.length > 0 && (
                 <>
+                  <img src={careLogo} alt="CARE logo" className={styles.careLogo} />
                   <div className={styles.printableHeader}>
                     <p className={styles.titleHeader}>{capitalize(t('laboratoryReport', 'Laboratory Report'))}</p>
                   </div>
 
-                  <div className={styles.printableBody}>
-                    <div className={styles.testResultDetails}>
+                  <div className={styles.patientInfoGrid}>
+                    <div className={styles.patientInfoRow}>
                       <p className={styles.itemLabel}>
-                        {capitalize(t('name', 'Name'))}: {firstOrder?.patient?.person?.display}
+                        <span className={styles.infoLabel}>{capitalize(t('name', 'Name'))}</span>:{' '}
+                        {firstOrder?.patient?.person?.display}
                       </p>
-                      <p className={styles.itemLabel}>
-                        {capitalize(t('age', 'Age'))}: {firstOrder?.patient?.person?.age}
-                      </p>
-                      <p className={styles.itemLabel}>
-                        {capitalize(t('gender', 'Gender'))}:{' '}
-                        {capitalize(firstOrder?.patient?.person?.gender === 'M' ? 'Male' : 'Female')}
-                      </p>
+                      {nationalId && (
+                        <p className={styles.itemLabel}>
+                          <span className={styles.infoLabel}>{capitalize(t('nationalId', 'National ID'))}</span>:{' '}
+                          {nationalId}
+                        </p>
+                      )}
                     </div>
-
-                    <div className={styles.facilityDetails}>
-                      <p className={styles.itemLabel}>{capitalize(location)}</p>
-                      <span className={styles.itemLabel}>
-                        {formatDatetime(parseDate(firstOrder.dateActivated), { mode: 'standard', noToday: true })}
-                      </span>
+                    <div className={styles.patientInfoRow}>
+                      <div>
+                        <p className={styles.itemLabel}>
+                          <span className={styles.infoLabel}>{capitalize(t('gender', 'Gender'))}</span>:{' '}
+                          {capitalize(firstOrder?.patient?.person?.gender === 'M' ? 'Male' : 'Female')}
+                        </p>
+                        <p className={styles.itemLabel}>
+                          <span className={styles.infoLabel}>{capitalize(t('age', 'Age'))}</span>:{' '}
+                          {firstOrder?.patient?.person?.age}
+                        </p>
+                      </div>
+                      <div className={styles.facilityDetails}>
+                        <p className={styles.itemLabel}>{capitalize(location)}</p>
+                        <p className={styles.itemLabel}>
+                          {formatDatetime(parseDate(firstOrder.dateActivated), { mode: 'standard', noToday: true })}
+                        </p>
+                      </div>
                     </div>
                   </div>
                   <p className={styles.testDoneHeader}>{capitalize(t('testDone', 'Test done'))}</p>

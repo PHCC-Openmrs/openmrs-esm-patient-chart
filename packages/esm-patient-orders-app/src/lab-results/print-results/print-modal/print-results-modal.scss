@@ -30,6 +30,13 @@
 
 .printContent {
   background: transparent;
+  width: 100%;
+
+  @media print {
+    width: 100%;
+    max-width: 100%;
+    padding: layout.$spacing-05 layout.$spacing-07;
+  }
 }
 
 .checkboxList {
@@ -60,6 +67,13 @@
   gap: layout.$spacing-03;
 }
 
+.careLogo {
+  display: block;
+  margin: 0 auto layout.$spacing-03 auto;
+  height: 2.5rem;
+  width: auto;
+}
+
 .printableHeader {
   display: flex;
   flex-direction: row;
@@ -69,7 +83,6 @@
   display: flex;
   flex-flow: column wrap;
   text-align: right;
-  margin-top: layout.$spacing-05;
 }
 .titleHeader {
   @include type.type-style('label-02');
@@ -84,10 +97,26 @@
   color: colors.$cool-gray-90;
 }
 
-.printableBody {
+.patientInfoGrid {
+  margin: layout.$spacing-05 0;
+  padding: layout.$spacing-03 0;
+  border-top: 1px solid themes.$border-subtle-01;
+  border-bottom: 1px solid themes.$border-subtle-01;
+}
+
+.patientInfoRow {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
+  gap: layout.$spacing-05;
+
+  .itemLabel {
+    margin: layout.$spacing-02 0;
+  }
+}
+
+.infoLabel {
+  font-weight: bold;
 }
 .testDoneHeader {
   @include type.type-style('label-02');
