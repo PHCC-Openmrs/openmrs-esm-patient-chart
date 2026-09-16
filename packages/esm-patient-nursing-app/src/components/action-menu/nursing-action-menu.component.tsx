@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Layer, OverflowMenu, OverflowMenuItem } from '@carbon/react';
-import { launchWorkspace2, showModal, useLayoutType } from '@openmrs/esm-framework';
+import { launchWorkspace2, showModal, useLayoutType, useSession, userHasAccess } from '@openmrs/esm-framework';
 import { nursingDeleteConfirmationModal, patientNursingFormWorkspace } from '../../constants';
 import styles from './nursing-action-menu.scss';
 
@@ -13,6 +13,8 @@ interface NursingActionMenuProps {
 export const NursingActionMenu: React.FC<NursingActionMenuProps> = ({ encounterUuid, patientUuid }) => {
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
+  const session = useSession();
+  const canRecordNursing = userHasAccess('Task: patientChart.recordNursing', session?.user);
 
   const handleLaunchEditForm = useCallback(() => {
     launchWorkspace2(patientNursingFormWorkspace, {
@@ -29,6 +31,10 @@ export const NursingActionMenu: React.FC<NursingActionMenuProps> = ({ encounterU
       patientUuid,
     });
   }, [encounterUuid, patientUuid]);
+
+  if (!canRecordNursing) {
+    return null;
+  }
 
   return (
     <Layer className={styles.layer}>
