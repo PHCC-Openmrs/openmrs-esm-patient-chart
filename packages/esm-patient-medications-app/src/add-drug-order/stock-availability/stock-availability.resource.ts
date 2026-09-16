@@ -39,11 +39,24 @@ async function fetchStockQuantityForDrug(drugUuid: string, locationUuid: string 
 
   // Uses dispenseLocationUuid rather than locationUuid: the ordering location itself often
   // isn't a stock-tracked party (e.g. an outpatient clinic), so a plain locationUuid lookup
-  // resolves to no party and reads as 0 on hand. dispenseLocationUuid instead walks up the
-  // location's tree for a "Main Pharmacy"/"Dispensary"-tagged party (falling back to any
-  // Main Pharmacy location org-wide), matching how the pharmacy dispensing screens resolve
-  // stock for a given location.
-  const params = new URLSearchParams({ v: 'default', stockItemUuid, groupBy: 'StockItemOnly' });
+  // resolves to no party and reads as 0 on hand. dispenseLocationUuid instead walks the
+  // location's own tree for a "Main Pharmacy"/"Dispensary"-tagged party, matching how the
+  // pharmacy dispensing screens resolve stock for a given location.
+  //
+  // dispenseAtLocation is required, not optional: without it the backend *adds* every
+  // Main Pharmacy-tagged party org-wide to the ones found in this location's tree, and
+  // since groupBy=StockItemOnly doesn't group by party, the quantities of unrelated
+  // facilities get summed into one number. A prescriber at one facility would see that
+  // facility's stock plus every other facility's - and then order against stock their
+  // pharmacy can't dispense. With it set, the hint reports the same on-hand figure the
+  // dispensing screen will show for this location (see openmrs-esm-dispensing-app's
+  // stock.resource, which queries with the same flag).
+  const params = new URLSearchParams({
+    v: 'default',
+    stockItemUuid,
+    groupBy: 'StockItemOnly',
+    dispenseAtLocation: '1',
+  });
   if (locationUuid) {
     params.set('dispenseLocationUuid', locationUuid);
   }
