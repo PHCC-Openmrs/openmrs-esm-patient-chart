@@ -13,7 +13,15 @@ import {
   TableHeader,
   TableRow,
 } from '@carbon/react';
-import { AddIcon, formatDate, parseDate, useLayoutType, usePagination } from '@openmrs/esm-framework';
+import {
+  AddIcon,
+  formatDate,
+  parseDate,
+  useLayoutType,
+  usePagination,
+  useSession,
+  userHasAccess,
+} from '@openmrs/esm-framework';
 import { CardHeader, EmptyState, ErrorState, PatientChartPagination } from '@openmrs/esm-patient-common-lib';
 import { useNursingRecords } from '../common';
 import { type NursingRecord } from '../common/types';
@@ -64,6 +72,8 @@ const NursingWidget: React.FC<NursingWidgetProps> = ({
   const isTablet = useLayoutType() === 'tablet';
   const { records, error, isLoading, isValidating } = useNursingRecords(patientUuid);
   const launchNursingForm = useLaunchNursingForm(patientUuid);
+  const session = useSession();
+  const canRecordNursing = userHasAccess('Task: patientChart.recordNursing', session?.user);
 
   const sectionRecords = useMemo(() => records?.filter(hasContent) ?? [], [records, hasContent]);
 
@@ -103,21 +113,29 @@ const NursingWidget: React.FC<NursingWidgetProps> = ({
   }
 
   if (!sectionRecords.length) {
-    return <EmptyState displayText={displayText} headerTitle={headerTitle} launchForm={launchNursingForm} />;
+    return (
+      <EmptyState
+        displayText={displayText}
+        headerTitle={headerTitle}
+        launchForm={canRecordNursing ? launchNursingForm : undefined}
+      />
+    );
   }
 
   return (
     <div className={styles.widgetCard}>
       <CardHeader title={headerTitle}>
         <span className={styles.backgroundDataFetchingIndicator}>{isValidating ? <InlineLoading /> : null}</span>
-        <Button
-          kind="ghost"
-          renderIcon={AddIcon}
-          iconDescription={t('recordNursing', 'Record nursing')}
-          onClick={launchNursingForm}
-        >
-          {t('add', 'Add')}
-        </Button>
+        {canRecordNursing && (
+          <Button
+            kind="ghost"
+            renderIcon={AddIcon}
+            iconDescription={t('recordNursing', 'Record nursing')}
+            onClick={launchNursingForm}
+          >
+            {t('add', 'Add')}
+          </Button>
+        )}
       </CardHeader>
       <DataTable
         headers={tableHeaders}
