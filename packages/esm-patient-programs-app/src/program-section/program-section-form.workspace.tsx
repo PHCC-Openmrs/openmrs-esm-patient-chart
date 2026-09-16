@@ -1,6 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, ButtonSet, Form, FormLabel, NumberInput, Select, SelectItem, Stack, TextInput } from '@carbon/react';
+import {
+  Button,
+  ButtonSet,
+  Form,
+  FormLabel,
+  NumberInput,
+  Select,
+  SelectItem,
+  Stack,
+  TextArea,
+  TextInput,
+} from '@carbon/react';
 import { useForm, useWatch, Controller } from 'react-hook-form';
 import dayjs from 'dayjs';
 import {
@@ -272,6 +283,20 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
                           const numericValue = state?.value != null ? Number(state.value) : NaN;
                           onChange(!Number.isNaN(numericValue) ? String(Math.max(0, numericValue)) : '');
                         }}
+                      />
+                    );
+                  }
+
+                  if (field.controlType === 'textarea') {
+                    return (
+                      <TextArea
+                        id={`field-${field.conceptUuid}`}
+                        labelText={field.label}
+                        value={value ?? ''}
+                        rows={4}
+                        invalid={missingConceptUuids.has(field.conceptUuid)}
+                        invalidText={t('fieldRequired', 'This field is required')}
+                        onChange={(event) => onChange(event.target.value)}
                       />
                     );
                   }

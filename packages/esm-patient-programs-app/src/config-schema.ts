@@ -93,7 +93,7 @@ export const configSchema = {
           label: { _type: Type.String, _description: 'Label shown for this field.' },
           controlType: {
             _type: Type.String,
-            _description: 'One of "text", "number", "select", or "date".',
+            _description: 'One of "text", "textarea", "number", "select", or "date".',
             _default: 'text',
           },
           options: {
@@ -509,7 +509,7 @@ export const configSchema = {
           {
             conceptUuid: '0983ec3a-3fdc-4398-a511-aaac695db09d',
             label: 'Notes',
-            controlType: 'text',
+            controlType: 'textarea',
             options: [],
             minAge: 0,
             maxAge: 200,
@@ -564,7 +564,7 @@ export const configSchema = {
           {
             conceptUuid: 'f0438e22-6224-4d50-8646-7b1845b122f8',
             label: 'Notes',
-            controlType: 'text',
+            controlType: 'textarea',
             options: [],
             minAge: 0,
             maxAge: 200,
@@ -599,7 +599,7 @@ export const configSchema = {
           {
             conceptUuid: 'b1285f61-04ac-40a2-903f-994d2e2151c9',
             label: 'Notes',
-            controlType: 'text',
+            controlType: 'textarea',
             options: [],
             minAge: 0,
             maxAge: 200,
@@ -629,7 +629,7 @@ export interface ProgramSectionAnswer {
 export interface ProgramSectionField {
   conceptUuid: string;
   label: string;
-  controlType: 'text' | 'number' | 'select' | 'date';
+  controlType: 'text' | 'textarea' | 'number' | 'select' | 'date';
   options: Array<string>;
   answers: Array<ProgramSectionAnswer>;
   minAge: number;
