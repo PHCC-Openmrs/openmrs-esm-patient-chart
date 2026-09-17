@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import useSWR from 'swr';
 import { openmrsFetch, restBaseUrl, useSession } from '@openmrs/esm-framework';
 
@@ -18,7 +17,7 @@ interface StockQuantity {
 
 /**
  * Builds the query for a "what can this location actually dispense" inventory lookup,
- * shared by the order form's stock hint and the drug search's availability filter.
+ * behind the order form's stock hint.
  *
  * Uses dispenseLocationUuid rather than locationUuid: the ordering location itself often
  * isn't a stock-tracked party (e.g. an outpatient clinic), so a plain locationUuid lookup
@@ -107,77 +106,3 @@ export function useStockQuantityForDrug(drugUuid: string | undefined) {
     error,
   };
 }
-
-/**
- * On-hand quantity of one drug at a location's dispensing party, in the unit that party
- * dispenses in - so it is directly comparable to what the pharmacy would hand out.
- *
- * `null` means the lookup produced no inventory row at all, which happens either because
- * the drug isn't registered as a stock item, or because the location resolves to no
- * dispensing party in the first place (nothing tagged Main Pharmacy/Dispensary in its
- * tree, e.g. a warehouse-only location). A lookup against a location that does resolve
- * pads a zero row for a stocked drug instead of omitting it, which is what lets callers
- * tell "out of stock here" apart from "nothing to compare against" - see
- * useStockAvailabilityForDrugs.
- */
-async function fetchStockAvailabilityForDrug(drugUuid: string, locationUuid: string | undefined) {
-  // Filters the inventory by drugUuid instead of resolving the stock item first: it saves
-  // a request per drug when a whole search result list is being checked, and matches how
-  // the dispensing app asks the same question (see its forms/stock-dispense/stock.resource).
-  const params = dispenseInventoryParams({ drugUuid }, locationUuid);
-  const { data } = await openmrsFetch<{ results: Array<StockQuantity> }>(
-    `${restBaseUrl}/stockmanagement/stockiteminventory?${params.toString()}`,
-  );
-  const result = data.results?.[0];
-  if (!result) {
-    return null;
-  }
-  return (result.quantity ?? 0) * (result.quantityFactor ?? 1);
-}
-
-/**
- * Looks up, for each of the given drugs, how much is on hand at the prescriber's own
- * location - used to keep the drug search from offering drugs that prescriber's own
- * pharmacy has nothing of. A drug's entry is either:
- *
- * - a number: on hand at this location, `0` meaning out of stock here;
- * - `null`: no inventory row, see fetchStockAvailabilityForDrug;
- * - absent from the map: the lookup is still in flight, or it failed (e.g. the stock
- *   management module isn't installed on this deployment). Callers should read that as
- *   "unknown" and leave the drug alone rather than hiding something they couldn't check.
- */
-export function useStockAvailabilityForDrugs(drugUuids: Array<string>) {
-  const { sessionLocation } = useSession();
-  const locationUuid = sessionLocation?.uuid;
-  const sortedUuids = useMemo(() => [...(drugUuids ?? [])].sort(), [drugUuids]);
-  const cacheKey = sortedUuids.length ? ['stock-availability-for-drugs', locationUuid, ...sortedUuids] : null;
-
-  // Not immutable, unlike a stock item's existence: quantities move as the pharmacy
-  // dispenses and receives, so this should revalidate on focus like the order form hint.
-  const { data, isLoading } = useSWR(
-    cacheKey,
-    async () => {
-      const entries = await Promise.all(
-        sortedUuids.map(async (uuid) => {
-          try {
-            return [uuid, await fetchStockAvailabilityForDrug(uuid, locationUuid)] as [string, number | null];
-          } catch {
-            // Left out of the map entirely, so one failed lookup doesn't hide its drug.
-            return null;
-          }
-        }),
-      );
-      return new Map(entries.filter((entry): entry is [string, number | null] => entry !== null));
-    },
-    { shouldRetryOnError: false },
-  );
-
-  return {
-    availabilityByDrugUuid: data ?? emptyStockAvailability,
-    isLoading,
-  };
-}
-
-// Stable reference so callers memoizing on the returned map don't recompute every render
-// while the lookup is still in flight.
-const emptyStockAvailability: ReadonlyMap<string, number | null> = new Map();

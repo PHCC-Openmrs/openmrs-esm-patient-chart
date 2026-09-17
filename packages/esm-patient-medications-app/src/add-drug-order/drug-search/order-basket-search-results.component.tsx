@@ -11,13 +11,11 @@ import {
   useConfig,
   useLayoutType,
   UserHasAccess,
-  useSession,
   type Visit,
   type Workspace2DefinitionProps,
 } from '@openmrs/esm-framework';
 import { type ConfigObject } from '../../config-schema';
 import { prepMedicationOrderPostData, useMedicationOrders } from '../../api';
-import { useStockAvailabilityForDrugs } from '../stock-availability/stock-availability.resource';
 import { ordersEqual } from './helpers';
 import {
   type DrugSearchResult,
@@ -54,36 +52,7 @@ export default function OrderBasketSearchResults({
 }: OrderBasketSearchResultsProps) {
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
-  const { sessionLocation } = useSession();
   const { drugs, isLoading, error } = useDrugSearch(searchTerm);
-  const drugUuids = useMemo(() => drugs?.map((drug) => drug.uuid) ?? [], [drugs]);
-  // Only drugs the prescriber's own location can actually dispense are listed. Filtering
-  // kicks in per drug once its lookup resolves - until then (or if the stock management
-  // module isn't installed) the drug is shown as usual, same as how the "In stock" hint
-  // on the order form fades in rather than blocking the page.
-  const { availabilityByDrugUuid } = useStockAvailabilityForDrugs(drugUuids);
-  // A location with no dispensing stock of its own - nothing tagged Main Pharmacy or
-  // Dispensary in its tree, e.g. a warehouse-only login location - has no inventory to
-  // filter against: every drug comes back without an inventory row, indistinguishable
-  // from a drug that isn't stocked anywhere. Listing nothing at all there would leave a
-  // prescriber unable to order anything, so hold off on filtering until at least one
-  // drug has resolved to a real quantity, which only happens once the location is known
-  // to have dispensing stock.
-  const locationHasDispensingStock = useMemo(
-    () => drugs?.some((drug) => typeof availabilityByDrugUuid.get(drug.uuid) === 'number') ?? false,
-    [drugs, availabilityByDrugUuid],
-  );
-  const stockedDrugs = useMemo(() => {
-    if (!locationHasDispensingStock) {
-      return drugs;
-    }
-    return drugs?.filter((drug) => {
-      const quantity = availabilityByDrugUuid.get(drug.uuid);
-      // `undefined` - not checked (yet), so leave it alone; `null` - not stocked here at
-      // all; a number - on hand at this location, and 0 means out of stock here.
-      return quantity === undefined || (quantity !== null && quantity > 0);
-    });
-  }, [drugs, availabilityByDrugUuid, locationHasDispensingStock]);
 
   if (!searchTerm) {
     return <div className={styles.container}></div>;
@@ -110,22 +79,14 @@ export default function OrderBasketSearchResults({
     );
   }
 
-  if (stockedDrugs?.length === 0) {
-    // Drugs matched the search but none of them are stocked here - say so, otherwise the
-    // filtering above reads as a search that simply can't find an obviously real drug.
-    const allFilteredOutAsUnavailable = drugs?.length > 0;
+  if (drugs?.length === 0) {
     return (
       <Tile className={styles.emptyState}>
         <div>
           <h4 className={styles.productiveHeading01}>
-            {allFilteredOutAsUnavailable
-              ? t('noStockedResultsForDrugSearch', 'Nothing matching "{{searchTerm}}" is in stock at {{location}}', {
-                  searchTerm,
-                  location: sessionLocation?.display,
-                })
-              : t('noResultsForDrugSearch', 'No results to display for "{{searchTerm}}"', {
-                  searchTerm,
-                })}
+            {t('noResultsForDrugSearch', 'No results to display for "{{searchTerm}}"', {
+              searchTerm,
+            })}
           </h4>
           <p className={styles.bodyShort01}>
             <span>{t('tryTo', 'Try to')}</span>{' '}
@@ -144,7 +105,7 @@ export default function OrderBasketSearchResults({
       <div className={styles.orderBasketSearchResultsHeader}>
         <span className={styles.searchResultsCount}>
           {t('searchResultsMatchesForTerm', '{{count}} results for "{{searchTerm}}"', {
-            count: stockedDrugs?.length,
+            count: drugs?.length,
             searchTerm,
           })}
         </span>
@@ -153,7 +114,7 @@ export default function OrderBasketSearchResults({
         </Button>
       </div>
       <div className={styles.resultsContainer}>
-        {stockedDrugs?.map((drug) => (
+        {drugs?.map((drug) => (
           <DrugSearchResultItem
             key={drug.uuid}
             patient={patient}
