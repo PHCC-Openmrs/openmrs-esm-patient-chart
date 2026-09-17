@@ -16,7 +16,6 @@ import {
 import { CardHeader, EmptyState, ErrorState, PatientChartPagination } from '@openmrs/esm-patient-common-lib';
 import { formatDate, useLayoutType, usePagination, isDesktop as desktopLayout } from '@openmrs/esm-framework';
 import { findLastState, groupEnrollmentsByProgram, usePrograms } from './programs.resource';
-import { ProgramsActionMenu } from './programs-action-menu.component';
 import styles from './programs-overview.scss';
 
 interface ProgramsOverviewProps {
@@ -40,11 +39,6 @@ const ProgramsOverview: React.FC<ProgramsOverviewProps> = ({ basePath, patientUu
   const groupedEnrollments = useMemo(() => groupEnrollmentsByProgram(enrollments), [enrollments]);
 
   const { results: paginatedGroups, goTo, currentPage } = usePagination(groupedEnrollments, programsCount);
-
-  const groupsByUuid = useMemo(
-    () => new Map(paginatedGroups?.map((group) => [group.uuid, group]) ?? []),
-    [paginatedGroups],
-  );
 
   const tableHeaders = [
     {
@@ -120,23 +114,15 @@ const ProgramsOverview: React.FC<ProgramsOverviewProps> = ({ basePath, patientUu
                         {header.header}
                       </TableHeader>
                     ))}
-                    <TableHeader />
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {rows.map((row) => {
-                    const group = groupsByUuid.get(row.id);
-
                     return (
                       <TableRow key={row.id} {...getRowProps({ row })}>
                         {row.cells.map((cell) => (
                           <TableCell key={cell.id}>{cell.value?.content ?? cell.value}</TableCell>
                         ))}
-                        {group && (
-                          <TableCell className="cds--table-column-menu">
-                            <ProgramsActionMenu patientUuid={patientUuid} programEnrollmentId={group.uuid} />
-                          </TableCell>
-                        )}
                       </TableRow>
                     );
                   })}
