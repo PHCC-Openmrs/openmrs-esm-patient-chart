@@ -1,12 +1,16 @@
 import useSWR from 'swr';
 import { filter, includes, map } from 'lodash-es';
 import { openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
-import { createProgramEnrollment, filterProgramsByLocation } from '@openmrs/esm-patient-common-lib';
+import {
+  createProgramEnrollment,
+  filterHiddenPrograms,
+  filterProgramsByLocation,
+} from '@openmrs/esm-patient-common-lib';
 import type { PatientProgram, Program, ProgramWorkflowState, ProgramsFetchResponse } from '../types';
 
 // Re-exported for existing importers -- the implementations now live in esm-patient-common-lib
 // so esm-patient-chart-app's start-visit form can share them (see useServicePrograms.tsx).
-export { createProgramEnrollment, filterProgramsByLocation };
+export { createProgramEnrollment, filterHiddenPrograms, filterProgramsByLocation };
 
 export const customRepresentation = `custom:(uuid,display,program,dateEnrolled,dateCompleted,location:(uuid,display),states:(startDate,endDate,voided,state:(uuid,concept:(display))))`;
 

@@ -37,6 +37,21 @@ export function filterProgramsByLocation<T extends { uuid: string }>(
   });
 }
 
+// Drops programs listed in `hiddenServicePrograms` config from a web UI service picker, without
+// touching the Program itself (it stays active for other consumers, e.g. a mobile client) -- see
+// the `hiddenServicePrograms` config in esm-patient-programs-app/src/config-schema.ts, shared the
+// same way as `programsLocationRestrictions` above.
+export function filterHiddenPrograms<T extends { uuid: string }>(
+  programs: Array<T> | undefined,
+  hiddenProgramUuids: Array<string> | undefined,
+): Array<T> | undefined {
+  if (!hiddenProgramUuids?.length) {
+    return programs;
+  }
+
+  return programs?.filter((program) => !hiddenProgramUuids.includes(program.uuid));
+}
+
 export interface ProgramEnrollmentPayload {
   program: string;
   patient: string;
