@@ -69,6 +69,19 @@ export const configSchema = {
     _description:
       'Restricts a program to being offered only when the user is logged in at one of the allowed locations.',
   },
+  hiddenServicePrograms: {
+    _type: Type.Array,
+    _elements: {
+      _type: Type.UUID,
+    },
+    _default: [],
+    _description:
+      "UUIDs of programs to exclude entirely from the web app's service pickers -- the Care Services " +
+      "enrollment form, the start-visit form's Service field, and the Service Queues app's 'Service type' " +
+      'filter. Unlike programsLocationRestrictions, this hides the program everywhere regardless of location. ' +
+      'The Program itself is left untouched (not retired), so other systems that rely on it -- e.g. a mobile ' +
+      'client -- are unaffected.',
+  },
   programSections: {
     _type: Type.Array,
     _elements: {
@@ -654,5 +667,6 @@ export interface ProgramSectionConfig {
 export interface ConfigObject {
   showProgramStatusField: boolean;
   programsLocationRestrictions: Array<ProgramLocationRestriction>;
+  hiddenServicePrograms: Array<string>;
   programSections: Array<ProgramSectionConfig>;
 }

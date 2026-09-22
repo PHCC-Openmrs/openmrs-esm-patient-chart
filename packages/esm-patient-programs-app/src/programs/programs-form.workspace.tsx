@@ -35,6 +35,7 @@ import { type PatientWorkspace2DefinitionProps } from '@openmrs/esm-patient-comm
 import { type ConfigObject } from '../config-schema';
 import {
   createProgramEnrollment,
+  filterHiddenPrograms,
   filterProgramsByLocation,
   findLastState,
   updateProgramEnrollment,
@@ -50,9 +51,7 @@ export interface ProgramsFormProps {
 const createProgramsFormSchema = (t: TFunction) =>
   z
     .object({
-      selectedPrograms: z
-        .array(z.string())
-        .min(1, t('serviceRequired', 'At least one service is required')),
+      selectedPrograms: z.array(z.string()).min(1, t('serviceRequired', 'At least one service is required')),
       enrollmentDate: z.date(),
       completionDate: z.date().optional().nullable(),
       enrollmentLocation: z.string(),
@@ -87,7 +86,7 @@ const ProgramsForm: React.FC<PatientWorkspace2DefinitionProps<ProgramsFormProps,
   const session = useSession();
   const { data: availablePrograms } = useAvailablePrograms();
   const { data: enrollments, mutateEnrollments } = useEnrollments(patientUuid);
-  const { showProgramStatusField, programsLocationRestrictions } = useConfig<ConfigObject>();
+  const { showProgramStatusField, programsLocationRestrictions, hiddenServicePrograms } = useConfig<ConfigObject>();
   const inEditMode = Boolean(programEnrollmentId);
 
   const programsFormSchema = useMemo(() => createProgramsFormSchema(t), [t]);
@@ -109,10 +108,13 @@ const ProgramsForm: React.FC<PatientWorkspace2DefinitionProps<ProgramsFormProps,
 
   const eligiblePrograms = currentProgram
     ? eligibleProgramsBeforeLocationFilter
-    : filterProgramsByLocation(
-        eligibleProgramsBeforeLocationFilter,
-        programsLocationRestrictions,
-        session?.sessionLocation?.uuid,
+    : filterHiddenPrograms(
+        filterProgramsByLocation(
+          eligibleProgramsBeforeLocationFilter,
+          programsLocationRestrictions,
+          session?.sessionLocation?.uuid,
+        ),
+        hiddenServicePrograms,
       );
 
   const getLocationUuid = () => {
