@@ -22,7 +22,6 @@ import VisitActionsCell from './visit-actions-cell.component';
 import VisitDateCell from './visit-date-cell.component';
 import VisitDiagnosisCell from './visit-diagnoses-cell.component';
 import VisitSummary from '../visits-widget/past-visits-components/visit-summary.component';
-import VisitTypeCell from './visit-type-cell.component';
 import styles from './visit-history-table.scss';
 
 interface VisitHistoryTableProps {
@@ -45,7 +44,6 @@ const VisitHistoryTable: React.FC<VisitHistoryTableProps> = ({ patientUuid, pati
   // TODO: make this configurable
   const columns = [
     { key: 'visitDate', header: t('date', 'Date'), CellComponent: VisitDateCell },
-    { key: 'visitType', header: t('visitType', 'Visit type'), CellComponent: VisitTypeCell },
     { key: 'diagnoses', header: t('diagnoses', 'Diagnoses'), CellComponent: VisitDiagnosisCell },
     { key: 'actions', header: '', CellComponent: VisitActionsCell },
   ];

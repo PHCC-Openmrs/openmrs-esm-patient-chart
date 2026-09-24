@@ -80,7 +80,7 @@ describe('CompletedFormsTable', () => {
     expect(table).toHaveAttribute('data-show-encounter-type-filter', 'true');
   });
 
-  it('renders the encounters table with the visit type column', () => {
+  it('renders the encounters table without the visit type column', () => {
     mockUseAllEncounters.mockReturnValue({
       data: [],
       isLoading: false,
@@ -90,7 +90,7 @@ describe('CompletedFormsTable', () => {
     renderWithSwr(<CompletedFormsTable patientUuid={mockPatientAlice.uuid} isTabActive />);
 
     const table = screen.getByTestId('encounters-table');
-    expect(table).toHaveAttribute('data-show-visit-type', 'true');
+    expect(table).toHaveAttribute('data-show-visit-type', 'false');
   });
 
   it('only includes encounters that have a form with a JSON schema resource', () => {

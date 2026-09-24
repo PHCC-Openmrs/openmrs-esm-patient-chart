@@ -37,7 +37,7 @@ const AllEncountersTable: React.FC<AllEncountersTableProps> = ({ patientUuid }) 
     setEncounterTypeToFilter,
     setPageSize,
     showEncounterTypeFilter: true,
-    showVisitType: true,
+    showVisitType: false,
     totalCount,
     isSelectable: false,
     canPrintEncounters,

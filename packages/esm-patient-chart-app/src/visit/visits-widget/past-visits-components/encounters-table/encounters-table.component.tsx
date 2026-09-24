@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useSWRConfig } from 'swr';
 import {
   Button,
-  ComboBox,
   DataTable,
   DataTableSkeleton,
   Layer,
@@ -37,7 +36,6 @@ import {
   useLayoutType,
   userHasAccess,
   useSession,
-  type EncounterType,
   ExtensionSlot,
   useFeatureFlag,
   PrinterIcon,
@@ -49,7 +47,6 @@ import {
   deleteEncounter,
   downloadPdf,
   mapEncounter,
-  useEncounterTypes,
   type EncountersTableProps,
   type MappedEncounter,
 } from './encounters-table.resource';
@@ -63,15 +60,12 @@ import styles from './encounters-table.scss';
  */
 const EncountersTable: React.FC<EncountersTableProps> = ({
   currentPage,
-  encounterTypeToFilter,
   goTo,
   isLoading,
   pageSize,
   paginatedEncounters,
   patientUuid,
-  setEncounterTypeToFilter,
   setPageSize,
-  showEncounterTypeFilter,
   showVisitType,
   totalCount,
   isSelectable,
@@ -84,7 +78,6 @@ const EncountersTable: React.FC<EncountersTableProps> = ({
   const { mutateVisitContext, patient } = usePatientChartStore(patientUuid);
   const { mutate } = useSWRConfig();
   const responsiveSize = desktopLayout ? 'sm' : 'lg';
-  const { data: encounterTypes, isLoading: isLoadingEncounterTypes } = useEncounterTypes();
   const enableEmbeddedFormView = useFeatureFlag('enable-embedded-form-view');
   const { encounterEditableDuration, encounterEditableDurationOverridePrivileges } = useConfig<ChartConfig>();
   const [isPrinting, setIsPrinting] = useState(false);
@@ -172,7 +165,7 @@ const EncountersTable: React.FC<EncountersTableProps> = ({
     downloadPdf(selectedEncounterUuids, t).finally(() => setIsPrinting(false));
   };
 
-  if (isLoadingEncounterTypes || isLoading) {
+  if (isLoading) {
     return <DataTableSkeleton role="progressbar" zebra />;
   }
 
@@ -203,33 +196,18 @@ const EncountersTable: React.FC<EncountersTableProps> = ({
           const selectedRowsCount = selectedRows.length;
           return (
             <TableContainer className={styles.tableContainer}>
-              {showEncounterTypeFilter && (
+              {isSelectable && canPrintEncounters && (
                 <TableToolbar {...getToolbarProps()}>
                   <TableToolbarContent>
-                    <div className={styles.filterContainer}>
-                      <ComboBox
-                        aria-label={t('filterByEncounterType', 'Filter by encounter type')}
-                        className={styles.substitutionType}
-                        id="encounterTypeFilter"
-                        items={encounterTypes}
-                        itemToString={(item: EncounterType) => item?.display}
-                        onChange={({ selectedItem }) => setEncounterTypeToFilter(selectedItem)}
-                        placeholder={t('filterByEncounterType', 'Filter by encounter type')}
-                        selectedItem={encounterTypeToFilter}
-                        size={responsiveSize}
-                      />
-                    </div>
-                    {isSelectable && canPrintEncounters && (
-                      <Button
-                        kind="ghost"
-                        size={responsiveSize}
-                        renderIcon={PrinterIcon}
-                        disabled={selectedRowsCount === 0 || isPrinting}
-                        onClick={() => handlePrintSelected(selectedRows)}
-                      >
-                        {isPrinting ? t('generating', 'Generating...') : t('printSelected', 'Print selected')}
-                      </Button>
-                    )}
+                    <Button
+                      kind="ghost"
+                      size={responsiveSize}
+                      renderIcon={PrinterIcon}
+                      disabled={selectedRowsCount === 0 || isPrinting}
+                      onClick={() => handlePrintSelected(selectedRows)}
+                    >
+                      {isPrinting ? t('generating', 'Generating...') : t('printSelected', 'Print selected')}
+                    </Button>
                   </TableToolbarContent>
                 </TableToolbar>
               )}
@@ -421,9 +399,6 @@ const EncountersTable: React.FC<EncountersTableProps> = ({
                   <Tile className={styles.tile}>
                     <div className={styles.tileContent}>
                       <p className={styles.content}>{t('noEncountersToDisplay', 'No encounters to display')}</p>
-                      {showEncounterTypeFilter && encounterTypeToFilter && (
-                        <p className={styles.helper}>{t('checkFilters', 'Check the filters above')}</p>
-                      )}
                     </div>
                   </Tile>
                 </div>
