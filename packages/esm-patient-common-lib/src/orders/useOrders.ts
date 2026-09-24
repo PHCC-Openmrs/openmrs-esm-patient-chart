@@ -26,15 +26,18 @@ export function usePatientOrders(
   endDate?: string,
 ) {
   const { mutate } = useSWRConfig();
-  // Always fetch status=any rather than letting the server filter out stopped orders: a
-  // fulfiller (e.g. the Laboratory app) discontinues the original order as part of marking
-  // it COMPLETED/DECLINED, so a server-side status=ACTIVE filter would drop completed orders
-  // entirely. We replicate the "ACTIVE" semantics client-side below, but also keep any order
-  // that has been through a fulfiller workflow regardless of its stop/discontinue state.
+  // Never send a server-side status filter. A fulfiller (e.g. the Laboratory app) discontinues
+  // the original order as part of marking it COMPLETED/DECLINED, so status=ACTIVE would drop
+  // completed orders entirely. We replicate the "ACTIVE" semantics client-side below, but also
+  // keep any order that has been through a fulfiller workflow regardless of its stop state.
+  // Omitting status (rather than sending status=any) matters: status=any routes the request to
+  // the legacy patient-orders lookup, which silently ignores orderTypes, the activated-date
+  // range and excludeDiscontinueOrders. Without it the order search handler applies all three
+  // and still returns stopped orders.
   const baseOrdersUrl =
     startDate && endDate
-      ? `${restBaseUrl}/order?patient=${patientUuid}&careSetting=${careSettingUuid}&v=${orderCustomRepresentation}&activatedOnOrAfterDate=${startDate}&activatedOnOrBeforeDate=${endDate}&excludeDiscontinueOrders=true&status=any`
-      : `${restBaseUrl}/order?patient=${patientUuid}&careSetting=${careSettingUuid}&v=${orderCustomRepresentation}&status=any&excludeDiscontinueOrders=true`;
+      ? `${restBaseUrl}/order?patient=${patientUuid}&careSetting=${careSettingUuid}&v=${orderCustomRepresentation}&activatedOnOrAfterDate=${startDate}&activatedOnOrBeforeDate=${endDate}&excludeDiscontinueOrders=true`
+      : `${restBaseUrl}/order?patient=${patientUuid}&careSetting=${careSettingUuid}&v=${orderCustomRepresentation}&excludeDiscontinueOrders=true`;
   const ordersUrl = orderType ? `${baseOrdersUrl}&orderTypes=${orderType}` : baseOrdersUrl;
 
   const { data, error, isLoading, isValidating } = useSWR<FetchResponse<PatientOrderFetchResponse>, Error>(
