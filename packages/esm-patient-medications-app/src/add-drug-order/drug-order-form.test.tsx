@@ -810,7 +810,6 @@ describe('DrugOrderForm - required field validation', () => {
     expect(screen.getByText('Route is required')).toBeInTheDocument();
     expect(screen.getByText('Frequency is required')).toBeInTheDocument();
     expect(screen.getByText('Quantity to dispense is required')).toBeInTheDocument();
-    expect(screen.getByText('Number of refills is required')).toBeInTheDocument();
     expect(onSave).not.toHaveBeenCalled();
   });
 });

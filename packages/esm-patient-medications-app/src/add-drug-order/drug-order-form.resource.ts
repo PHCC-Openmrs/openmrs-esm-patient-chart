@@ -61,7 +61,7 @@ export function drugOrderBasketItemToFormValue(
     durationUnit: item?.durationUnit,
     pillsDispensed: item?.pillsDispensed ?? null,
     quantityUnits: item?.quantityUnits,
-    numRefills: item?.numRefills ?? null,
+    numRefills: item?.numRefills ?? 0,
     frequency: item?.frequency,
     scheduledDate,
   };
