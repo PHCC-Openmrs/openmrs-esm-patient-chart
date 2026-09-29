@@ -192,6 +192,13 @@ export const configSchema = {
               'that only exists to show/hide other fields via visibleWhenConceptUuid) that have no real concept.',
             _default: true,
           },
+          wholeNumber: {
+            _type: Type.Boolean,
+            _description:
+              'For a number field, whether only whole numbers are accepted (e.g. counts such as gravidity). ' +
+              'Decimal input is truncated.',
+            _default: false,
+          },
         },
         _default: [],
       },
@@ -330,14 +337,46 @@ export const configSchema = {
             maxAge: 200,
             readOnly: false,
           },
+          // Obstetric history as GPAL: Gravidity, Parity, Abortions, Living children.
           {
             conceptUuid: '511d5fc2-7dc6-43b9-9f5f-139e62f256ab',
-            label: 'Gravidity (Number of Pregnancies)',
+            label: 'G:',
             controlType: 'number',
             options: [],
             minAge: 0,
             maxAge: 200,
             readOnly: false,
+            wholeNumber: true,
+          },
+          {
+            conceptUuid: 'd44ade25-c898-4845-84aa-0fec970385c4',
+            label: 'P:',
+            controlType: 'number',
+            options: [],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+            wholeNumber: true,
+          },
+          {
+            conceptUuid: 'bc07ff5a-908e-4de6-a3c1-f56aee02e37a',
+            label: 'A:',
+            controlType: 'number',
+            options: [],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+            wholeNumber: true,
+          },
+          {
+            conceptUuid: '37ba9c66-0a95-40a4-ba60-504c93157d18',
+            label: 'L:',
+            controlType: 'number',
+            options: [],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+            wholeNumber: true,
           },
           {
             conceptUuid: '5ba1f82e-c0aa-46d3-9bfd-8e76b7265093',
@@ -347,13 +386,13 @@ export const configSchema = {
             minAge: 0,
             maxAge: 200,
             readOnly: false,
+            optional: true,
           },
         ],
       },
       {
-        // Obstetric ultrasound findings. Measurements (FL/CRL/BPD/AC) and the gestational-age
-        // fields are optional: which of them a scan yields depends on how far along the
-        // pregnancy is, so requiring all of them would block a valid early- or late-term scan.
+        // Obstetric ultrasound findings. Every question is optional: which of them a scan yields
+        // depends on how far along the pregnancy is, so requiring them would block a valid scan.
         programName: SRH_PROGRAM_NAME,
         sectionTitle: 'Ultrasound',
         encounterTypeUuid: '367f7663-1ec7-4802-befc-b5097cee30b1',
@@ -362,19 +401,21 @@ export const configSchema = {
             conceptUuid: '1baaf8f0-7b59-40d5-8aec-1af2436be3a4',
             label: 'Fetuses',
             controlType: 'select',
-            options: ['Foetus:1', 'Not Defined'],
+            options: ['Foetus:1', 'Foetus:2', 'Foetus:3', 'Not Defined'],
             minAge: 0,
             maxAge: 200,
             readOnly: false,
+            optional: true,
           },
           {
             conceptUuid: 'd31d549f-77f2-41fe-9463-d6f9cd5f39de',
             label: 'Fetal Heart Pulsation',
             controlType: 'select',
-            options: ['Not Set', '+ve', '-ve', '+ve/ -ve'],
+            options: ['Not Set', '+ve', '-ve', '+ve/ -ve', '+ve/+ve', '-ve/-ve'],
             minAge: 0,
             maxAge: 200,
             readOnly: false,
+            optional: true,
           },
           {
             conceptUuid: '151f6ad3-83d6-4e99-8f9f-87253a569cbf',
@@ -384,6 +425,7 @@ export const configSchema = {
             minAge: 0,
             maxAge: 200,
             readOnly: false,
+            optional: true,
           },
           {
             conceptUuid: 'e5b825c6-8d33-4493-9afd-0162944e3094',
@@ -393,6 +435,7 @@ export const configSchema = {
             minAge: 0,
             maxAge: 200,
             readOnly: false,
+            optional: true,
           },
           {
             conceptUuid: 'a8adc088-44db-4800-91d4-ed159666cea0',
@@ -402,6 +445,7 @@ export const configSchema = {
             minAge: 0,
             maxAge: 200,
             readOnly: false,
+            optional: true,
           },
           {
             conceptUuid: '9ccb470d-4698-410c-80e8-ddf71626b9c8',
@@ -481,6 +525,7 @@ export const configSchema = {
             minAge: 0,
             maxAge: 200,
             readOnly: false,
+            optional: true,
           },
           {
             // Calculated from the LMP recorded in SRH Assessment: LMP + 9 months + 7 days.
@@ -536,8 +581,8 @@ export const configSchema = {
         sectionTitle: 'STI and Gyna',
         encounterTypeUuid: '871dd5ad-4d3a-4170-a985-181d10394c44',
         fields: [
+          // Every question in this section is optional.
           {
-            // Optional: only applies to a patient who has recently delivered.
             conceptUuid: '9311d1f3-ec8b-41a7-9893-fe8f3071c792',
             label: 'PNC',
             controlType: 'select',
@@ -555,6 +600,7 @@ export const configSchema = {
             minAge: 0,
             maxAge: 200,
             readOnly: false,
+            optional: true,
           },
           {
             conceptUuid: '1d1b1ebe-fa60-4f17-8ba2-c75830944a82',
@@ -564,6 +610,7 @@ export const configSchema = {
             minAge: 0,
             maxAge: 200,
             readOnly: false,
+            optional: true,
           },
           {
             conceptUuid: '98018a2e-f03d-48ad-a002-a95f0e52f010',
@@ -573,6 +620,7 @@ export const configSchema = {
             minAge: 0,
             maxAge: 200,
             readOnly: false,
+            optional: true,
           },
           {
             conceptUuid: 'f0438e22-6224-4d50-8646-7b1845b122f8',
@@ -655,6 +703,7 @@ export interface ProgramSectionField {
   visibleWhenConceptUuid?: string;
   visibleWhenValue?: string;
   persist?: boolean;
+  wholeNumber?: boolean;
 }
 
 export interface ProgramSectionConfig {

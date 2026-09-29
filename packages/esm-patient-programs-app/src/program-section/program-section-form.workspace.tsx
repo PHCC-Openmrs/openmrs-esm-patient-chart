@@ -277,11 +277,13 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
                           // Carbon's NumberInput can emit NaN (e.g. clicking the +/- stepper
                           // while empty) -- without this check that becomes the literal
                           // string "NaN", which the backend rejects for a Numeric concept.
-                          // Every number field in this form (MUAC, supplement quantity, gravidity)
+                          // Every number field in this form (MUAC, supplement quantity, GPAL)
                           // is a non-negative count/measurement, so also clamp out any negative
-                          // value the stepper or manual typing could otherwise produce.
+                          // value the stepper or manual typing could otherwise produce. Counts
+                          // (wholeNumber) also drop any fractional part.
                           const numericValue = state?.value != null ? Number(state.value) : NaN;
-                          onChange(!Number.isNaN(numericValue) ? String(Math.max(0, numericValue)) : '');
+                          const clampedValue = Math.max(0, field.wholeNumber ? Math.trunc(numericValue) : numericValue);
+                          onChange(!Number.isNaN(numericValue) ? String(clampedValue) : '');
                         }}
                       />
                     );
