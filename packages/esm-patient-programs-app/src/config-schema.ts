@@ -326,6 +326,7 @@ export const configSchema = {
       {
         programName: SRH_PROGRAM_NAME,
         sectionTitle: 'SRH Assessment',
+        // Every question in this section is optional.
         encounterTypeUuid: '20f20572-92d4-4cd2-a800-6dff5d39b044',
         fields: [
           {
@@ -336,6 +337,7 @@ export const configSchema = {
             minAge: 0,
             maxAge: 200,
             readOnly: false,
+            optional: true,
           },
           // Obstetric history as GPAL: Gravidity, Parity, Abortions, Living children.
           {
@@ -347,6 +349,7 @@ export const configSchema = {
             maxAge: 200,
             readOnly: false,
             wholeNumber: true,
+            optional: true,
           },
           {
             conceptUuid: 'd44ade25-c898-4845-84aa-0fec970385c4',
@@ -357,6 +360,7 @@ export const configSchema = {
             maxAge: 200,
             readOnly: false,
             wholeNumber: true,
+            optional: true,
           },
           {
             conceptUuid: 'bc07ff5a-908e-4de6-a3c1-f56aee02e37a',
@@ -367,6 +371,7 @@ export const configSchema = {
             maxAge: 200,
             readOnly: false,
             wholeNumber: true,
+            optional: true,
           },
           {
             conceptUuid: '37ba9c66-0a95-40a4-ba60-504c93157d18',
@@ -377,6 +382,7 @@ export const configSchema = {
             maxAge: 200,
             readOnly: false,
             wholeNumber: true,
+            optional: true,
           },
           {
             conceptUuid: '5ba1f82e-c0aa-46d3-9bfd-8e76b7265093',
