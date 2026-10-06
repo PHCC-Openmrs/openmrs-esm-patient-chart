@@ -440,6 +440,28 @@ export function DrugOrderForm({
     }
   }, [stockQuantityUnit, setValue]);
 
+  // A newly picked drug pre-fills Dose unit and Quantity unit from its dosage form, but the server
+  // only accepts units from its configured dosing / dispensing-unit concept sets. A dosage form
+  // such as Inhaler or Gel isn't a valid dose unit, and the order basket then fails to sign with
+  // just "Invalid Submission". Once those sets have loaded, clear a unit that isn't in them so the
+  // prescriber has to pick a valid one (e.g. Puff) instead of unknowingly keeping the bad default.
+  const allowedDosingUnits = orderConfigObject?.drugDosingUnits;
+  const allowedDispensingUnits = orderConfigObject?.drugDispensingUnits;
+  useEffect(() => {
+    const unit = getValues('unit');
+    if (allowedDosingUnits && unit?.valueCoded && !allowedDosingUnits.some((u) => u.valueCoded === unit.valueCoded)) {
+      setValue('unit', null);
+    }
+    const quantityUnits = getValues('quantityUnits');
+    if (
+      allowedDispensingUnits &&
+      quantityUnits?.valueCoded &&
+      !allowedDispensingUnits.some((u) => u.valueCoded === quantityUnits.valueCoded)
+    ) {
+      setValue('quantityUnits', null);
+    }
+  }, [allowedDosingUnits, allowedDispensingUnits, getValues, setValue]);
+
   const durationUnits: Array<DurationUnit> = useMemo(
     () =>
       orderConfigObject?.durationUnits ?? [

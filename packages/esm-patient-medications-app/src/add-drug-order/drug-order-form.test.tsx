@@ -813,3 +813,21 @@ describe('DrugOrderForm - required field validation', () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 });
+
+describe('DrugOrderForm - units pre-filled from the dosage form', () => {
+  it('keeps a pre-filled dose unit that is an allowed dosing unit', () => {
+    renderDrugOrderForm(
+      createNewOrderBasketItem({ unit: { valueCoded: '1513AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', value: 'Tablet' } }),
+    );
+
+    expect(screen.getByRole('combobox', { name: /dose unit/i })).toHaveValue('Tablet');
+  });
+
+  it('clears a pre-filled dose unit and quantity unit that the server does not allow (e.g. Inhaler)', () => {
+    const inhaler = { valueCoded: '162400AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', value: 'Inhaler' };
+    renderDrugOrderForm(createNewOrderBasketItem({ unit: inhaler, quantityUnits: inhaler }));
+
+    expect(screen.getByRole('combobox', { name: /dose unit/i })).toHaveValue('');
+    expect(screen.getByRole('combobox', { name: /quantity unit/i })).toHaveValue('');
+  });
+});

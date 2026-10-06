@@ -33,6 +33,15 @@ import { type ConfigObject } from '../config-schema';
 import { type Provider, useOrderEncounterForSystemWithVisitDisabled, useProviders } from '../api/api';
 import { patientHasActiveDiagnosis } from '../api/diagnoses.resource';
 import GeneralOrderPanel from './general-order-type/general-order-panel.component';
+import { getOrderSubmissionErrorMessage } from './order-basket.utils';
+
+/* Translation keys used by getOrderSubmissionErrorMessage:
+ * t('doseUnit', 'Dose unit')
+ * t('durationUnit', 'Duration unit')
+ * t('frequency', 'Frequency')
+ * t('quantityUnit', 'Quantity unit')
+ * t('route', 'Route')
+ */
 import styles from './order-basket.scss';
 
 interface OrderBasketProps {
@@ -169,10 +178,7 @@ const OrderBasket: React.FC<OrderBasketProps> = ({
         showOrderSuccessToast('@openmrs/esm-patient-orders-app', orders);
       } catch (e) {
         console.error(e);
-        setCreatingEncounterError(
-          e.responseBody?.error?.message ||
-            t('tryReopeningTheWorkspaceAgain', 'Please try launching the workspace again'),
-        );
+        setCreatingEncounterError(getOrderSubmissionErrorMessage(e, t));
       }
     } else {
       try {
@@ -200,10 +206,7 @@ const OrderBasket: React.FC<OrderBasketProps> = ({
         onOrderBasketSubmitted?.(orderEncounterUuid, postedOrders);
       } catch (e) {
         console.error(e);
-        setCreatingEncounterError(
-          e.responseBody?.error?.message ||
-            t('tryReopeningTheWorkspaceAgain', 'Please try launching the workspace again'),
-        );
+        setCreatingEncounterError(getOrderSubmissionErrorMessage(e, t));
       }
     }
     setIsSavingOrders(false);
@@ -329,7 +332,11 @@ const OrderBasket: React.FC<OrderBasketProps> = ({
           {(creatingEncounterError || errorFetchingEncounterUuid) && (
             <InlineNotification
               kind="error"
-              title={t('tryReopeningTheWorkspaceAgain', 'Please try launching the workspace again')}
+              title={
+                creatingEncounterError
+                  ? t('ordersCouldNotBePlaced', 'The orders could not be placed')
+                  : t('tryReopeningTheWorkspaceAgain', 'Please try launching the workspace again')
+              }
               subtitle={creatingEncounterError}
               lowContrast={true}
               className={styles.inlineNotification}
