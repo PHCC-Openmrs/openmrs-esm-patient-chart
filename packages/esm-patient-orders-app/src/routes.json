@@ -105,6 +105,10 @@
     {
       "component": "printLabResultModal",
       "name": "print-lab-results-modal"
+    },
+    {
+      "component": "diagnosisRequiredModal",
+      "name": "diagnosis-required-modal"
     }
   ]
 }

@@ -91,6 +91,12 @@ export const configSchema = {
     _description: 'Maximum number of pinned drug orders per user',
     _validators: [validators.inRange(1, 50)],
   },
+  requireDiagnosisBeforeOrdering: {
+    _type: Type.Boolean,
+    _default: true,
+    _description:
+      'Whether signing the order basket requires the patient to have at least one Active entry on their Diagnoses page. When none exists, the orders are not submitted and the user is asked to add a diagnosis first.',
+  },
 };
 
 export interface OrderTypeDefinition {
@@ -112,4 +118,5 @@ export interface ConfigObject {
   orderLocationTagName: string;
   enableDrugOrderFavorites: boolean;
   maxPinnedDrugOrders: number;
+  requireDiagnosisBeforeOrdering: boolean;
 }
