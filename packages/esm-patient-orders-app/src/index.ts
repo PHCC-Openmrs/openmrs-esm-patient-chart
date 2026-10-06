@@ -64,6 +64,11 @@ export const printLabResultModal = getAsyncLifecycle(
   options,
 );
 
+export const diagnosisRequiredModal = getAsyncLifecycle(
+  () => import('./order-basket/diagnosis-required-modal/diagnosis-required.modal'),
+  options,
+);
+
 export const addGeneralOrderWorkspace = getAsyncLifecycle(
   () => import('./order-basket/general-order-type/add-general-order/add-general-order.workspace'),
   options,

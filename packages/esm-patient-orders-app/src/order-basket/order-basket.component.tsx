@@ -9,6 +9,7 @@ import {
   getPatientName,
   PatientBannerPatientInfo,
   PatientPhoto,
+  showModal,
   LocationPicker,
   useConfig,
   useLayoutType,
@@ -30,6 +31,7 @@ import {
 } from '@openmrs/esm-patient-common-lib';
 import { type ConfigObject } from '../config-schema';
 import { type Provider, useOrderEncounterForSystemWithVisitDisabled, useProviders } from '../api/api';
+import { patientHasActiveDiagnosis } from '../api/diagnoses.resource';
 import GeneralOrderPanel from './general-order-type/general-order-panel.component';
 import styles from './order-basket.scss';
 
@@ -56,7 +58,8 @@ const OrderBasket: React.FC<OrderBasketProps> = ({
 }) => {
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
-  const { orderTypes, orderEncounterType, ordererProviderRoles, orderLocationTagName } = useConfig<ConfigObject>();
+  const { orderTypes, orderEncounterType, ordererProviderRoles, orderLocationTagName, requireDiagnosisBeforeOrdering } =
+    useConfig<ConfigObject>();
   const {
     currentProvider: _currentProvider,
     sessionLocation,
@@ -77,6 +80,7 @@ const OrderBasket: React.FC<OrderBasketProps> = ({
   } = useOrderEncounterForSystemWithVisitDisabled(patientUuid);
   const [isSavingOrders, setIsSavingOrders] = useState(false);
   const [creatingEncounterError, setCreatingEncounterError] = useState('');
+  const [diagnosisCheckFailed, setDiagnosisCheckFailed] = useState(false);
   const { mutate: mutateOrders } = useMutatePatientOrders(patientUuid);
   const { mutate } = useSWRConfig();
 
@@ -105,8 +109,29 @@ const OrderBasket: React.FC<OrderBasketProps> = ({
   const handleSave = useCallback(async () => {
     const abortController = new AbortController();
     setCreatingEncounterError('');
+    setDiagnosisCheckFailed(false);
 
     setIsSavingOrders(true);
+
+    // Orders (medications, lab tests, ...) may only be placed for a patient with a diagnosis.
+    // If the check itself fails we don't submit either, rather than let orders through unchecked.
+    if (requireDiagnosisBeforeOrdering) {
+      let hasDiagnosis = false;
+      try {
+        hasDiagnosis = await patientHasActiveDiagnosis(patientUuid);
+      } catch (e) {
+        console.error(e);
+        setDiagnosisCheckFailed(true);
+        setIsSavingOrders(false);
+        return;
+      }
+      if (!hasDiagnosis) {
+        const dispose = showModal('diagnosis-required-modal', { closeModal: () => dispose() });
+        setIsSavingOrders(false);
+        return;
+      }
+    }
+
     // orderEncounterUuid should only be preset if the system does not support visits, and the user has an order encounter today.
     // If orderEncounterUuid is not present, then create an encounter along with the orders.
     // If orderEncounterUuid is present, then just post the orders to that encounter.
@@ -199,6 +224,7 @@ const OrderBasket: React.FC<OrderBasketProps> = ({
     orderer,
     orderLocationUuid,
     onOrderBasketSubmitted,
+    requireDiagnosisBeforeOrdering,
   ]);
 
   const handleCancel = useCallback(() => {
@@ -305,6 +331,15 @@ const OrderBasket: React.FC<OrderBasketProps> = ({
               kind="error"
               title={t('tryReopeningTheWorkspaceAgain', 'Please try launching the workspace again')}
               subtitle={creatingEncounterError}
+              lowContrast={true}
+              className={styles.inlineNotification}
+            />
+          )}
+          {diagnosisCheckFailed && (
+            <InlineNotification
+              kind="error"
+              title={t('errorCheckingDiagnoses', "Couldn't check the patient's diagnoses")}
+              subtitle={t('ordersNotSubmittedTryAgain', 'The orders were not submitted. Please try again.')}
               lowContrast={true}
               className={styles.inlineNotification}
             />
