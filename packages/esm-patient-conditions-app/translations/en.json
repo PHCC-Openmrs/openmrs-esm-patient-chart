@@ -36,6 +36,7 @@
   "notes": "Notes",
   "onsetDate": "Onset date",
   "onsetDateCannotBeInTheFuture": "Onset date cannot be in the future",
+  "onsetDateRequired": "Onset date is required",
   "possibleDuplicate": "Possible duplicate",
   "recordCondition": "Record a Condition",
   "required": "Required",
