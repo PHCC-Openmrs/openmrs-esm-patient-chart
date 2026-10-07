@@ -17,14 +17,15 @@ import {
 } from '@openmrs/esm-framework';
 import { useOrderBasket, type Order, type OrderBasketItem } from '@openmrs/esm-patient-common-lib';
 import { type ConfigObject } from '../config-schema';
-import { type ObservationValue } from '../types/encounter';
+import { type Observation, type ObservationValue } from '../types/encounter';
 import {
   createCompositeObservationPayload,
+  createObservationSaveTasks,
   isCoded,
   isNumeric,
   isPanel,
   isText,
-  updateObservation,
+  type LabOrderConcept,
   updateOrderResult,
   useCompletedLabResultsArray,
   useOrderConceptsByUuids,
@@ -139,31 +140,43 @@ const ExportedLabResultsForm: React.FC<Workspace2DefinitionProps<LabResultsFormP
   const canUseResultEntryAddTests = enableAddTestsDuringResultEntry && !isEditMode && !!resolvedLaunchLabOrderForm;
 
   useEffect(() => {
-    conceptArray.forEach((concept, index) => {
-      const completeLabResult = completeLabResults.find((r) => r.concept.uuid === concept.uuid);
-      if (concept && completeLabResult && isEditMode) {
-        if (isCoded(concept) && typeof completeLabResult?.value === 'object' && completeLabResult?.value?.uuid) {
-          setValue(concept.uuid, completeLabResult.value.uuid);
-        } else if (isNumeric(concept) && completeLabResult?.value) {
-          setValue(concept.uuid, parseFloat(completeLabResult.value as string));
-        } else if (isText(concept) && completeLabResult?.value) {
-          setValue(concept.uuid, completeLabResult?.value);
-        } else if (isPanel(concept)) {
-          concept.setMembers.forEach((member) => {
-            const obs = completeLabResult.groupMembers.find((v) => v.concept.uuid === member.uuid);
-            let value: ObservationValue;
-            if (isCoded(member)) {
-              value = typeof obs?.value === 'object' ? obs.value.uuid : obs?.value;
-            } else if (isNumeric(member)) {
-              value = obs?.value ? parseFloat(obs.value as string) : undefined;
-            } else if (isText(member)) {
-              value = obs?.value;
-            }
-            if (value) setValue(member.uuid, value);
-          });
-        }
+    if (!isEditMode) {
+      return;
+    }
+
+    const prefill = (concept: LabOrderConcept, obs: Observation | undefined) => {
+      if (!obs) {
+        return;
       }
-    });
+      if (isPanel(concept)) {
+        concept.setMembers.forEach((member) =>
+          prefill(
+            member,
+            obs.groupMembers?.find((groupMember) => groupMember.concept?.uuid === member.uuid),
+          ),
+        );
+        return;
+      }
+
+      let value: ObservationValue;
+      if (isCoded(concept)) {
+        value = typeof obs.value === 'object' ? obs.value?.uuid : obs.value;
+      } else if (isNumeric(concept)) {
+        value = obs.value !== undefined && obs.value !== null ? parseFloat(obs.value as string) : undefined;
+      } else if (isText(concept)) {
+        value = obs.value;
+      }
+      if (value !== undefined && value !== null && value !== '') {
+        setValue(concept.uuid, value);
+      }
+    };
+
+    conceptArray.forEach((concept) =>
+      prefill(
+        concept,
+        completeLabResults.find((r) => r.concept.uuid === concept.uuid),
+      ),
+    );
   }, [conceptArray, completeLabResults, isEditMode, setValue]);
 
   if (isLoadingResultConcepts) {
@@ -205,25 +218,11 @@ const ExportedLabResultsForm: React.FC<Workspace2DefinitionProps<LabResultsFormP
 
     // Handle update operation for completed lab order results
     if (isEditMode) {
-      const updateTasks = Object.entries(formValues)
-        .filter(([, value]) => value !== undefined && value !== null && value !== '')
-        .map(([conceptUuid, value]) => {
-          let obs = completeLabResults.find((r) => r.concept.uuid === conceptUuid);
-          if (!obs) {
-            for (const result of completeLabResults) {
-              obs = result.groupMembers?.find((m) => m.concept.uuid === conceptUuid);
-              if (obs) break;
-            }
-          }
-          return updateObservation(obs?.uuid, { value });
-        });
-      const updateResults = await Promise.allSettled(updateTasks);
-      const failedObsconceptUuids = updateResults.reduce((prev, curr, index) => {
-        if (curr.status === 'rejected') {
-          return [...prev, Object.keys(formValues).at(index)];
-        }
-        return prev;
-      }, []);
+      const saveTasks = createObservationSaveTasks(conceptArray, completeLabResults, order, formValues);
+      const updateResults = await Promise.allSettled(saveTasks.map((task) => task.save()));
+      const failedObsconceptUuids = saveTasks
+        .filter((_, index) => updateResults[index].status === 'rejected')
+        .map((task) => task.conceptUuid);
 
       // Invalidate caches before closing workspace
       mutateResults();
@@ -248,6 +247,12 @@ const ExportedLabResultsForm: React.FC<Workspace2DefinitionProps<LabResultsFormP
 
     // Set the observation status to 'FINAL' as we're not capturing it in the form
     const obsPayload = createCompositeObservationPayload(conceptArray, order, formValues, 'FINAL');
+    if (obsPayload.obs.length === 0) {
+      // Never complete the order when there is nothing to save, otherwise the order ends up
+      // marked as completed with no results attached.
+      setShowEmptyFormErrorNotification(true);
+      return;
+    }
     const orderDiscontinuationPayload = {
       previousOrder: order.uuid,
       type: 'testorder',

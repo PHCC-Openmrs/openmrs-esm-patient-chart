@@ -250,11 +250,7 @@ export function getConceptUuids(concept: LabOrderConcept | undefined): Array<str
   if (!concept) {
     return [];
   }
-  const uuids = [concept.uuid];
-  if (concept.setMembers) {
-    concept.setMembers.forEach((member) => uuids.push(member.uuid));
-  }
-  return uuids;
+  return [concept.uuid, ...(concept.setMembers ?? []).flatMap((member) => getConceptUuids(member))];
 }
 
 export interface InterpretedResult {

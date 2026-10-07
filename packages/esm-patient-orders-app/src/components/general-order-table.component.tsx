@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { type Order } from '@openmrs/esm-patient-common-lib';
 import { useLayoutType } from '@openmrs/esm-framework';
 import { getObservationDisplayValue } from '../utils';
-import { useLabEncounter, useOrderConceptByUuid } from '../lab-results/lab-results.resource';
+import { flattenPanelResults, useLabEncounter, useOrderConceptByUuid } from '../lab-results/lab-results.resource';
 import styles from './general-order-table.scss';
 
 interface GeneralOrderProps {
@@ -53,23 +53,32 @@ const GeneralOrderTable: React.FC<GeneralOrderProps> = ({ order }) => {
 
   const rows = useMemo(() => {
     if (concept && concept.setMembers.length > 0) {
-      return concept?.setMembers.map((memberConcept) => ({
-        id: memberConcept.uuid,
-        orderName: <div className={styles.type}>{memberConcept.display}</div>,
-        instructions: '--',
-        result: isLoadingResult ? (
-          <SkeletonText />
-        ) : (
-          getObservationDisplayValue(
-            obs?.groupMembers?.find((obs) => obs.concept.uuid === memberConcept.uuid)?.value,
-          ) ?? '--'
-        ),
-        normalRange:
-          memberConcept.hiNormal && memberConcept.lowNormal
-            ? `${memberConcept.lowNormal} - ${memberConcept.hiNormal}`
-            : t('notApplicable', 'Not applicable'),
-        referenceNumber: order?.accessionNumber,
-      }));
+      return flattenPanelResults(concept, obs).map(({ concept: memberConcept, obs: memberObs, isHeading }) =>
+        isHeading
+          ? {
+              id: memberConcept.uuid,
+              orderName: (
+                <div className={styles.type}>
+                  <strong>{memberConcept.display}</strong>
+                </div>
+              ),
+              instructions: '',
+              result: '',
+              normalRange: '',
+              referenceNumber: '',
+            }
+          : {
+              id: memberConcept.uuid,
+              orderName: <div className={styles.type}>{memberConcept.display}</div>,
+              instructions: '--',
+              result: isLoadingResult ? <SkeletonText /> : getObservationDisplayValue(memberObs?.value) ?? '--',
+              normalRange:
+                memberConcept.hiNormal && memberConcept.lowNormal
+                  ? `${memberConcept.lowNormal} - ${memberConcept.hiNormal}`
+                  : t('notApplicable', 'Not applicable'),
+              referenceNumber: order?.accessionNumber,
+            },
+      );
     } else if (concept && concept.setMembers.length === 0) {
       return [
         {
@@ -87,7 +96,7 @@ const GeneralOrderTable: React.FC<GeneralOrderProps> = ({ order }) => {
     } else {
       return [];
     }
-  }, [concept, isLoadingResult, obs?.groupMembers, obs?.value, order?.accessionNumber, order?.instructions, t]);
+  }, [concept, isLoadingResult, obs, order?.accessionNumber, order?.instructions, t]);
 
   return (
     <div className={styles.order}>

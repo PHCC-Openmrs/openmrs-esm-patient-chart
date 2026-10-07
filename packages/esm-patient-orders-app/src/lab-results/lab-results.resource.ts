@@ -6,11 +6,13 @@ import { type Encounter, type Observation } from '../types/encounter';
 import { type OrderDiscontinuationPayload } from '../types/order';
 
 const labEncounterRepresentation =
-  'custom:(uuid,encounterDatetime,encounterType:(uuid,display),location:(uuid,name),patient:(uuid,display,person:(uuid,display,gender,age)),encounterProviders:(uuid,provider:(uuid,name)),obs:(uuid,obsDatetime,voided,groupMembers:(uuid,concept:(uuid,name:(uuid,name)),value:(uuid,display,name:(uuid,name),names:(uuid,conceptNameType,name)),interpretation),formFieldNamespace,formFieldPath,order:(uuid,display),concept:(uuid,name:(uuid,name)),value:(uuid,display,name:(uuid,name),names:(uuid,conceptNameType,name)),interpretation))';
+  'custom:(uuid,encounterDatetime,encounterType:(uuid,display),location:(uuid,name),patient:(uuid,display,person:(uuid,display,gender,age)),encounterProviders:(uuid,provider:(uuid,name)),obs:(uuid,obsDatetime,voided,groupMembers:(uuid,concept:(uuid,name:(uuid,name)),value:(uuid,display,name:(uuid,name),names:(uuid,conceptNameType,name)),interpretation,groupMembers:(uuid,concept:(uuid,name:(uuid,name)),value:(uuid,display,name:(uuid,name),names:(uuid,conceptNameType,name)),interpretation)),formFieldNamespace,formFieldPath,order:(uuid,display),concept:(uuid,name:(uuid,name)),value:(uuid,display,name:(uuid,name),names:(uuid,conceptNameType,name)),interpretation))';
 const labConceptRepresentation =
   'custom:(uuid,display,name,datatype,set,answers,hiNormal,hiAbsolute,hiCritical,lowNormal,lowAbsolute,lowCritical,units,allowDecimal,' +
   'setMembers:(uuid,display,answers,datatype,hiNormal,hiAbsolute,hiCritical,lowNormal,lowAbsolute,lowCritical,units,allowDecimal,set,setMembers:(uuid)))';
-const conceptObsRepresentation = 'custom:(uuid,display,concept:(uuid,display),groupMembers,value)';
+const obsMemberRepresentation = 'uuid,display,concept:(uuid,display),value';
+// Panels can be nested (e.g. Urine Analysis -> physical/chemical/microscopic sub-panels -> tests), so fetch two levels of group members.
+const conceptObsRepresentation = `custom:(uuid,display,concept:(uuid,display),value,groupMembers:(${obsMemberRepresentation},groupMembers:(${obsMemberRepresentation})))`;
 
 type NullableNumber = number | null | undefined;
 export interface LabOrderConcept {
@@ -301,29 +303,36 @@ export async function updateOrderResult(
   throw new Error('Failed to update order');
 }
 
+/**
+ * Builds the observation for a concept, recursing through nested panels so that tests inside
+ * sub-panels are saved as group members of their own sub-panel obs. Returns null when nothing
+ * in the concept (or any of its descendants) has a value.
+ */
+function createNestedObservation(
+  concept: LabOrderConcept,
+  order: Order,
+  values: Record<string, unknown>,
+  status: string,
+): ReturnType<typeof createObservationByConcept> | null {
+  if (isPanel(concept)) {
+    const groupMembers = concept.setMembers
+      .map((member) => createNestedObservation(member, order, values, status))
+      .filter((member) => member !== null);
+    return groupMembers.length > 0 ? createObservationByConcept(concept, order, groupMembers, null, status) : null;
+  }
+
+  const value = getValue(concept, values);
+  return value === null || value === undefined ? null : createObservationByConcept(concept, order, null, value, status);
+}
+
 export function createObservationPayload(
   concept: LabOrderConcept,
   order: Order,
   values: Record<string, unknown>,
   status: string,
 ) {
-  if (concept.set && concept.setMembers.length > 0) {
-    const groupMembers = concept.setMembers
-      .map((member) => createGroupMember(member, order, values, status))
-      .filter((member) => member !== null && member.value !== null && member.value !== undefined);
-
-    if (groupMembers.length === 0) {
-      return { obs: [] };
-    }
-
-    return { obs: [createObservation(order, groupMembers, null, status)] };
-  } else {
-    const value = getValue(concept, values);
-    if (value === null || value === undefined) {
-      return { obs: [] };
-    }
-    return { obs: [createObservation(order, null, value, status)] };
-  }
+  const observation = createNestedObservation(concept, order, values, status);
+  return { obs: observation ? [observation] : [] };
 }
 
 export function createCompositeObservationPayload(
@@ -334,23 +343,127 @@ export function createCompositeObservationPayload(
 ) {
   if (!concepts || concepts.length === 0) return { obs: [] };
 
-  const allObs = concepts.flatMap((concept) => {
-    if (concept.set && concept.setMembers.length > 0) {
-      const groupMembers = concept.setMembers
-        .map((member) => createGroupMember(member, order, values, status))
-        .filter((member) => member !== null && member.value !== null && member.value !== undefined);
+  return {
+    obs: concepts
+      .map((concept) => createNestedObservation(concept, order, values, status))
+      .filter((observation) => observation !== null),
+  };
+}
 
-      if (groupMembers.length === 0) return [];
-
-      return [createObservationByConcept(concept, order, groupMembers, null, status)];
-    } else {
-      const value = getValue(concept, values);
-      if (value === null || value === undefined) return [];
-      return [createObservationByConcept(concept, order, null, value, status)];
+/**
+ * Finds the observation for a concept anywhere in an observation tree, however deeply it is nested.
+ */
+export function findObservationByConcept(
+  observations: Array<Observation> | undefined,
+  conceptUuid: string,
+): Observation | undefined {
+  for (const observation of observations ?? []) {
+    if (observation?.concept?.uuid === conceptUuid) {
+      return observation;
     }
+    const nested = findObservationByConcept(observation?.groupMembers, conceptUuid);
+    if (nested) {
+      return nested;
+    }
+  }
+  return undefined;
+}
+
+export interface ObservationSaveTask {
+  conceptUuid: string;
+  save: () => Promise<unknown>;
+}
+
+/**
+ * True when a field that now has a value has no saved observation yet (e.g. a sub-panel that was
+ * skipped the first time results were entered).
+ */
+function hasUnsavedValues(
+  concept: LabOrderConcept,
+  existing: Observation | undefined,
+  values: Record<string, unknown>,
+): boolean {
+  if (isPanel(concept)) {
+    return concept.setMembers.some((member) =>
+      hasUnsavedValues(
+        member,
+        existing?.groupMembers?.find((groupMember) => groupMember.concept?.uuid === member.uuid),
+        values,
+      ),
+    );
+  }
+  const value = values[concept.uuid];
+  return !existing && value !== undefined && value !== null && value !== '';
+}
+
+/**
+ * Works out what has to be written to save edited results.
+ *
+ * Existing observations are updated in place. The REST API cannot attach a new observation to an
+ * existing group, so when a filled field has no observation yet, the whole result is saved again
+ * as a new observation tree and the previous one is voided once the new one is stored.
+ */
+export function createObservationSaveTasks(
+  concepts: Array<LabOrderConcept>,
+  existingObservations: Array<Observation>,
+  order: Order,
+  values: Record<string, unknown>,
+): Array<ObservationSaveTask> {
+  const tasks: Array<ObservationSaveTask> = [];
+
+  const updateExisting = (concept: LabOrderConcept, existing: Observation) => {
+    if (isPanel(concept)) {
+      concept.setMembers.forEach((member) => {
+        const memberObs = existing.groupMembers?.find((groupMember) => groupMember.concept?.uuid === member.uuid);
+        if (memberObs) {
+          updateExisting(member, memberObs);
+        }
+      });
+      return;
+    }
+
+    const value = values[concept.uuid];
+    if (value !== undefined && value !== null && value !== '') {
+      tasks.push({ conceptUuid: concept.uuid, save: () => updateObservation(existing.uuid, { value }) });
+    }
+  };
+
+  concepts.forEach((concept) => {
+    const existing = existingObservations.find((observation) => observation.concept?.uuid === concept.uuid);
+    if (!existing || hasUnsavedValues(concept, existing, values)) {
+      const observation = createNestedObservation(concept, order, values, 'FINAL');
+      if (observation) {
+        tasks.push({
+          conceptUuid: concept.uuid,
+          save: async () => {
+            await saveNewObservations(order.encounter.uuid, [observation]);
+            if (existing) {
+              await voidObservation(existing.uuid);
+            }
+          },
+        });
+      }
+      return;
+    }
+
+    updateExisting(concept, existing);
   });
 
-  return { obs: allObs };
+  return tasks;
+}
+
+function saveNewObservations(encounterUuid: string, obs: Array<unknown>) {
+  return openmrsFetch(`${restBaseUrl}/encounter/${encounterUuid}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ obs }),
+  });
+}
+
+function voidObservation(observationUuid: string) {
+  return openmrsFetch(`${restBaseUrl}/obs/${observationUuid}`, { method: 'DELETE' });
 }
 
 export function updateObservation(observationUuid: string, payload: Record<string, any>) {
@@ -361,29 +474,6 @@ export function updateObservation(observationUuid: string, payload: Record<strin
     },
     body: JSON.stringify(payload),
   });
-}
-
-function createGroupMember(member: LabOrderConcept, order: Order, values: Record<string, unknown>, status: string) {
-  const value = getValue(member, values);
-  if (value === null || value === undefined) {
-    return null;
-  }
-  return {
-    concept: { uuid: member.uuid },
-    value: value,
-    status: status,
-    order: { uuid: order.uuid },
-  };
-}
-
-function createObservation(order: Order, groupMembers = null, value = null, status: string) {
-  return {
-    concept: { uuid: order.concept.uuid },
-    status: status,
-    order: { uuid: order.uuid },
-    ...(groupMembers && groupMembers.length > 0 && { groupMembers }),
-    ...(value !== null && value !== undefined && { value }),
-  };
 }
 
 function createObservationByConcept(
@@ -420,6 +510,28 @@ function getValue(concept: LabOrderConcept, values: Record<string, unknown>) {
   }
 
   return null;
+}
+
+export interface PanelResultRow {
+  concept: LabOrderConcept;
+  /** The saved observation for this concept, if one exists. */
+  obs: Observation | undefined;
+  /** True for a sub-panel heading, whose tests follow it in the list. */
+  isHeading: boolean;
+}
+
+/**
+ * Flattens a panel into display rows in order. Sub-panels (e.g. "Urine physical examination"
+ * inside "Urine Analysis") produce a heading row followed by their own tests, so results from
+ * nested panels are shown instead of being skipped.
+ */
+export function flattenPanelResults(concept: LabOrderConcept, obs: Observation | undefined): Array<PanelResultRow> {
+  return (concept.setMembers ?? []).flatMap((member) => {
+    const memberObs = obs?.groupMembers?.find((groupMember) => groupMember.concept?.uuid === member.uuid);
+    return isPanel(member)
+      ? [{ concept: member, obs: memberObs, isHeading: true }, ...flattenPanelResults(member, memberObs)]
+      : [{ concept: member, obs: memberObs, isHeading: false }];
+  });
 }
 
 export const isCoded = (concept: LabOrderConcept) => concept.datatype?.display === 'Coded';
