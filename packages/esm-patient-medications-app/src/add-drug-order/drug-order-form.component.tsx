@@ -761,7 +761,7 @@ export function DrugOrderForm({
                           type="number"
                           id="durationInput"
                           label={t('duration', 'Duration')}
-                          min={0}
+                          min={1}
                           step={1}
                           allowEmpty
                         />
@@ -773,6 +773,7 @@ export function DrugOrderForm({
                         setValue={setValue}
                         name="duration"
                         labelText={t('duration', 'Duration')}
+                        min={1}
                       />
                     )}
                   </InputWrapper>
@@ -913,10 +914,19 @@ interface CustomNumberInputProps {
   name: keyof MedicationOrderFormData;
   labelText: string;
   isTablet: boolean;
+  min?: number;
   inputProps?: Partial<ComponentProps<typeof TextInput>>;
 }
 
-const CustomNumberInput = ({ setValue, control, name, labelText, isTablet, ...inputProps }: CustomNumberInputProps) => {
+const CustomNumberInput = ({
+  setValue,
+  control,
+  name,
+  labelText,
+  isTablet,
+  min = 0,
+  ...inputProps
+}: CustomNumberInputProps) => {
   const { t } = useTranslation();
   const responsiveSize = isTablet ? 'md' : 'sm';
 
@@ -937,7 +947,7 @@ const CustomNumberInput = ({ setValue, control, name, labelText, isTablet, ...in
   };
 
   const decrement = () => {
-    setValue(name, Math.max(Number(value) - 1, 0));
+    setValue(name, Math.max(Number(value) - 1, min));
   };
 
   return (

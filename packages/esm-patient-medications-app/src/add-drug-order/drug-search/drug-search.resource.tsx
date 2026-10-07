@@ -278,7 +278,7 @@ export function getTemplateOrderBasketItem(
         patientInstructions: '',
         asNeeded: template.template.dosingInstructions.asNeeded || false,
         asNeededCondition: template.template.dosingInstructions.asNeededCondition,
-        duration: null,
+        duration: 1,
         durationUnit: configDefaultDurationConcept
           ? {
               value: configDefaultDurationConcept?.display,
@@ -316,7 +316,7 @@ export function getTemplateOrderBasketItem(
         patientInstructions: '',
         asNeeded: false,
         asNeededCondition: null,
-        duration: null,
+        duration: 1,
         durationUnit: configDefaultDurationConcept
           ? {
               value: configDefaultDurationConcept?.display,

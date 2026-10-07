@@ -57,7 +57,7 @@ export function drugOrderBasketItemToFormValue(
     patientInstructions: item?.patientInstructions ?? '',
     asNeeded: item?.asNeeded ?? false,
     asNeededCondition: item?.asNeededCondition ?? '',
-    duration: item?.duration,
+    duration: item?.duration ?? 1,
     durationUnit: item?.durationUnit,
     pillsDispensed: item?.pillsDispensed ?? null,
     quantityUnits: item?.quantityUnits,
@@ -130,7 +130,11 @@ function useCreateMedicationOrderFormSchema() {
       patientInstructions: z.string().nullable(),
       asNeeded: z.boolean(),
       asNeededCondition: z.string().nullable(),
-      duration: z.number().nullable(),
+      duration: z
+        .number()
+        .int()
+        .min(1, { message: t('durationMinErrorMessage', 'Duration must be at least 1') })
+        .nullable(),
       durationUnit: z.object({ ...comboSchema }).nullable(),
       scheduledDate: z.date(),
       frequency: z.object(

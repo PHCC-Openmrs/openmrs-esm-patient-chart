@@ -34,6 +34,7 @@
   "drugs": "Drugs",
   "drugStockAvailable": "In stock: {{quantity}} {{unit}}",
   "duration": "Duration",
+  "durationMinErrorMessage": "Duration must be at least 1",
   "durationUnit": "Duration unit",
   "durationUnitPlaceholder": "Duration Unit",
   "editDispensingUnit": "Quantity unit",
