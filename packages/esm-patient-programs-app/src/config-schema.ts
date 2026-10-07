@@ -454,6 +454,33 @@ export const configSchema = {
             optional: true,
           },
           {
+            // Calculated from the LMP recorded in SRH Assessment: LMP + 9 months + 7 days.
+            conceptUuid: '21eea22d-7aef-4238-8203-a987fbf08d35',
+            label: 'EDD',
+            controlType: 'date',
+            options: [],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: true,
+            optional: true,
+            autofillFromLatestObsConceptUuid: SRH_LMP_CONCEPT_UUID,
+            autofillRule: 'lmpToEdd',
+          },
+          {
+            // Calculated from the LMP recorded in SRH Assessment: every 7 whole days elapsed
+            // since the LMP counts as one completed week.
+            conceptUuid: 'ccb5e545-2c8e-4082-a9a0-fddc01a0f088',
+            label: 'Number of Weeks',
+            controlType: 'number',
+            options: [],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: true,
+            optional: true,
+            autofillFromLatestObsConceptUuid: SRH_LMP_CONCEPT_UUID,
+            autofillRule: 'lmpToGestationalWeeks',
+          },
+          {
             conceptUuid: '9ccb470d-4698-410c-80e8-ddf71626b9c8',
             label: 'FL',
             controlType: 'number',
@@ -532,33 +559,6 @@ export const configSchema = {
             maxAge: 200,
             readOnly: false,
             optional: true,
-          },
-          {
-            // Calculated from the LMP recorded in SRH Assessment: LMP + 9 months + 7 days.
-            conceptUuid: '21eea22d-7aef-4238-8203-a987fbf08d35',
-            label: 'EDD',
-            controlType: 'date',
-            options: [],
-            minAge: 0,
-            maxAge: 200,
-            readOnly: true,
-            optional: true,
-            autofillFromLatestObsConceptUuid: SRH_LMP_CONCEPT_UUID,
-            autofillRule: 'lmpToEdd',
-          },
-          {
-            // Calculated from the LMP recorded in SRH Assessment: every 7 whole days elapsed
-            // since the LMP counts as one completed week.
-            conceptUuid: 'ccb5e545-2c8e-4082-a9a0-fddc01a0f088',
-            label: 'Number of Weeks',
-            controlType: 'number',
-            options: [],
-            minAge: 0,
-            maxAge: 200,
-            readOnly: true,
-            optional: true,
-            autofillFromLatestObsConceptUuid: SRH_LMP_CONCEPT_UUID,
-            autofillRule: 'lmpToGestationalWeeks',
           },
           {
             conceptUuid: '26bcbe57-ac91-4763-a249-1e530acb237f',
