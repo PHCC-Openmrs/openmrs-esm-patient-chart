@@ -20,7 +20,12 @@ import {
   useReferenceRanges,
   ReferenceRangeDisplay,
 } from '@openmrs/esm-patient-common-lib';
-import { useLabEncounter, useOrderConceptByUuid, useOrderConceptsByUuids } from '../lab-results/lab-results.resource';
+import {
+  flattenPanelResults,
+  useLabEncounter,
+  useOrderConceptByUuid,
+  useOrderConceptsByUuids,
+} from '../lab-results/lab-results.resource';
 import { getConceptUuids, getEffectiveRanges, getInterpretationClass, interpretObservation } from '../utils';
 import styles from './test-order.scss';
 
@@ -79,8 +84,15 @@ const TestOrder: React.FC<TestOrderProps> = ({ testOrder, patientUuid: patientUu
 
       // Handle panel tests (with set members / groupMembers)
       if (concept.setMembers && concept.setMembers.length > 0) {
-        return concept.setMembers.map((memberConcept) => {
-          const memberObs = obs.groupMembers?.find((gm) => gm.concept.uuid === memberConcept.uuid);
+        return flattenPanelResults(concept, obs).map(({ concept: memberConcept, obs: memberObs, isHeading }) => {
+          if (isHeading) {
+            return {
+              id: `${obs.uuid}:${memberConcept.uuid}:heading`,
+              testType: <strong>{memberConcept.display || '--'}</strong>,
+              result: '',
+              normalRange: '',
+            };
+          }
 
           const ranges = getEffectiveRanges(memberConcept, referenceRanges);
 

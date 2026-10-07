@@ -19,7 +19,7 @@ import {
   ReferenceRangeDisplay,
   useReferenceRanges,
 } from '@openmrs/esm-patient-common-lib';
-import { useLabEncounter, useOrderConceptByUuid } from '../../lab-results.resource';
+import { flattenPanelResults, useLabEncounter, useOrderConceptByUuid } from '../../lab-results.resource';
 import { getConceptUuids, getEffectiveRanges, getInterpretationClass, interpretObservation } from '../../../utils';
 import styles from './print-preview.scss';
 
@@ -65,28 +65,37 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ order, index }) => {
     }
 
     if (concept.setMembers?.length > 0) {
-      return concept.setMembers.map((memberConcept) => {
-        const memberObs = testResultObs?.groupMembers?.find((obs) => obs?.concept?.uuid === memberConcept?.uuid);
+      return flattenPanelResults(concept, testResultObs).map(
+        ({ concept: memberConcept, obs: memberObs, isHeading }) => {
+          if (isHeading) {
+            return {
+              id: `${testResultObs?.uuid}:${memberConcept.uuid}:heading`,
+              testType: <div className={styles.testType}>{memberConcept.display || '--'}</div>,
+              result: '',
+              normalRange: '',
+            };
+          }
 
-        const ranges = getEffectiveRanges(memberConcept, referenceRanges);
+          const ranges = getEffectiveRanges(memberConcept, referenceRanges);
 
-        let result: { value: string; interpretation: OBSERVATION_INTERPRETATION } | React.ReactNode;
-        if (isLoadingResult) {
-          result = <SkeletonText />;
-        } else if (memberObs) {
-          const { displayValue, interpretation } = interpretObservation(memberObs, ranges);
-          result = { value: displayValue, interpretation };
-        } else {
-          result = '--';
-        }
+          let result: { value: string; interpretation: OBSERVATION_INTERPRETATION } | React.ReactNode;
+          if (isLoadingResult) {
+            result = <SkeletonText />;
+          } else if (memberObs) {
+            const { displayValue, interpretation } = interpretObservation(memberObs, ranges);
+            result = { value: displayValue, interpretation };
+          } else {
+            result = '--';
+          }
 
-        return {
-          id: memberObs?.uuid ?? `${testResultObs?.uuid}:${memberConcept?.uuid}`,
-          testType: <div className={styles.testType}>{memberConcept?.display || '--'}</div>,
-          result,
-          normalRange: <ReferenceRangeDisplay ranges={ranges} />,
-        };
-      });
+          return {
+            id: memberObs?.uuid ?? `${testResultObs?.uuid}:${memberConcept?.uuid}`,
+            testType: <div className={styles.testType}>{memberConcept?.display || '--'}</div>,
+            result,
+            normalRange: <ReferenceRangeDisplay ranges={ranges} />,
+          };
+        },
+      );
     }
 
     const ranges = getEffectiveRanges(concept, referenceRanges);
