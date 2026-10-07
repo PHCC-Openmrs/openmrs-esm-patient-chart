@@ -238,6 +238,7 @@ describe('Conditions form', () => {
     await user.click(submitButton);
 
     expect(screen.getByText(/a condition is required/i)).toBeInTheDocument();
+    expect(screen.getByText(/onset date is required/i)).toBeInTheDocument();
     expect(screen.queryByText(/a clinical status is required/i)).not.toBeInTheDocument();
 
     await user.type(conditionSearchInput, 'Headache');
@@ -245,6 +246,14 @@ describe('Conditions form', () => {
     await user.click(submitButton);
 
     expect(screen.queryByText(/a condition is required/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/onset date is required/i)).toBeInTheDocument();
+    expect(mockCreateCondition).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('textbox', { name: /onset date/i }));
+    await user.paste('2020-05-05');
+    await user.click(submitButton);
+
+    expect(screen.queryByText(/onset date is required/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/a clinical status is required/i)).not.toBeInTheDocument();
 
     await waitFor(() => {

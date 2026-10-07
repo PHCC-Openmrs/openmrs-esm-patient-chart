@@ -37,7 +37,10 @@ const createSchema = (formContext: 'creating' | 'editing', t: TFunction) => {
     onsetDateTime: z
       .date()
       .nullable()
-      .refine((onsetDateTime) => onsetDateTime <= new Date(), {
+      .refine((onsetDateTime) => !!onsetDateTime, {
+        message: t('onsetDateRequired', 'Onset date is required'),
+      })
+      .refine((onsetDateTime) => !onsetDateTime || onsetDateTime <= new Date(), {
         message: t('onsetDateCannotBeInTheFuture', 'Onset date cannot be in the future'),
       }),
   });

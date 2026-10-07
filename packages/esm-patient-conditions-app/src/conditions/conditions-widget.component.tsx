@@ -321,7 +321,7 @@ const ConditionsWidget: React.FC<ConditionsWidgetProps> = ({
                   id="onsetDate"
                   data-testid="onsetDate"
                   maxDate={new Date()}
-                  labelText={t('onsetDate', 'Onset date')}
+                  labelText={<RequiredFieldLabel label={t('onsetDate', 'Onset date')} t={t} />}
                   invalid={Boolean(fieldState?.error?.message)}
                   invalidText={fieldState?.error?.message}
                 />
