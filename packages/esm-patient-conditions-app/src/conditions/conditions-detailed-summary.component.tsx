@@ -153,7 +153,7 @@ function ConditionsDetailedSummary({ patient }) {
               <Button
                 kind="ghost"
                 renderIcon={(props: ComponentProps<typeof AddIcon>) => <AddIcon size={16} {...props} />}
-                iconDescription="Add conditions"
+                iconDescription={t('addConditions', 'Add conditions')}
                 onClick={launchConditionsForm}
               >
                 {t('add', 'Add')}

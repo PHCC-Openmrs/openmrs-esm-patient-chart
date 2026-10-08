@@ -87,7 +87,7 @@ const ActiveVisitActions: React.FC<ActiveVisitActionsInterface> = ({ visit, pati
           <Button
             kind="ghost"
             renderIcon={(props: ComponentProps<typeof AddIcon>) => <AddIcon size={16} {...props} />}
-            iconDescription="Add visit note"
+            iconDescription={t('addVisitNote', 'Add visit note')}
             onClick={launchVisitNotesFormWorkspace}
           >
             {t('addNote', 'Add note')}
@@ -95,7 +95,7 @@ const ActiveVisitActions: React.FC<ActiveVisitActionsInterface> = ({ visit, pati
           <Button
             kind="ghost"
             renderIcon={(props: ComponentProps<typeof AddIcon>) => <AddIcon size={16} {...props} />}
-            iconDescription="Add lab or prescription"
+            iconDescription={t('addLabOrPrescription', 'Add lab or prescription')}
             onClick={launchOrderBasketFormWorkspace}
           >
             {t('addLabOrPrescription', 'Add lab or prescription')}

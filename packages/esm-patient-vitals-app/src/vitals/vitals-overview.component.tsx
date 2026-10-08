@@ -220,7 +220,7 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
                       <Button
                         kind="ghost"
                         renderIcon={PrinterIcon}
-                        iconDescription="Add vitals"
+                        iconDescription={t('addVitals', 'Add vitals')}
                         className={styles.printButton}
                         onClick={handlePrint}
                       >
@@ -231,7 +231,7 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
                       <Button
                         kind="ghost"
                         renderIcon={AddIcon}
-                        iconDescription="Add vitals"
+                        iconDescription={t('addVitals', 'Add vitals')}
                         onClick={launchVitalsBiometricsForm}
                       >
                         {t('add', 'Add')}

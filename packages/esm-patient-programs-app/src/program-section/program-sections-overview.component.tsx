@@ -31,6 +31,7 @@ import {
   usePatientAge,
 } from './program-section.resource';
 import { ProgramSectionActionMenu } from './program-section-action-menu.component';
+import { translateProgramSectionText, translateProgramSectionValue } from './program-section-translation';
 import styles from './program-sections-overview.scss';
 
 const PAGE_SIZE = 5;
@@ -47,6 +48,9 @@ interface ProgramSectionCardProps {
 
 const ProgramSectionCard: React.FC<ProgramSectionCardProps> = ({ patientUuid, section, isActive }) => {
   const { t } = useTranslation();
+  // The configured (English) section stays untouched for saving/matching; only displayed text
+  // is translated.
+  const sectionTitle = translateProgramSectionText(t, section.sectionTitle);
   const { encounters, error, isLoading } = useProgramSectionEncounters(patientUuid, section.encounterTypeUuid);
   const { age, isLoading: isLoadingAge } = usePatientAge(patientUuid);
   const session = useSession();
@@ -66,7 +70,7 @@ const ProgramSectionCard: React.FC<ProgramSectionCardProps> = ({ patientUuid, se
 
   const launchForm = () =>
     launchWorkspace2('program-section-form-workspace', {
-      workspaceTitle: t('recordSection', 'Record {{sectionTitle}}', { sectionTitle: section.sectionTitle }),
+      workspaceTitle: t('recordSection', 'Record {{sectionTitle}}', { sectionTitle }),
       section,
     });
 
@@ -75,14 +79,14 @@ const ProgramSectionCard: React.FC<ProgramSectionCardProps> = ({ patientUuid, se
   }
 
   if (error) {
-    return <ErrorState error={error} headerTitle={section.sectionTitle} />;
+    return <ErrorState error={error} headerTitle={sectionTitle} />;
   }
 
   if (!encounters.length) {
     return (
       <EmptyState
-        displayText={section.sectionTitle.toLowerCase()}
-        headerTitle={section.sectionTitle}
+        displayText={sectionTitle.toLowerCase()}
+        headerTitle={sectionTitle}
         launchForm={canAddSection ? launchForm : undefined}
       />
     );
@@ -90,12 +94,15 @@ const ProgramSectionCard: React.FC<ProgramSectionCardProps> = ({ patientUuid, se
 
   const formatFieldValue = (encounter: ProgramSectionEncounter, field: (typeof visibleFields)[number]) => {
     const rawValue = findObsValue(encounter, field.conceptUuid);
-    return field.controlType === 'date' && rawValue !== '--' ? formatDate(new Date(rawValue)) : rawValue;
+    if (field.controlType === 'date' && rawValue !== '--') {
+      return formatDate(new Date(rawValue));
+    }
+    return translateProgramSectionValue(t, field, rawValue);
   };
 
   const tableHeaders = [
     { key: 'date', header: t('dateAndTime', 'Date and time') },
-    ...visibleFields.map((field) => ({ key: field.conceptUuid, header: field.label })),
+    ...visibleFields.map((field) => ({ key: field.conceptUuid, header: translateProgramSectionText(t, field.label) })),
     { key: 'actions', header: '' },
   ];
 
@@ -110,7 +117,7 @@ const ProgramSectionCard: React.FC<ProgramSectionCardProps> = ({ patientUuid, se
 
   return (
     <div className={styles.widgetCard}>
-      <CardHeader title={section.sectionTitle}>
+      <CardHeader title={sectionTitle}>
         {canAddSection && (
           <Button kind="ghost" onClick={launchForm}>
             {t('add', 'Add')}
@@ -122,7 +129,7 @@ const ProgramSectionCard: React.FC<ProgramSectionCardProps> = ({ patientUuid, se
           // A wide section (Ultrasound records 17 fields) scrolls sideways rather than
           // squeezing every column or pushing the chart's own layout out.
           <TableContainer className={styles.tableContainer}>
-            <Table aria-label={section.sectionTitle} {...getTableProps()}>
+            <Table aria-label={sectionTitle} {...getTableProps()}>
               <TableHead>
                 <TableRow>
                   {headers.map((header) => (

@@ -10,6 +10,7 @@
   "district": "District",
   "from_lower": "from",
   "pastVisitWithDate": "Past visit: {{date}}",
+  "patientBanner": "patient banner",
   "postalCode": "Postal code",
   "started": "Started",
   "state": "State",

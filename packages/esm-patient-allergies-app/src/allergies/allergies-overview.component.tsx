@@ -84,7 +84,7 @@ const AllergiesOverview: React.FC<AllergiesOverviewProps> = ({ patient }) => {
         <DataTable rows={tableRows} headers={tableHeaders} isSortable size={isTablet ? 'lg' : 'sm'} useZebraStyles>
           {({ rows, headers, getHeaderProps, getTableProps }) => (
             <TableContainer>
-              <Table aria-label="allergies overview" {...getTableProps()}>
+              <Table aria-label={t('allergiesOverview', 'allergies overview')} {...getTableProps()}>
                 <TableHead>
                   <TableRow>
                     {headers.map((header) => (

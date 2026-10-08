@@ -17,7 +17,7 @@ const LabResults: React.FC<LabResultsProps> = ({ order }) => {
     return (
       <InlineLoading
         status="active"
-        iconDescription="Loading"
+        iconDescription={t('loading', 'Loading')}
         description={t('loadinglabresults', 'Loading lab results') + '...'}
       />
     );

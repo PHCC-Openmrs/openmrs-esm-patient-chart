@@ -33,6 +33,7 @@
   "errorFetchingConcepts": "Error fetching concepts",
   "errorSavingProcedure": "Error saving procedure",
   "estimatedStartDate": "Estimated start date",
+  "expandRow": "expand row",
   "february": "February",
   "isStartDateKnown": "Is start date known?",
   "january": "January",
@@ -83,6 +84,7 @@
   "statusOptionsLoadFailed": "Could not load status options. Please try again.",
   "statusRequired": "Status is required",
   "time": "Time",
+  "timePlaceholder": "hh:mm",
   "year": "Year",
   "yes": "Yes"
 }

@@ -1,10 +1,13 @@
 {
-  "addEncounter": "Add encounter",
-  "date": "Date",
+  "addEncounter": "إضافة لقاء",
+  "chartView": "عرض الرسم البياني",
+  "date": "التاريخ",
   "dateAndTime": "التاريخ والوقت",
-  "editabilityNote": "Tap an observation to edit",
+  "editabilityNote": "انقر على ملاحظة لتعديلها",
   "encounterType": "نوع اللقاء",
-  "errorSavingObservation": "Error saving observation",
-  "noValue": "No value",
-  "observationSaved": "Observation saved successfully"
+  "errorSavingObservation": "خطأ في حفظ الملاحظة",
+  "noValue": "لا توجد قيمة",
+  "observationSaved": "تم حفظ الملاحظة بنجاح",
+  "obsTabs": "علامات تبويب الملاحظات",
+  "tableView": "عرض الجدول"
 }

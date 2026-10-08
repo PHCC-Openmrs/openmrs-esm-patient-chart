@@ -114,10 +114,10 @@ const BiometricsBase: React.FC<BiometricsBaseProps> = ({ patientUuid, patient, p
               size={isTablet ? 'md' : 'sm'}
               selectedIndex={chartView ? 1 : 0}
             >
-              <IconSwitch name="tableView" text="Table view">
+              <IconSwitch name="tableView" text={t('tableView', 'Table view')}>
                 <Table size={16} />
               </IconSwitch>
-              <IconSwitch name="chartView" text="Chart view">
+              <IconSwitch name="chartView" text={t('chartView', 'Chart view')}>
                 <Analytics size={16} />
               </IconSwitch>
             </ContentSwitcher>
@@ -127,7 +127,7 @@ const BiometricsBase: React.FC<BiometricsBaseProps> = ({ patientUuid, patient, p
                 <Button
                   kind="ghost"
                   renderIcon={(props) => <Add size={16} {...props} />}
-                  iconDescription="Add biometrics"
+                  iconDescription={t('addBiometrics', 'Add biometrics')}
                   onClick={launchBiometricsForm}
                 >
                   {t('add', 'Add')}

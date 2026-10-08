@@ -167,6 +167,22 @@ export function DrugOrderForm({
   launchAllergyForm,
 }: DrugOrderFormProps) {
   const { t } = useTranslation();
+
+  const getGenderLabel = (gender: string): string => {
+    switch (gender) {
+      case 'male':
+        return t('male', 'Male');
+      case 'female':
+        return t('female', 'Female');
+      case 'other':
+        return t('other', 'Other');
+      case 'unknown':
+        return t('unknown', 'Unknown');
+      default:
+        return capitalize(gender);
+    }
+  };
+
   const { daysDurationUnit, durationUnitsDaysMap } = useConfig<ConfigObject>();
   const isTablet = useLayoutType() === 'tablet';
   const { orderConfigObject, error: errorFetchingOrderConfig } = useOrderConfig();
@@ -543,7 +559,7 @@ export function DrugOrderForm({
         <div className={styles.patientHeader}>
           <span className={styles.bodyShort02}>{patientName}</span>
           <span className={classNames(styles.text02, styles.bodyShort01)}>
-            {capitalize(patient?.gender)} &middot; {age(patient?.birthDate)} &middot;{' '}
+            {getGenderLabel(patient?.gender)} &middot; {age(patient?.birthDate)} &middot;{' '}
             <span>{formatDate(parseDate(patient?.birthDate), { mode: 'wide', time: false })}</span>
           </span>
         </div>

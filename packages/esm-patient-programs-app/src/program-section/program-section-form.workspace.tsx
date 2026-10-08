@@ -35,6 +35,7 @@ import {
   usePatientAge,
   type ProgramSectionEncounter,
 } from './program-section.resource';
+import { translateProgramSectionText, translateProgramSectionValue } from './program-section-translation';
 import styles from './program-section-form.scss';
 
 export interface ProgramSectionFormProps {
@@ -50,6 +51,8 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
   const { t } = useTranslation();
   const session = useSession();
   const isEditing = !!encounterToEdit;
+  // `section` is the configured (English) section; only the text shown to the user is translated.
+  const sectionTitle = translateProgramSectionText(t, section.sectionTitle);
   const { age, isLoading: isLoadingAge } = usePatientAge(patientUuid);
   const { mutateEncounters } = useProgramSectionEncounters(patientUuid, section.encounterTypeUuid);
 
@@ -145,7 +148,7 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
         showSnackbar({
           kind: 'error',
           title: t('missingRequiredFields', 'Please fill in all fields'),
-          subtitle: missingFields.map((field) => field.label).join(', '),
+          subtitle: missingFields.map((field) => translateProgramSectionText(t, field.label)).join(', '),
         });
         return;
       }
@@ -181,22 +184,31 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
         closeWorkspace({ discardUnsavedChanges: true });
         showSnackbar({
           kind: 'success',
-          title: t('sectionSaved', '{{sectionTitle}} saved', { sectionTitle: section.sectionTitle }),
+          title: t('sectionSaved', '{{sectionTitle}} saved', { sectionTitle }),
         });
       } catch (error) {
         showSnackbar({
           kind: 'error',
-          title: t('sectionSaveError', 'Error saving {{sectionTitle}}', { sectionTitle: section.sectionTitle }),
+          title: t('sectionSaveError', 'Error saving {{sectionTitle}}', { sectionTitle }),
           subtitle: error instanceof Error ? error.message : 'An unknown error occurred',
         });
       }
     },
-    [closeWorkspace, encounterToEdit, isEditing, mutateEncounters, patientUuid, section, session, t, visibleFields],
+    [
+      closeWorkspace,
+      encounterToEdit,
+      isEditing,
+      mutateEncounters,
+      patientUuid,
+      section,
+      sectionTitle,
+      session,
+      t,
+      visibleFields,
+    ],
   );
 
-  const workspaceTitle = isEditing
-    ? t('editSectionTitle', 'Edit {{sectionTitle}}', { sectionTitle: section.sectionTitle })
-    : section.sectionTitle;
+  const workspaceTitle = isEditing ? t('editSectionTitle', 'Edit {{sectionTitle}}', { sectionTitle }) : sectionTitle;
 
   if (isLoadingAge || isLoadingLatestObs) {
     return (
@@ -216,14 +228,17 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
                 name={field.conceptUuid}
                 control={control}
                 render={({ field: { onChange, value } }) => {
+                  const label = translateProgramSectionText(t, field.label);
                   if (field.readOnly) {
                     // An autofilled date holds a raw timestamp -- show it the way the date picker
                     // and the summary table would, not as an ISO string.
                     const displayValue =
-                      field.controlType === 'date' && value ? formatDate(parseDate(value), { time: false }) : value;
+                      field.controlType === 'date' && value
+                        ? formatDate(parseDate(value), { time: false })
+                        : translateProgramSectionValue(t, field, value);
                     return (
                       <div className={styles.readOnlyField}>
-                        <FormLabel>{field.label}</FormLabel>
+                        <FormLabel>{label}</FormLabel>
                         <p className={styles.readOnlyValue}>{displayValue || '--'}</p>
                       </div>
                     );
@@ -233,7 +248,7 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
                     return (
                       <OpenmrsDatePicker
                         id={`field-${field.conceptUuid}`}
-                        labelText={field.label}
+                        labelText={label}
                         value={value ? parseDate(value) : null}
                         maxDate={new Date()}
                         onChange={(date) => onChange(date ? dayjs(date).format() : '')}
@@ -243,13 +258,19 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
 
                   if (field.controlType === 'select') {
                     const choices = field.answers?.length
-                      ? field.answers.map((answer) => ({ text: answer.label, value: answer.conceptUuid }))
-                      : field.options.map((option) => ({ text: option, value: option }));
+                      ? field.answers.map((answer) => ({
+                          text: translateProgramSectionText(t, answer.label),
+                          value: answer.conceptUuid,
+                        }))
+                      : field.options.map((option) => ({
+                          text: translateProgramSectionText(t, option),
+                          value: option,
+                        }));
 
                     return (
                       <Select
                         id={`field-${field.conceptUuid}`}
-                        labelText={field.label}
+                        labelText={label}
                         value={value ?? ''}
                         invalid={missingConceptUuids.has(field.conceptUuid)}
                         invalidText={t('fieldRequired', 'This field is required')}
@@ -267,7 +288,7 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
                     return (
                       <NumberInput
                         id={`field-${field.conceptUuid}`}
-                        label={field.label}
+                        label={label}
                         value={value ?? ''}
                         allowEmpty
                         min={0}
@@ -293,7 +314,7 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
                     return (
                       <TextArea
                         id={`field-${field.conceptUuid}`}
-                        labelText={field.label}
+                        labelText={label}
                         value={value ?? ''}
                         rows={4}
                         invalid={missingConceptUuids.has(field.conceptUuid)}
@@ -306,7 +327,7 @@ const ProgramSectionForm: React.FC<PatientWorkspace2DefinitionProps<ProgramSecti
                   return (
                     <TextInput
                       id={`field-${field.conceptUuid}`}
-                      labelText={field.label}
+                      labelText={label}
                       value={value ?? ''}
                       invalid={missingConceptUuids.has(field.conceptUuid)}
                       invalidText={t('fieldRequired', 'This field is required')}

@@ -1,9 +1,12 @@
 {
   "add": "Add",
+  "addAllergies": "Add allergies",
   "allergen": "Allergen",
   "allergenRequired": "Allergen is required",
   "allergies": "Allergies",
   "Allergies": "Allergies",
+  "allergiesOverview": "allergies overview",
+  "allergiesSummary": "allergies summary",
   "allergyDeleted": "Allergy deleted",
   "allergyIntolerances": "allergy intolerances",
   "allergyNowVisible": "It is now visible on the Allergies page",

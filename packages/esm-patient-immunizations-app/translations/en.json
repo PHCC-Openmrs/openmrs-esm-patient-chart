@@ -23,6 +23,7 @@
   "Immunizations": "Immunizations",
   "immunizations__lower": "immunizations",
   "immunizationsHistory": "Immunizations history",
+  "immunizationsSummary": "immunizations summary",
   "immunizationWorkspaceTitle": "Immunization Form",
   "lastDoseOnDate": "Last dose on {{date}}",
   "lotNumber": "Lot number",

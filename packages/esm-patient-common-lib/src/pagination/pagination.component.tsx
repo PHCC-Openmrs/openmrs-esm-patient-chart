@@ -47,6 +47,10 @@ export const PatientChartPagination: React.FC<PatientChartPaginationProps> = ({
             pageSizes={pageSizes}
             totalItems={totalItems}
             onChange={onPageNumberChange}
+            itemsPerPageText={t('itemsPerPage', 'Items per page:')}
+            itemRangeText={(min, max, total) =>
+              t('paginationItemRange', '{{min}}–{{max}} of {{total}} items', { min, max, total })
+            }
             pageRangeText={(_, total) => t('paginationPageText', 'of {{count}} pages', { count: total })}
             size={isTablet ? 'lg' : 'sm'}
           />

@@ -100,7 +100,7 @@ const PatientListDetailsTable: React.FC<PatientListDetailsTableProps> = ({ listM
             />
           </Layer>
           <DataTable
-            aria-label="patient list details"
+            aria-label={t('patientListDetails', 'patient list details')}
             rows={tableRows}
             headers={tableHeaders}
             size={responsiveSize}

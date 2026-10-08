@@ -265,7 +265,7 @@ export const EncounterList: React.FC<EncounterListProps> = ({
         <Button
           kind="ghost"
           renderIcon={() => <AddIcon className={styles.headerIcon} />}
-          iconDescription="Add"
+          iconDescription={t('add', 'Add')}
           onClick={(e) => {
             e.preventDefault();
             launchEncounterForm(formsJson, 'add', '*', requireActiveVisitForEncounterTile, visit);
@@ -293,6 +293,11 @@ export const EncounterList: React.FC<EncounterListProps> = ({
             </div>
             <EncounterListDataTable tableHeaders={headers} tableRows={tableRows} />
             <Pagination
+              itemsPerPageText={t('itemsPerPage', 'Items per page:')}
+              itemRangeText={(min, max, total) =>
+                t('paginationItemRange', '{{min}}–{{max}} of {{total}} items', { min, max, total })
+              }
+              pageRangeText={(_, total) => t('paginationPageText', 'of {{count}} pages', { count: total })}
               page={currentPage}
               pageSizes={[10, 20, 30, 40, 50]}
               onChange={({ page, pageSize }) => {
