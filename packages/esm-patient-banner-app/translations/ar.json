@@ -1,17 +1,18 @@
 {
-  "activeVisit": "Active Visit",
+  "activeVisit": "زيارة نشطة",
   "address1": "العنوان سطر 1",
   "address2": "العنوان سطر 2",
   "city": "المدينة",
   "cityVillage": "المدينة",
   "country": "الدولة",
   "countyDistrict": "المنطقة",
-  "deceased": "Deceased",
+  "deceased": "متوفى",
   "district": "المنطقة",
-  "from_lower": "from",
-  "pastVisitWithDate": "Past visit: {{date}}",
+  "from_lower": "من",
+  "pastVisitWithDate": "زيارة سابقة: {{date}}",
+  "patientBanner": "شريط بيانات المريض",
   "postalCode": "الرمز البريدي",
-  "started": "Started",
+  "started": "بدأت",
   "state": "الولاية",
   "stateProvince": "الولاية"
 }

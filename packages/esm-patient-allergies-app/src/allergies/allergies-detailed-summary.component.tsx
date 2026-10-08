@@ -88,7 +88,7 @@ const AllergiesDetailedSummary: React.FC<AllergiesDetailedSummaryProps> = ({ pat
             <Button
               kind="ghost"
               renderIcon={(props) => <AddIcon size={16} {...props} />}
-              iconDescription="Add allergies"
+              iconDescription={t('addAllergies', 'Add allergies')}
               onClick={launchAllergiesForm}
             >
               {t('add', 'Add')}
@@ -98,7 +98,7 @@ const AllergiesDetailedSummary: React.FC<AllergiesDetailedSummaryProps> = ({ pat
         <DataTable rows={tableRows} headers={tableHeaders} isSortable useZebraStyles size={isTablet ? 'lg' : 'sm'}>
           {({ rows, headers, getHeaderProps, getTableProps }) => (
             <TableContainer>
-              <Table aria-label="allergies summary" {...getTableProps()}>
+              <Table aria-label={t('allergiesSummary', 'allergies summary')} {...getTableProps()}>
                 <TableHead>
                   <TableRow>
                     {headers.map((header) => (

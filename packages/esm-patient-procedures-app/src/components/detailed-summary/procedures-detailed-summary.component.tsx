@@ -141,7 +141,7 @@ const ProceduresDetailedSummary = ({ patient }: ProceduresDetailedSummaryProps) 
                 >
                   <TableHead>
                     <TableRow>
-                      <TableExpandHeader aria-label="expand row" />
+                      <TableExpandHeader aria-label={t('expandRow', 'expand row')} />
                       {carbonHeaders.map((header) => (
                         <TableHeader {...getHeaderProps({ header })} key={header.key}>
                           {header.header}

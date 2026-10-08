@@ -97,7 +97,7 @@ export const DateTimeField = ({
       <TimePicker
         id={`${idPrefix}-time`}
         labelText={t('time', 'Time')}
-        placeholder="hh:mm"
+        placeholder={t('timePlaceholder', 'hh:mm')}
         pattern="(1[0-2]|0?[1-9]):[0-5][0-9]"
         maxLength={5}
         defaultValue={formatTime(dateValue)}

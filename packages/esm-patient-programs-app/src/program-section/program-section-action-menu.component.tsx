@@ -4,6 +4,7 @@ import { Layer, OverflowMenu, OverflowMenuItem } from '@carbon/react';
 import { launchWorkspace2, showModal, useLayoutType, useSession, userHasAccess } from '@openmrs/esm-framework';
 import { type ProgramSectionConfig } from '../config-schema';
 import { type ProgramSectionEncounter } from './program-section.resource';
+import { translateProgramSectionText } from './program-section-translation';
 import styles from './program-section-action-menu.scss';
 
 interface ProgramSectionActionMenuProps {
@@ -22,6 +23,7 @@ export const ProgramSectionActionMenu = ({
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
   const session = useSession();
+  const sectionTitle = translateProgramSectionText(t, section.sectionTitle);
   // A completed enrollment's section is shown for history, but only the currently active
   // enrollment for this program can have its records edited or deleted.
   const canEdit = isActive && userHasAccess('Task: patientChart.recordProgramSection', session?.user);
@@ -30,11 +32,11 @@ export const ProgramSectionActionMenu = ({
   const launchEditForm = useCallback(
     () =>
       launchWorkspace2('program-section-form-workspace', {
-        workspaceTitle: t('editSectionTitle', 'Edit {{sectionTitle}}', { sectionTitle: section.sectionTitle }),
+        workspaceTitle: t('editSectionTitle', 'Edit {{sectionTitle}}', { sectionTitle }),
         section,
         encounterToEdit: encounter,
       }),
-    [encounter, section, t],
+    [encounter, section, sectionTitle, t],
   );
 
   const launchDeleteDialog = useCallback(() => {
@@ -43,10 +45,10 @@ export const ProgramSectionActionMenu = ({
       encounterUuid: encounter.uuid,
       patientUuid,
       encounterTypeUuid: section.encounterTypeUuid,
-      sectionTitle: section.sectionTitle,
+      sectionTitle,
       size: 'sm',
     });
-  }, [encounter.uuid, patientUuid, section.encounterTypeUuid, section.sectionTitle]);
+  }, [encounter.uuid, patientUuid, section.encounterTypeUuid, sectionTitle]);
 
   if (!canEdit && !canDelete) {
     return null;
@@ -55,9 +57,7 @@ export const ProgramSectionActionMenu = ({
   return (
     <Layer className={styles.layer}>
       <OverflowMenu
-        aria-label={t('editOrDeleteSection', 'Edit or delete {{sectionTitle}} record', {
-          sectionTitle: section.sectionTitle,
-        })}
+        aria-label={t('editOrDeleteSection', 'Edit or delete {{sectionTitle}} record', { sectionTitle })}
         align="left"
         size={isTablet ? 'lg' : 'sm'}
         flipped

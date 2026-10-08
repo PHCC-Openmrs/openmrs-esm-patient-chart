@@ -59,10 +59,10 @@ function PrintModal({
   const headerTitle = t('testResults_title', 'Test Results');
 
   const tableHeaders = [
-    { key: 'testType', header: 'Test Type' },
-    { key: 'date', header: 'Date' },
-    { key: 'result', header: 'Result' },
-    { key: 'normalRange', header: 'Normal Range' },
+    { key: 'testType', header: t('testTypeHeader', 'Test Type') },
+    { key: 'date', header: t('date', 'Date') },
+    { key: 'result', header: t('result', 'Result') },
+    { key: 'normalRange', header: t('normalRange', 'Normal Range') },
   ];
 
   const handlePrint = useReactToPrint({

@@ -122,6 +122,11 @@ const VisitHistoryTable: React.FC<VisitHistoryTableProps> = ({ patientUuid, pati
             <Pagination
               forwardText={t('nextPage', 'Next page')}
               backwardText={t('previousPage', 'Previous page')}
+              itemsPerPageText={t('itemsPerPage', 'Items per page:')}
+              itemRangeText={(min, max, total) =>
+                t('paginationItemRange', '{{min}}–{{max}} of {{total}} items', { min, max, total })
+              }
+              pageRangeText={(_, total) => t('paginationPageText', 'of {{count}} pages', { count: total })}
               page={currentPage}
               pageSize={pageSize}
               pageSizes={pageSizes}

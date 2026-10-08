@@ -115,7 +115,7 @@ const ProgramsDetailedSummary: React.FC<ProgramsDetailedSummaryProps> = ({ patie
         <DataTable rows={tableRows} headers={tableHeaders} isSortable size={isTablet ? 'lg' : 'sm'} useZebraStyles>
           {({ rows, headers, getHeaderProps, getTableProps, getRowProps }) => (
             <TableContainer>
-              <Table aria-label="service enrollments" {...getTableProps()}>
+              <Table aria-label={t('serviceEnrollments', 'service enrollments')} {...getTableProps()}>
                 <TableHead>
                   <TableRow>
                     {headers.map((header) => (

@@ -138,7 +138,7 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ order, index }) => {
           <DataTable rows={testRows} headers={tableHeaders} size="sm" useZebraStyles>
             {({ rows, headers, getHeaderProps, getRowProps, getTableProps, getTableContainerProps }) => (
               <TableContainer {...getTableContainerProps()}>
-                <Table {...getTableProps()} aria-label="test orders">
+                <Table {...getTableProps()} aria-label={t('testOrders', 'test orders')}>
                   <TableHead>
                     <TableRow>
                       {headers.map((header) => (

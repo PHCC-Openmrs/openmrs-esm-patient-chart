@@ -101,7 +101,7 @@ const ProgramsOverview: React.FC<ProgramsOverviewProps> = ({ basePath, patientUu
         <DataTable rows={tableRows} headers={tableHeaders} isSortable size={isTablet ? 'lg' : 'sm'} useZebraStyles>
           {({ rows, headers, getHeaderProps, getRowProps, getTableProps }) => (
             <TableContainer>
-              <Table aria-label="services overview" {...getTableProps()}>
+              <Table aria-label={t('servicesOverview', 'services overview')} {...getTableProps()}>
                 <TableHead>
                   <TableRow>
                     {headers.map((header) => (

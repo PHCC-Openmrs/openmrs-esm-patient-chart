@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import classNames from 'classnames';
+import { useTranslation } from 'react-i18next';
 import {
   getPatientName,
   PatientBannerActionsMenu,
@@ -17,6 +18,7 @@ interface PatientBannerProps {
 }
 
 const PatientBanner: React.FC<PatientBannerProps> = ({ patient, patientUuid, hideActionsOverflow }) => {
+  const { t } = useTranslation();
   const patientBannerRef = useRef<HTMLElement>(null);
   const [bannerWidth, setBannerWidth] = useState<number | null>(null);
   const [showContactDetails, setShowContactDetails] = useState(false);
@@ -47,7 +49,7 @@ const PatientBanner: React.FC<PatientBannerProps> = ({ patient, patientUuid, hid
 
   return (
     <header
-      aria-label="patient banner"
+      aria-label={t('patientBanner', 'patient banner')}
       className={classNames(
         styles.container,
         isDeceased ? styles.deceasedPatientContainer : styles.activePatientContainer,

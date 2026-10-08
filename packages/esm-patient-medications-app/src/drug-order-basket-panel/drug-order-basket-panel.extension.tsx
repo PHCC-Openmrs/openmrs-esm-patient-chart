@@ -101,7 +101,7 @@ function DrugOrderBasketPanelExtension({ patient, launchDrugOrderForm }: OrderBa
             className={styles.addButton}
             kind="ghost"
             renderIcon={(props: ComponentProps<typeof AddIcon>) => <AddIcon size={16} {...props} />}
-            iconDescription="Add medication"
+            iconDescription={t('addMedication', 'Add medication')}
             onClick={() => launchDrugOrderForm()}
             size={responsiveSize}
           >
@@ -114,7 +114,7 @@ function DrugOrderBasketPanelExtension({ patient, launchDrugOrderForm }: OrderBa
             renderIcon={(props: ComponentProps<typeof ChevronUpIcon>) =>
               isExpanded ? <ChevronUpIcon size={16} {...props} /> : <ChevronDownIcon size={16} {...props} />
             }
-            iconDescription="View"
+            iconDescription={t('view', 'View')}
             disabled={orders.length === 0}
             onClick={() => setIsExpanded(!isExpanded)}
             size={responsiveSize}

@@ -7,6 +7,7 @@
   "activeMedicationsTableTitle": "Active Medications",
   "add": "Add",
   "addDrugOrderWorkspaceTitle": "Add drug order",
+  "addMedication": "Add medication",
   "applyCalculatedQuantity": "Apply calculated quantity ({{quantity}})",
   "backToOrderBasket": "Back to order basket",
   "browse": "Browse",
@@ -132,5 +133,6 @@
   "tryTo": "Try to",
   "unknown": "Unknown",
   "updated": "Updated",
-  "usingADifferentTerm": "using a different term"
+  "usingADifferentTerm": "using a different term",
+  "view": "View"
 }

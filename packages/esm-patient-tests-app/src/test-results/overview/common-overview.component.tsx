@@ -81,7 +81,7 @@ const InfoTooltip = ({ effectiveDateTime, issuedDateTime }) => {
   const { t } = useTranslation();
   return (
     <Toggletip align="bottom" className={styles.tooltipContainer}>
-      <ToggletipButton label="Additional information">
+      <ToggletipButton label={t('additionalInformation', 'Additional information')}>
         <Information />
       </ToggletipButton>
       <ToggletipContent>

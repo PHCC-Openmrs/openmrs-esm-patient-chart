@@ -189,7 +189,7 @@ const ConditionsOverview: React.FC<ConditionsOverviewProps> = ({ patientUuid }) 
           </div>
         </CardHeader>
         <DataTable
-          aria-label="conditions overview"
+          aria-label={t('conditionsOverview', 'conditions overview')}
           headers={headers}
           isSortable
           overflowMenuOnHover={isDesktop}
