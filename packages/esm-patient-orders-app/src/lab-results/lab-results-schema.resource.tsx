@@ -68,7 +68,11 @@ const createSchema = (labOrderConcept: LabOrderConcept): z.ZodType => {
       return createNumericSchema(labOrderConcept, upperLimit, lowerLimit);
     case 'CWE': {
       const answers = labOrderConcept.answers?.map((answer) => answer.uuid) ?? [];
-      return answers.length > 0 ? z.enum(answers as [string, ...string[]]).optional() : z.string().optional();
+      // The "Choose an option" placeholder has value '', which means no answer was selected
+      const emptyToUndefined = (val: unknown) => (val === '' || val === null ? undefined : val);
+      return answers.length > 0
+        ? z.preprocess(emptyToUndefined, z.enum(answers as [string, ...string[]]).optional())
+        : z.preprocess(emptyToUndefined, z.string().optional());
     }
     default:
       return null;
