@@ -118,12 +118,26 @@ export function deleteProgramSectionEncounter(encounterUuid: string, abortContro
   });
 }
 
+/**
+ * The REST API HTML-escapes free-text obs values on the way out (a saved "<72 H" comes back as
+ * "&lt;72 H"), so undo that before displaying a value or matching it against a select's options.
+ * `&amp;` is decoded last so "&amp;lt;" correctly becomes "&lt;" rather than "<".
+ */
+export function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/&amp;/g, '&');
+}
+
 export function findObsValue(encounter: ProgramSectionEncounter | undefined, conceptUuid: string): string {
   const obs = encounter?.obs?.find((o) => o.concept.uuid === conceptUuid);
   if (!obs) {
     return '--';
   }
-  return typeof obs.value === 'object' ? obs.value.display : String(obs.value);
+  return typeof obs.value === 'object' ? obs.value.display : decodeHtmlEntities(String(obs.value));
 }
 
 /**
@@ -136,7 +150,7 @@ export function findObsFormValue(encounter: ProgramSectionEncounter | undefined,
   if (!obs) {
     return '';
   }
-  return typeof obs.value === 'object' ? obs.value.uuid : String(obs.value);
+  return typeof obs.value === 'object' ? obs.value.uuid : decodeHtmlEntities(String(obs.value));
 }
 
 export function usePatientAge(patientUuid: string) {
@@ -184,7 +198,11 @@ export function useLatestObsValues(patientUuid: string, conceptUuids: Array<stri
           const latest = (response?.data?.results ?? [])
             .slice()
             .sort((a, b) => (a.obsDatetime > b.obsDatetime ? -1 : 1))[0];
-          const value = latest ? (typeof latest.value === 'object' ? latest.value.uuid : String(latest.value)) : '';
+          const value = latest
+            ? typeof latest.value === 'object'
+              ? latest.value.uuid
+              : decodeHtmlEntities(String(latest.value))
+            : '';
           return [conceptUuid, value] as const;
         }),
       );
