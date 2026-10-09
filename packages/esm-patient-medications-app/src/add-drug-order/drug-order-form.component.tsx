@@ -424,11 +424,28 @@ export function DrugOrderForm({
     [lockedDoseUnitUuid, stockDispensingUnitName, drugDosingUnits],
   );
 
+  // Dose unit isn't prescriber-editable. When stock doesn't pin it (no stock item, or its
+  // dispensing unit - e.g. Bottle - isn't a dosing unit), fall back to the drug's dosage form
+  // (e.g. Puff), matched against the configured dosing units by concept or by name.
+  const configuredDosingUnits = orderConfigObject?.drugDosingUnits;
+  const dosageFormDosingUnit = useMemo(
+    () =>
+      drug?.dosageForm && configuredDosingUnits
+        ? configuredDosingUnits.find(
+            (u) =>
+              u.valueCoded === drug.dosageForm.uuid ||
+              u.value?.toLowerCase() === drug.dosageForm.display?.toLowerCase(),
+          ) ?? null
+        : null,
+    [drug?.dosageForm, configuredDosingUnits],
+  );
+  const lockedDosingUnit = stockDosingUnit ?? dosageFormDosingUnit;
+
   useEffect(() => {
-    if (stockDosingUnit) {
-      setValue('unit', stockDosingUnit, { shouldValidate: true });
+    if (lockedDosingUnit) {
+      setValue('unit', lockedDosingUnit, { shouldValidate: true });
     }
-  }, [stockDosingUnit, setValue]);
+  }, [lockedDosingUnit, setValue]);
 
   const drugRoutes: Array<MedicationRoute> = useMemo(() => orderConfigObject?.drugRoutes ?? [], [orderConfigObject]);
 
@@ -653,7 +670,7 @@ export function DrugOrderForm({
                           type="comboBox"
                           getValues={getValues}
                           id="dosingUnits"
-                          disabled={Boolean(stockDosingUnit)}
+                          disabled
                           shouldFilterItem={filterItemsByName}
                           placeholder={t('editDosageUnitsPlaceholder', 'Unit')}
                           titleText={t('editDosageUnitsTitle', 'Dose unit')}
