@@ -183,7 +183,7 @@ export function DrugOrderForm({
     }
   };
 
-  const { daysDurationUnit, durationUnitsDaysMap } = useConfig<ConfigObject>();
+  const { daysDurationUnit, durationUnitsDaysMap, lockedDoseUnits } = useConfig<ConfigObject>();
   const isTablet = useLayoutType() === 'tablet';
   const { orderConfigObject, error: errorFetchingOrderConfig } = useOrderConfig();
   const { requireOutpatientQuantity } = useRequireOutpatientQuantity();
@@ -411,12 +411,17 @@ export function DrugOrderForm({
   // unit (e.g. Box) downstream. When the ordered drug has a matching stock item, lock the
   // field to that unit instead of leaving it freely editable.
   const stockDispensingUnitName = stock?.dispensingUnitName;
+  // A drug listed in the `lockedDoseUnits` config is locked to that unit instead, for drugs dosed
+  // in a different unit than they are stocked in (e.g. an inhaler stocked by the bottle, dosed in puffs).
+  const lockedDoseUnitUuid = lockedDoseUnits?.[initialOrderBasketItem?.drug?.uuid];
   const stockDosingUnit = useMemo(
     () =>
-      stockDispensingUnitName
-        ? drugDosingUnits.find((u) => u.value?.toLowerCase() === stockDispensingUnitName.toLowerCase()) ?? null
-        : null,
-    [stockDispensingUnitName, drugDosingUnits],
+      lockedDoseUnitUuid
+        ? drugDosingUnits.find((u) => u.valueCoded === lockedDoseUnitUuid) ?? null
+        : stockDispensingUnitName
+          ? drugDosingUnits.find((u) => u.value?.toLowerCase() === stockDispensingUnitName.toLowerCase()) ?? null
+          : null,
+    [lockedDoseUnitUuid, stockDispensingUnitName, drugDosingUnits],
   );
 
   useEffect(() => {
