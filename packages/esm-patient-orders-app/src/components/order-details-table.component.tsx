@@ -293,7 +293,10 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
           '--'
         ),
         reasonForCancelling:
-          order.fulfillerComment || discontinuedOrderReasons[order.uuid] || medicationDispenseReasons[order.uuid] || '--',
+          order.fulfillerComment ||
+          discontinuedOrderReasons[order.uuid] ||
+          medicationDispenseReasons[order.uuid] ||
+          '--',
       })) ?? [],
     [displayedOrders, t, discontinuedOrderReasons, medicationDispenseReasons],
   );
@@ -606,6 +609,8 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
 function OrderBasketItemActions({ orderItem, patient }: OrderBasketItemActionsProps) {
   const { t } = useTranslation();
   const isDeclined = orderItem.fulfillerStatus === 'DECLINED';
+  // A dispensed (completed) drug order can no longer be cancelled
+  const isDispensedDrugOrder = orderItem.type === ORDER_TYPES.DRUG_ORDER && orderItem.fulfillerStatus === 'COMPLETED';
   const session = useSession();
   const canManageOrders =
     orderItem.type === ORDER_TYPES.DRUG_ORDER
@@ -746,15 +751,17 @@ function OrderBasketItemActions({ orderItem, patient }: OrderBasketItemActionsPr
             onClick={handleAddOrEditTestResults}
           />
         )}
-        <OverflowMenuItem
-          className={styles.menuItem}
-          disabled={alreadyInBasket || orderItem?.action === 'DISCONTINUE'}
-          hasDivider
-          id="discontinue"
-          isDelete
-          itemText={t('cancelOrder', 'Cancel order')}
-          onClick={handleCancelOrder}
-        />
+        {!isDispensedDrugOrder && (
+          <OverflowMenuItem
+            className={styles.menuItem}
+            disabled={alreadyInBasket || orderItem?.action === 'DISCONTINUE'}
+            hasDivider
+            id="discontinue"
+            isDelete
+            itemText={t('cancelOrder', 'Cancel order')}
+            onClick={handleCancelOrder}
+          />
+        )}
       </OverflowMenu>
     </Layer>
   );
