@@ -18,6 +18,8 @@ export interface ObsReferenceRanges {
 
 export type ObservationInterpretation = 'critically_low' | 'critically_high' | 'high' | 'low' | 'normal';
 
+export type OverallRisk = 'high' | 'low';
+
 export type MappedVitals = {
   code: string;
   interpretation: ObservationInterpretation;
@@ -98,6 +100,7 @@ export interface PatientVitalsAndBiometrics {
   id: string;
   date: string;
   note?: string;
+  overallRisk?: OverallRisk;
   systolic?: number;
   systolicRenderInterpretation?: ObservationInterpretation;
   diastolic?: number;

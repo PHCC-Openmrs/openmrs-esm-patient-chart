@@ -3,6 +3,7 @@ import { type PatientVitalsAndBiometrics, type ObservationInterpretation } from 
 export interface VitalsTableRow extends PatientVitalsAndBiometrics {
   id: string;
   dateRender: string;
+  overallRiskRender: string;
   bloodPressureRender: string;
   bloodPressureRenderInterpretation?: ObservationInterpretation;
   pulseRender: string | number;
@@ -18,6 +19,7 @@ export interface VitalsTableRow extends PatientVitalsAndBiometrics {
 export interface VitalsTableHeader {
   key:
     | 'dateRender'
+    | 'overallRiskRender'
     | 'temperatureRender'
     | 'bloodPressureRender'
     | 'pulseRender'

@@ -44,3 +44,8 @@
 .content {
   color: colors.$gray-80;
 }
+
+.riskCell {
+  overflow: visible;
+  padding: layout.$spacing-03 layout.$spacing-05;
+}

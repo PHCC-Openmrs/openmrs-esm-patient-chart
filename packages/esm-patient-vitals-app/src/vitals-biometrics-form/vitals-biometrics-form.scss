@@ -1,3 +1,4 @@
+@use '@carbon/colors';
 @use '@carbon/layout';
 @use '@carbon/type';
 @use '@openmrs/esm-styleguide/src/vars' as *;
@@ -74,4 +75,54 @@
 
 .errorContainer {
   margin: layout.$spacing-05;
+}
+
+.overallRisk {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-03;
+}
+
+.riskLabel {
+  @include type.type-style('label-01');
+  color: colors.$gray-70;
+}
+
+.riskOptions {
+  display: flex;
+  gap: layout.$spacing-03;
+}
+
+.riskOption {
+  @include type.type-style('body-compact-01');
+  min-width: 8rem;
+  padding: layout.$spacing-03 layout.$spacing-05;
+  border: 1px solid transparent;
+  border-radius: layout.$spacing-07;
+  background-color: colors.$gray-10;
+  color: colors.$gray-100;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid colors.$blue-60;
+    outline-offset: 2px;
+  }
+}
+
+.highRisk {
+  border-color: colors.$red-60;
+
+  &.selected {
+    background-color: colors.$red-60;
+    color: colors.$white-0;
+  }
+}
+
+.lowRisk {
+  border-color: colors.$green-60;
+
+  &.selected {
+    background-color: colors.$green-60;
+    color: colors.$white-0;
+  }
 }

@@ -185,7 +185,7 @@ describe('VitalsBiometricsForm', () => {
     expect(screen.getByRole('spinbutton', { name: /temperature/i })).toBeInTheDocument();
     expect(screen.getByText(/temp/i)).toBeInTheDocument();
     expect(screen.getByText(/DEG C/i)).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: /notes/i })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /add a note/i })).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/type any additional notes here/i)).toBeInTheDocument();
     expect(screen.getByRole('spinbutton', { name: /weight/i })).toBeInTheDocument();
     expect(screen.getByText(/^kg$/i)).toBeInTheDocument();

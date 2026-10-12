@@ -135,6 +135,16 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
       sortFunc: (valueA, valueB) => (valueA.spo2 && valueB.spo2 ? valueA.spo2 - valueB.spo2 : 0),
     },
   ];
+  const tableHeadersWithRisk: Array<VitalsTableHeader> = [
+    tableHeaders[0],
+    {
+      key: 'overallRiskRender',
+      header: t('overallRisk', 'Overall risk'),
+      isSortable: true,
+      sortFunc: (valueA, valueB) => (valueA.overallRisk ?? '').localeCompare(valueB.overallRisk ?? ''),
+    },
+    ...tableHeaders.slice(1),
+  ];
 
   const tableRows: Array<VitalsTableRow> = useMemo(
     () =>
@@ -142,6 +152,7 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
         return {
           ...vitalSigns,
           dateRender: formatDate(parseDate(vitalSigns.date.toString()), { mode: 'wide', time: true }),
+          overallRiskRender: vitalSigns.overallRisk ?? '--',
           bloodPressureRender: `${vitalSigns.systolic ?? '--'} / ${vitalSigns.diastolic ?? '--'}`,
           bloodPressureRenderInterpretation: vitalSigns.bloodPressureRenderInterpretation,
           pulseRender: vitalSigns.pulse ?? '--',
@@ -250,7 +261,7 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
                     pageSize={pageSize}
                     pageUrl={pageUrl}
                     patientUuid={patientUuid}
-                    tableHeaders={tableHeaders}
+                    tableHeaders={tableHeadersWithRisk}
                     tableRows={tableRows}
                     urlLabel={urlLabel}
                     patient={patient}

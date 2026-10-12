@@ -1,0 +1,60 @@
+@use '@carbon/colors';
+@use '@carbon/layout';
+@use '@carbon/type';
+
+.container {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
+// Plain pill sized like the patient banner's status tags such as "Not Urgent"
+.riskTag {
+  display: inline-block;
+  padding: 0.125rem layout.$spacing-03;
+  border: none;
+  border-radius: layout.$spacing-05;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1rem;
+  white-space: nowrap;
+}
+
+.highRiskTag {
+  background-color: colors.$red-30;
+  color: colors.$red-90;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid colors.$blue-60;
+    outline-offset: 1px;
+  }
+}
+
+.lowRiskTag {
+  background-color: colors.$green-20;
+  color: colors.$green-80;
+}
+
+.noteContent {
+  @include type.type-style('body-01');
+  position: absolute;
+  top: calc(100% + #{layout.$spacing-02});
+  left: 0;
+  z-index: 9000;
+  min-width: 12rem;
+  max-width: 20rem;
+  padding: layout.$spacing-05;
+  background-color: colors.$white-0;
+  color: colors.$gray-100;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  white-space: normal;
+  text-align: left;
+}
+
+.noteHeading {
+  @include type.type-style('label-01');
+  margin-bottom: layout.$spacing-02;
+  color: colors.$gray-70;
+}

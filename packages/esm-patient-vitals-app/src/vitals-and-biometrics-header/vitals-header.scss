@@ -198,3 +198,14 @@ html[dir='rtl'] {
     }
   }
 }
+
+.noteSection {
+  margin-bottom: layout.$spacing-05;
+}
+
+.noteText {
+  @include type.type-style('body-compact-01');
+  max-width: 18rem;
+  white-space: normal;
+  word-break: break-word;
+}
