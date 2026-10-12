@@ -670,7 +670,7 @@ export function DrugOrderForm({
                           type="comboBox"
                           getValues={getValues}
                           id="dosingUnits"
-                          disabled
+                          disabled={Boolean(lockedDosingUnit) && Boolean(watchedUnit)}
                           shouldFilterItem={filterItemsByName}
                           placeholder={t('editDosageUnitsPlaceholder', 'Unit')}
                           titleText={t('editDosageUnitsTitle', 'Dose unit')}
@@ -874,7 +874,7 @@ export function DrugOrderForm({
                     <ControlledFieldInput
                       control={control}
                       id="dispensingUnits"
-                      disabled={Boolean(stockQuantityUnit)}
+                      disabled={Boolean(stockQuantityUnit) && Boolean(watchedQuantityUnits)}
                       items={drugDispensingUnits}
                       itemToString={(item: CommonMedicationValueCoded) => item?.value}
                       name="quantityUnits"
