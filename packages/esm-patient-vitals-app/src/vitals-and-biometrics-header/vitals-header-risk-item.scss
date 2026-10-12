@@ -1,0 +1,23 @@
+@use '@carbon/layout';
+@use '@carbon/type';
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
+// Mirrors the layout of the numeric observation card tiles
+.container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: layout.$spacing-04;
+  width: fit-content;
+  margin: layout.$spacing-03 0 0;
+  padding: layout.$spacing-02;
+}
+
+.label {
+  @include type.type-style('label-01');
+  color: $text-02;
+}
+
+.value {
+  @include type.type-style('body-compact-02');
+}

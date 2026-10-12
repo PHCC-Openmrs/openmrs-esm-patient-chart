@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import classNames from 'classnames';
+import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -344,6 +345,62 @@ const ExportedVitalsAndBiometricsForm: React.FC<Workspace2DefinitionProps<Vitals
             </Column>
             <Row className={styles.row}>
               <Column>
+                <div className={styles.overallRisk}>
+                  <span className={styles.riskLabel} id="overall-risk-label">
+                    {t('overallRisk', 'Overall risk')}
+                  </span>
+                  <Controller
+                    name="overallRisk"
+                    control={control}
+                    render={({ field: { onChange, value } }) => (
+                      <div className={styles.riskOptions} role="radiogroup" aria-labelledby="overall-risk-label">
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={value === config.concepts.highRiskUuid}
+                          className={classNames(styles.riskOption, styles.highRisk, {
+                            [styles.selected]: value === config.concepts.highRiskUuid,
+                          })}
+                          onClick={() => onChange(config.concepts.highRiskUuid)}
+                        >
+                          {t('highRisk', 'High risk')}
+                        </button>
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={value === config.concepts.lowRiskUuid}
+                          className={classNames(styles.riskOption, styles.lowRisk, {
+                            [styles.selected]: value === config.concepts.lowRiskUuid,
+                          })}
+                          onClick={() => onChange(config.concepts.lowRiskUuid)}
+                        >
+                          {t('lowRisk', 'Low risk')}
+                        </button>
+                      </div>
+                    )}
+                  />
+                </div>
+              </Column>
+            </Row>
+            <Row className={styles.row}>
+              <Column className={styles.noteInput}>
+                <VitalsAndBiometricsInput
+                  control={control}
+                  fieldWidth={isTablet ? '70%' : '100%'}
+                  fieldProperties={[
+                    {
+                      name: t('addANote', 'Add a note'),
+                      type: 'textarea',
+                      id: 'generalPatientNote',
+                    },
+                  ]}
+                  placeholder={t('additionalNoteText', 'Type any additional notes here')}
+                  label={t('addANote', 'Add a note')}
+                />
+              </Column>
+            </Row>
+            <Row className={styles.row}>
+              <Column>
                 <VitalsAndBiometricsInput
                   control={control}
                   fieldProperties={[
@@ -548,24 +605,6 @@ const ExportedVitalsAndBiometricsForm: React.FC<Workspace2DefinitionProps<Vitals
                 />
               </Column>
             </Row>
-
-            <Row className={styles.row}>
-              <Column className={styles.noteInput}>
-                <VitalsAndBiometricsInput
-                  control={control}
-                  fieldWidth={isTablet ? '70%' : '100%'}
-                  fieldProperties={[
-                    {
-                      name: t('notes', 'Notes'),
-                      type: 'textarea',
-                      id: 'generalPatientNote',
-                    },
-                  ]}
-                  placeholder={t('additionalNoteText', 'Type any additional notes here')}
-                  label={t('notes', 'Notes')}
-                />
-              </Column>
-            </Row>
           </Stack>
           <Stack className={styles.spacer}>
             <Column>
@@ -680,7 +719,7 @@ const ExportedVitalsAndBiometricsForm: React.FC<Workspace2DefinitionProps<Vitals
             <InlineNotification
               lowContrast
               title={t('error', 'Error')}
-              subtitle={t('pleaseFillField', 'Please fill at least one field') + '.'}
+              subtitle={t('pleaseFillField', 'Please fill at least one vital sign or biometric measurement') + '.'}
               onClose={() => setShowErrorNotification(false)}
             />
           </Column>

@@ -17,6 +17,7 @@ import {
 import { NumericObservation, useLayoutType, usePagination } from '@openmrs/esm-framework';
 import { PatientChartPagination } from '@openmrs/esm-patient-common-lib';
 import type { VitalsTableHeader, VitalsTableRow } from './types';
+import OverallRiskTag from '../components/overall-risk-tag/overall-risk-tag.component';
 import { VitalsAndBiometricsActionMenu } from '../components/action-menu/vitals-biometrics-action-menu.component';
 import styles from './paginated-vitals.scss';
 
@@ -131,13 +132,19 @@ const PaginatedVitals: React.FC<PaginatedVitalsProps> = ({
 
                           return (
                             <TableCell key={`styled-cell-${cell.id}`} className={styles.numericObsCell}>
-                              <NumericObservation
-                                value={cell.value?.content ?? cell.value}
-                                interpretation={interpretation}
-                                conceptUuid={conceptUuid}
-                                variant="cell"
-                                patientUuid={patientUuid}
-                              />
+                              {cell.info.header === 'overallRiskRender' ? (
+                                <div className={styles.riskCell}>
+                                  <OverallRiskTag risk={vitalsObj?.overallRisk} note={vitalsObj?.note} />
+                                </div>
+                              ) : (
+                                <NumericObservation
+                                  value={cell.value?.content ?? cell.value}
+                                  interpretation={interpretation}
+                                  conceptUuid={conceptUuid}
+                                  variant="cell"
+                                  patientUuid={patientUuid}
+                                />
+                              )}
                             </TableCell>
                           );
                         })}
@@ -162,13 +169,19 @@ const PaginatedVitals: React.FC<PaginatedVitalsProps> = ({
 
                           return (
                             <TableCell key={`styled-cell-${cell.id}`} className={styles.numericObsCell}>
-                              <NumericObservation
-                                value={cell.value?.content ?? cell.value}
-                                interpretation={interpretation}
-                                conceptUuid={conceptUuid}
-                                variant="cell"
-                                patientUuid={patientUuid}
-                              />
+                              {cell.info.header === 'overallRiskRender' ? (
+                                <div className={styles.riskCell}>
+                                  <OverallRiskTag risk={vitalsObj?.overallRisk} note={vitalsObj?.note} />
+                                </div>
+                              ) : (
+                                <NumericObservation
+                                  value={cell.value?.content ?? cell.value}
+                                  interpretation={interpretation}
+                                  conceptUuid={conceptUuid}
+                                  variant="cell"
+                                  patientUuid={patientUuid}
+                                />
+                              )}
                             </TableCell>
                           );
                         })}

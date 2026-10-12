@@ -44,6 +44,21 @@ export const configSchema = {
       _type: Type.ConceptUuid,
       _default: '165095AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
     },
+    overallRiskUuid: {
+      _type: Type.ConceptUuid,
+      _default: 'cda459bc-6034-4e73-8e02-904837550a85',
+      _description: 'Coded concept recording the overall risk (high / low) assessed alongside vitals.',
+    },
+    highRiskUuid: {
+      _type: Type.ConceptUuid,
+      _default: '417c6929-7fc4-4de1-8eef-c35ee0333562',
+      _description: 'Answer concept of the overall risk concept meaning "High risk".',
+    },
+    lowRiskUuid: {
+      _type: Type.ConceptUuid,
+      _default: '11ecf94f-b075-4a32-9fd6-ccba47c0514c',
+      _description: 'Answer concept of the overall risk concept meaning "Low risk".',
+    },
     midUpperArmCircumferenceUuid: {
       _type: Type.ConceptUuid,
       _default: '1343AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
@@ -148,6 +163,9 @@ export interface ConfigObject {
     weightUuid: string;
     respiratoryRateUuid: string;
     generalPatientNoteUuid: string;
+    overallRiskUuid: string;
+    highRiskUuid: string;
+    lowRiskUuid: string;
     midUpperArmCircumferenceUuid: string;
     bodyMassIndexUuid: string;
     vitalSignsConceptSetUuid: string;

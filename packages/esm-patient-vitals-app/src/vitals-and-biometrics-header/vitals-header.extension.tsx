@@ -19,6 +19,7 @@ import {
 import { type ConfigObject } from '../config-schema';
 import { useLaunchVitalsAndBiometricsForm } from '../utils';
 import VitalsHeaderItem from './vitals-header-item.component';
+import VitalsHeaderRiskItem from './vitals-header-risk-item.component';
 import styles from './vitals-header.scss';
 import { shouldShowBmi } from '../common/helpers';
 
@@ -157,7 +158,7 @@ const VitalsHeader: React.FC<VitalsHeaderProps> = ({
                 {t('vitalsHistory', 'Vitals history')}
               </ConfigurableLink>
             )}
-            {conceptRangeMap?.size > 0 && (
+            {(conceptRangeMap?.size > 0 || latestVitals?.note) && (
               <Toggletip align="bottom-start" autoAlign className={styles.referenceRangeToggletip}>
                 <ToggletipButton
                   className={styles.referenceRangeButton}
@@ -166,7 +167,15 @@ const VitalsHeader: React.FC<VitalsHeaderProps> = ({
                   <Information size={16} />
                 </ToggletipButton>
                 <ToggletipContent className={styles.referenceRangeContent}>
-                  <p className={styles.referenceRangeHeading}>{t('normalRanges', 'Normal ranges')}</p>
+                  {latestVitals?.note ? (
+                    <div className={styles.noteSection}>
+                      <p className={styles.referenceRangeHeading}>{t('note', 'Note')}</p>
+                      <p className={styles.noteText}>{latestVitals.note}</p>
+                    </div>
+                  ) : null}
+                  {conceptRangeMap?.size > 0 ? (
+                    <p className={styles.referenceRangeHeading}>{t('normalRanges', 'Normal ranges')}</p>
+                  ) : null}
                   <dl className={styles.referenceRangeEntries}>
                     {sysRange && diaRange && (
                       <div className={styles.referenceRangeRow}>
@@ -237,6 +246,7 @@ const VitalsHeader: React.FC<VitalsHeaderProps> = ({
         </div>
         <div className={styles.rowContainer}>
           <div className={styles.row}>
+            <VitalsHeaderRiskItem overallRisk={latestVitals?.overallRisk} note={latestVitals?.note} />
             <VitalsHeaderItem
               interpretation={interpretBloodPressure(
                 latestVitals?.systolic,

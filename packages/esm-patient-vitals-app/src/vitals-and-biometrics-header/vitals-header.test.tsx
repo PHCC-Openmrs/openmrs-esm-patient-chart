@@ -400,8 +400,9 @@ describe('VitalsHeader', () => {
       conceptRangeMap: new Map(),
     } as ReturnType<typeof useVitalsConceptMetadata>);
 
+    // The toggletip also shows the latest note, so use vitals without one
     mockUseVitalsAndBiometrics.mockReturnValue({
-      data: [formattedVitals[0]],
+      data: [{ ...formattedVitals[0], note: undefined }],
     } as ReturnType<typeof useVitalsAndBiometrics>);
 
     renderWithSwr(<VitalsHeader {...testProps} />);
@@ -409,6 +410,30 @@ describe('VitalsHeader', () => {
     await waitForLoadingToFinish();
 
     expect(screen.queryByRole('button', { name: /view normal ranges/i })).not.toBeInTheDocument();
+  });
+
+  it('shows the latest note and the overall risk tile', async () => {
+    const user = userEvent.setup();
+
+    mockUseVitalsConceptMetadata.mockReturnValue({
+      ...mockVitalsConceptMetadata,
+      conceptRangeMap: new Map(),
+    } as ReturnType<typeof useVitalsConceptMetadata>);
+
+    mockUseVitalsAndBiometrics.mockReturnValue({
+      data: [{ ...formattedVitals[0], overallRisk: 'high', note: 'Patient is short of breath' }],
+    } as ReturnType<typeof useVitalsAndBiometrics>);
+
+    renderWithSwr(<VitalsHeader {...testProps} />);
+
+    await waitForLoadingToFinish();
+
+    expect(screen.getByText(/overall risk/i)).toBeInTheDocument();
+    expect(screen.getByText(/high risk/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /view normal ranges/i }));
+
+    expect(screen.getByText(/patient is short of breath/i)).toBeInTheDocument();
   });
 
   it('opens the reference ranges panel with correct content when the toggletip button is clicked', async () => {

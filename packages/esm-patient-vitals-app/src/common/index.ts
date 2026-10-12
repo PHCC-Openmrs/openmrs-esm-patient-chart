@@ -18,4 +18,4 @@ export {
   getReferenceRangesForConcept,
   interpretBloodPressure,
 } from './helpers';
-export type { ObservationInterpretation, PatientVitalsAndBiometrics } from './types';
+export type { ObservationInterpretation, OverallRisk, PatientVitalsAndBiometrics } from './types';

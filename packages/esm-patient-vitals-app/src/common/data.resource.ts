@@ -22,6 +22,7 @@ import type {
   FHIRObservationResource,
   FHIRSearchBundleResponse,
   MappedVitals,
+  OverallRisk,
   PatientVitalsAndBiometrics,
   VitalsResponse,
 } from './types';
@@ -178,7 +179,7 @@ export const withUnit = (label: string, unit: string | null | undefined) => {
 // Each mutator is stored in the vitalsHooksMutates map and removed (via a useEffect hook) when the
 // hook is unmounted.
 let vitalsHooksCounter = 0;
-const vitalsHooksMutates = new Map<number, ReturnType<typeof useSWRInfinite<VitalsFetchResponse>>['mutate']>();
+const vitalsHooksMutates = new Map<number, () => unknown>();
 
 /**
  * Hook to get concepts for vitals, biometrics or both
@@ -189,11 +190,19 @@ export function useVitalsOrBiometricsConcepts(mode: VitalsAndBiometricsMode) {
   const conceptUuids = useMemo(() => {
     const biometricsKeys = ['bodyMassIndexUuid', 'heightUuid', 'midUpperArmCircumferenceUuid', 'weightUuid'];
     // These keys are not individual observation concepts for the FHIR query:
-    // generalPatientNoteUuid is fetched separately to avoid note-only encounters
-    // polluting the vitals list; vitalSignsConceptSetUuid is a concept set, not an obs concept.
+    // generalPatientNoteUuid and overallRiskUuid are fetched separately to avoid note-only or
+    // risk-only encounters polluting the vitals list (highRiskUuid and lowRiskUuid are answers,
+    // not observation concepts); vitalSignsConceptSetUuid is a concept set, not an obs concept.
     // bloodGlucoseUuid is recorded on the vitals form but has no column in the vitals table
     // yet, so including it would surface glucose-only encounters as rows of dashes.
-    const excludedFromQuery = new Set(['bloodGlucoseUuid', 'generalPatientNoteUuid', 'vitalSignsConceptSetUuid']);
+    const excludedFromQuery = new Set([
+      'bloodGlucoseUuid',
+      'generalPatientNoteUuid',
+      'overallRiskUuid',
+      'highRiskUuid',
+      'lowRiskUuid',
+      'vitalSignsConceptSetUuid',
+    ]);
 
     if (!concepts) {
       return [];
@@ -252,9 +261,18 @@ export function useVitalsAndBiometrics(patientUuid: string, mode: VitalsAndBiome
   // as standalone vitals entries. Notes are merged into existing vitals encounters below.
   // We omit _count so that every note for this patient is returned; notes are lightweight
   // and typically few, so unbounded fetching is acceptable here.
-  const { data: notesData } = useSWR<VitalsFetchResponse, Error>(
+  const { data: notesData, mutate: mutateNotes } = useSWR<VitalsFetchResponse, Error>(
     concepts.generalPatientNoteUuid && patientUuid
       ? `${fhirBaseUrl}/Observation?subject:Patient=${patientUuid}&code=${concepts.generalPatientNoteUuid}&_sort=-date`
+      : null,
+    openmrsFetch,
+  );
+
+  // The overall risk is fetched separately for the same reason as notes: it is merged into
+  // existing vitals encounters below and never surfaces as a standalone entry.
+  const { data: riskData, mutate: mutateRisk } = useSWR<VitalsFetchResponse, Error>(
+    concepts.overallRiskUuid && patientUuid
+      ? `${fhirBaseUrl}/Observation?subject:Patient=${patientUuid}&code=${concepts.overallRiskUuid}&_sort=-date`
       : null,
     openmrsFetch,
   );
@@ -262,11 +280,13 @@ export function useVitalsAndBiometrics(patientUuid: string, mode: VitalsAndBiome
   // see the comments above for why this is here
   useEffect(() => {
     const index = ++vitalsHooksCounter;
-    vitalsHooksMutates.set(index, mutate);
+    // The notes and overall risk are fetched by separate requests, so they must be revalidated
+    // together with the vitals or a newly saved / edited note and risk only show up after a reload.
+    vitalsHooksMutates.set(index, () => Promise.all([mutate(), mutateNotes(), mutateRisk()]));
     return () => {
       vitalsHooksMutates.delete(index);
     };
-  }, [mutate]);
+  }, [mutate, mutateNotes, mutateRisk]);
 
   const getVitalsMapKey = useCallback(
     (conceptUuid: string): string => {
@@ -354,6 +374,20 @@ export function useVitalsAndBiometrics(patientUuid: string, mode: VitalsAndBiome
         }
       });
 
+    riskData?.data?.entry
+      ?.map((entry) => entry.resource)
+      .filter(Boolean)
+      .forEach((resource) => {
+        const encounterId = extractEncounterUuid(resource.encounter);
+        const overallRisk = mapOverallRisk(resource, concepts.highRiskUuid, concepts.lowRiskUuid);
+        if (encounterId && overallRisk && vitalsHashTable.has(encounterId)) {
+          vitalsHashTable.set(encounterId, {
+            ...vitalsHashTable.get(encounterId),
+            overallRisk,
+          });
+        }
+      });
+
     return Array.from(vitalsHashTable).map(([encounterId, vitalSigns]) => {
       const result = {
         id: encounterId,
@@ -386,7 +420,7 @@ export function useVitalsAndBiometrics(patientUuid: string, mode: VitalsAndBiome
 
       return result;
     });
-  }, [conceptRanges, concepts, data, getVitalsMapKey, mode, notesData]);
+  }, [conceptRanges, concepts, data, getVitalsMapKey, mode, notesData, riskData]);
 
   return {
     data: data ? formattedObs : undefined,
@@ -422,7 +456,8 @@ export function useEncounterVitalsAndBiometrics(encounterUuid: string) {
         if (fieldName) {
           fieldName = fieldName.endsWith(fieldNameSuffix) ? fieldName.replace(fieldNameSuffix, '') : fieldName;
           vitalsAndBiometrics.set(fieldName, {
-            value: obs.value,
+            // Coded observations (e.g. overall risk) come back as a concept, the form works with its uuid
+            value: obs.value?.uuid ?? obs.value,
             obs,
           });
         }
@@ -525,6 +560,26 @@ function mapVitalsAndBiometrics(resource: FHIRObservationResource): MappedVitals
     recordedDate: resource?.effectiveDateTime,
     value: resource?.valueQuantity?.value,
   };
+}
+
+/**
+ * Maps a coded overall risk FHIR Observation to 'high' or 'low', matching its answer concept
+ * against the configured high / low risk concepts.
+ * @internal
+ */
+function mapOverallRisk(
+  resource: FHIRObservationResource,
+  highRiskUuid: string,
+  lowRiskUuid: string,
+): OverallRisk | undefined {
+  const codes = resource?.valueCodeableConcept?.coding?.map((coding) => coding.code) ?? [];
+  if (codes.includes(highRiskUuid)) {
+    return 'high';
+  }
+  if (codes.includes(lowRiskUuid)) {
+    return 'low';
+  }
+  return undefined;
 }
 
 export function createOrUpdateVitalsAndBiometrics(
