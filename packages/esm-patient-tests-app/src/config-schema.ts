@@ -1,4 +1,4 @@
-import { Type } from '@openmrs/esm-framework';
+import { Type, validators } from '@openmrs/esm-framework';
 
 export const configSchema = {
   resultsViewerConcepts: {
@@ -35,7 +35,8 @@ export const configSchema = {
   },
   orderTypeUuid: {
     _type: Type.UUID,
-    _description: "UUID identifying this extension's order type for order basket panel filtering. Must match orders.labOrderTypeUuid if that value is overridden.",
+    _description:
+      "UUID identifying this extension's order type for order basket panel filtering. Must match orders.labOrderTypeUuid if that value is overridden.",
     _default: '52a447d3-a64a-11e3-9aeb-50e549534c5e',
   },
   orders: {
@@ -58,6 +59,17 @@ export const configSchema = {
     _default: true,
     _description:
       'Whether to display the Reference number field in the Test Order form. This field maps to the accesion_number property in the Order data model',
+  },
+  enableTestOrderFavorites: {
+    _type: Type.Boolean,
+    _default: true,
+    _description: 'Whether to enable the test order favorites (pinned orders) feature',
+  },
+  maxPinnedTestOrders: {
+    _type: Type.Number,
+    _default: 10,
+    _description: 'Maximum number of pinned test orders per user and order type',
+    _validators: [validators.inRange(1, 50)],
   },
   additionalTestOrderTypes: {
     _type: Type.Array,
@@ -135,6 +147,8 @@ export interface OrderReason {
 }
 
 export interface ConfigObject {
+  enableTestOrderFavorites: boolean;
+  maxPinnedTestOrders: number;
   orderTypeUuid: string;
   labTestsWithOrderReasons: Array<OrderReason>;
   orders: {

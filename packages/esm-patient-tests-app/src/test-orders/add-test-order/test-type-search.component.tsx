@@ -13,10 +13,12 @@ import {
   type Visit,
   type Workspace2DefinitionProps,
 } from '@openmrs/esm-framework';
-import { useOrderBasket, type TestOrderBasketItem } from '@openmrs/esm-patient-common-lib';
+import { useOrderBasket, useOrderType, type TestOrderBasketItem } from '@openmrs/esm-patient-common-lib';
 import { prepTestOrderPostData } from '../api';
 import { createEmptyLabOrder } from './test-order';
 import { useTestTypes, type TestType } from './useTestTypes';
+import TestPinButton from '../test-favorites/test-pin-button.component';
+import TestFavoritesList from '../test-favorites/test-favorites-list.component';
 import styles from './test-type-search.scss';
 
 export interface TestTypeSearchProps {
@@ -63,6 +65,8 @@ export function TestTypeSearch({
   const { t } = useTranslation();
   const debouncedSearchTerm = useDebounce(searchTerm);
   const searchInputRef = useRef(null);
+  const session = useSession();
+  const { orderType } = useOrderType(orderTypeUuid);
 
   const focusAndClearSearchInput = useCallback(() => {
     onSearchTermChange('');
@@ -89,6 +93,20 @@ export function TestTypeSearch({
           value={searchTerm}
         />
       </ResponsiveWrapper>
+      <TestFavoritesList
+        orderTypeUuid={orderTypeUuid}
+        orderTypeDisplay={orderType?.display}
+        isSearching={Boolean(debouncedSearchTerm)}
+        openOrderForm={({ uuid, display }) =>
+          openLabForm(
+            createEmptyLabOrder(
+              { label: display, conceptUuid: uuid, synonyms: [] },
+              session.currentProvider?.uuid,
+              visit,
+            ),
+          )
+        }
+      />
       <TestTypeSearchResults
         closeWorkspace={closeWorkspace}
         orderTypeUuid={orderTypeUuid}
@@ -247,9 +265,12 @@ const TestTypeSearchResultItem: React.FC<TestTypeSearchResultItemProps> = ({
       role="listitem"
     >
       <div className={classNames(styles.searchResultTileContent, styles.text02)}>
-        <p>
-          <span className={styles.heading}>{testType.label}</span>{' '}
-        </p>
+        <div className={styles.testNameRow}>
+          <p className={styles.testNameText}>
+            <span className={styles.heading}>{testType.label}</span>{' '}
+          </p>
+          <TestPinButton conceptUuid={testType.conceptUuid} label={testType.label} orderTypeUuid={orderTypeUuid} />
+        </div>
       </div>
       <div className={styles.searchResultActions}>
         {testTypeAlreadyInBasket ? (

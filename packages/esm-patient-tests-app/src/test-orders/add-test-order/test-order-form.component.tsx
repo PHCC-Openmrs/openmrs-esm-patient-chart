@@ -1,17 +1,6 @@
 import React, { type ChangeEvent, useCallback, useEffect, useMemo } from 'react';
 import classNames from 'classnames';
-import {
-  Button,
-  ButtonSet,
-  Column,
-  Form,
-  Grid,
-  Layer,
-  Select,
-  SelectItem,
-  TextArea,
-  TextInput,
-} from '@carbon/react';
+import { Button, ButtonSet, Column, Form, Grid, Layer, Select, SelectItem, TextArea, TextInput } from '@carbon/react';
 import { Controller, type ControllerRenderProps, type FieldErrors, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -37,6 +26,7 @@ import {
 import { prepTestOrderPostData } from '../api';
 import { ordersEqual } from './test-order';
 import { type ConfigObject } from '../../config-schema';
+import TestOrderPinAction from '../test-favorites/test-order-pin-action.component';
 import styles from './test-order-form.scss';
 
 export interface LabOrderFormProps {
@@ -349,6 +339,13 @@ export function LabOrderForm({
           </Column>
         </Grid>
       </div>
+      {initialOrder?.action !== 'REVISE' && (
+        <TestOrderPinAction
+          conceptUuid={initialOrder?.testType?.conceptUuid}
+          label={initialOrder?.testType?.label}
+          orderTypeUuid={orderTypeUuid}
+        />
+      )}
       <ButtonSet className={classNames(styles.buttonSet, isTablet ? styles.tabletButtonSet : styles.desktopButtonSet)}>
         <Button className={styles.button} kind="secondary" onClick={onCancel} size="xl">
           {t('discard', 'Discard')}
