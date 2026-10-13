@@ -183,7 +183,7 @@ export function DrugOrderForm({
     }
   };
 
-  const { daysDurationUnit, durationUnitsDaysMap, lockedDoseUnits } = useConfig<ConfigObject>();
+  const { daysDurationUnit, durationUnitsDaysMap } = useConfig<ConfigObject>();
   const isTablet = useLayoutType() === 'tablet';
   const { orderConfigObject, error: errorFetchingOrderConfig } = useOrderConfig();
   const { requireOutpatientQuantity } = useRequireOutpatientQuantity();
@@ -405,30 +405,12 @@ export function DrugOrderForm({
     [orderConfigObject, initialOrderBasketItem?.drug?.dosageForm],
   );
 
-  // Pharmacy dispenses in the stock item's configured dispensing unit (e.g. Tablet), not
-  // whatever Dose unit a prescriber might otherwise pick from the generic dosing-units
-  // concept set - a mismatch there is what let stock get dispensed/deducted in the wrong
-  // unit (e.g. Box) downstream. When the ordered drug has a matching stock item, lock the
-  // field to that unit instead of leaving it freely editable.
-  const stockDispensingUnitName = stock?.dispensingUnitName;
-  // A drug listed in the `lockedDoseUnits` config is locked to that unit instead, for drugs dosed
-  // in a different unit than they are stocked in (e.g. an inhaler stocked by the bottle, dosed in puffs).
-  const lockedDoseUnitUuid = lockedDoseUnits?.[initialOrderBasketItem?.drug?.uuid];
-  const stockDosingUnit = useMemo(
-    () =>
-      lockedDoseUnitUuid
-        ? drugDosingUnits.find((u) => u.valueCoded === lockedDoseUnitUuid) ?? null
-        : stockDispensingUnitName
-          ? drugDosingUnits.find((u) => u.value?.toLowerCase() === stockDispensingUnitName.toLowerCase()) ?? null
-          : null,
-    [lockedDoseUnitUuid, stockDispensingUnitName, drugDosingUnits],
-  );
-
-  // Dose unit isn't prescriber-editable. When stock doesn't pin it (no stock item, or its
-  // dispensing unit - e.g. Bottle - isn't a dosing unit), fall back to the drug's dosage form
-  // (e.g. Puff), matched against the configured dosing units by concept or by name.
+  // Dose unit comes from the drug's Dosage Form (set in the legacy admin UI): when that concept is
+  // one of the configured dosing units (matched by concept, then by name), pre-fill and lock the
+  // field. A drug with no dosage form, or one that isn't a valid dosing unit (e.g. Syrup, Inhaler),
+  // leaves the field empty and editable so the prescriber picks a unit the server accepts.
   const configuredDosingUnits = orderConfigObject?.drugDosingUnits;
-  const dosageFormDosingUnit = useMemo(
+  const lockedDosingUnit = useMemo(
     () =>
       drug?.dosageForm && configuredDosingUnits
         ? configuredDosingUnits.find(
@@ -439,7 +421,6 @@ export function DrugOrderForm({
         : null,
     [drug?.dosageForm, configuredDosingUnits],
   );
-  const lockedDosingUnit = stockDosingUnit ?? dosageFormDosingUnit;
 
   useEffect(() => {
     if (lockedDosingUnit) {
@@ -461,9 +442,10 @@ export function DrugOrderForm({
   );
 
   // "Quantity to dispense" is what actually reaches pharmacy (it becomes the FHIR
-  // dispenseRequest.quantity that seeds the dispense form) - if its unit isn't locked the
-  // same way Dose unit is, a prescriber could still leave/pick a unit stock doesn't
-  // recognize as the dispensing unit, reintroducing the same box/tablet mismatch.
+  // dispenseRequest.quantity that seeds the dispense form), and pharmacy dispenses in the stock
+  // item's configured dispensing unit (e.g. Bottle). Lock its unit to that unit when it is one of
+  // the configured dispensing units, so stock isn't dispensed/deducted in a mismatched unit.
+  const stockDispensingUnitName = stock?.dispensingUnitName;
   const stockQuantityUnit = useMemo(
     () =>
       stockDispensingUnitName
