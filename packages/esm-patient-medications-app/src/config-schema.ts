@@ -48,12 +48,6 @@ export const configSchema = {
       '1734AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA': 365, // Years
     },
   },
-  lockedDoseUnits: {
-    _type: Type.Object,
-    _description:
-      'Maps a drug UUID to the dosing-unit concept UUID its Dose unit is locked to, overriding the stock dispensing unit. For drugs dosed in a different unit than they are stocked in (e.g. an inhaler stocked by the bottle but dosed in puffs).',
-    _default: {},
-  },
   drugCategoryConceptSets: {
     _type: Type.Array,
     _description:
@@ -84,7 +78,6 @@ export interface ConfigObject {
   showPrintButton: boolean;
   debounceDelayInMs: number;
   durationUnitsDaysMap: Record<string, number>;
-  lockedDoseUnits: Record<string, string>;
   drugCategoryConceptSets: Array<string>;
   minimumCharacterLengthForDrugSearch: number;
 }
