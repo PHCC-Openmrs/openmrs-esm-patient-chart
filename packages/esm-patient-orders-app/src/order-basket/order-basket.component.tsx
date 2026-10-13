@@ -122,9 +122,10 @@ const OrderBasket: React.FC<OrderBasketProps> = ({
 
     setIsSavingOrders(true);
 
-    // Orders (medications, lab tests, ...) may only be placed for a patient with a diagnosis.
+    // Drug orders may only be placed for a patient with a diagnosis (lab orders are exempt).
     // If the check itself fails we don't submit either, rather than let orders through unchecked.
-    if (requireDiagnosisBeforeOrdering) {
+    const hasDrugOrder = orders.some((order) => 'drug' in order && Boolean(order.drug));
+    if (requireDiagnosisBeforeOrdering && hasDrugOrder) {
       let hasDiagnosis = false;
       try {
         hasDiagnosis = await patientHasActiveDiagnosis(patientUuid);

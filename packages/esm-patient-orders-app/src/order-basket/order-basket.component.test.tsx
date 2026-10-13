@@ -129,10 +129,10 @@ describe('OrderBasket', () => {
   });
 
   describe('diagnosis check on Sign and close', () => {
-    const renderWithAnOrder = () => {
+    const renderWithAnOrder = (order: any = { display: 'Paracetamol', action: 'NEW', drug: { uuid: 'drug-uuid' } }) => {
       mockUseSession.mockReturnValue(mockSessionDataResponse.data as any);
       mockUseOrderBasket.mockReturnValue({
-        orders: [{ display: 'Paracetamol', action: 'NEW' }],
+        orders: [order],
         clearOrders: vi.fn(),
         setOrders: vi.fn(),
       } as any);
@@ -183,6 +183,18 @@ describe('OrderBasket', () => {
 
       expect(await screen.findByText(/couldn't check the patient's diagnoses/i)).toBeInTheDocument();
       expect(mockPostOrdersOnNewEncounter).not.toHaveBeenCalled();
+    });
+
+    it('skips the check for lab orders', async () => {
+      const user = userEvent.setup();
+      mockPatientHasActiveDiagnosis.mockResolvedValue(false);
+      renderWithAnOrder({ display: 'CBC', action: 'NEW', testType: { conceptUuid: 'cbc-uuid' } });
+
+      await user.click(screen.getByRole('button', { name: /sign and close/i }));
+
+      expect(mockPatientHasActiveDiagnosis).not.toHaveBeenCalled();
+      expect(mockShowModal).not.toHaveBeenCalled();
+      expect(mockPostOrdersOnNewEncounter).toHaveBeenCalled();
     });
 
     it('skips the check when requireDiagnosisBeforeOrdering is disabled', async () => {

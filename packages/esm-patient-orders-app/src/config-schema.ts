@@ -95,7 +95,7 @@ export const configSchema = {
     _type: Type.Boolean,
     _default: true,
     _description:
-      'Whether signing the order basket requires the patient to have at least one Active entry on their Diagnoses page. When none exists, the orders are not submitted and the user is asked to add a diagnosis first.',
+      'Whether signing an order basket containing drug orders (lab orders are exempt) requires the patient to have at least one Active entry on their Diagnoses page. When none exists, the orders are not submitted and the user is asked to add a diagnosis first.',
   },
 };
 
