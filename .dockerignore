@@ -29,10 +29,11 @@
 .yarn/cache
 .yarn/install-state.gz
 
-# Test artefacts
-**/test-results
-**/playwright-report
-**/playwright/.cache
+# Test artefacts -- root-anchored like .gitignore. An unanchored `**/test-results` would also
+# drop packages/esm-patient-tests-app/src/test-results, which is real source.
+/test-results
+/playwright-report
+/playwright/.cache
 e2e/storageState.json
 
 # Local / editor cruft
