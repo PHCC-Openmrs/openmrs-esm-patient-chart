@@ -330,6 +330,23 @@ export const configSchema = {
         encounterTypeUuid: '20f20572-92d4-4cd2-a800-6dff5d39b044',
         fields: [
           {
+            // Antenatal care (ANC) visit status -- one of the options below.
+            conceptUuid: 'd2c7f668-6b1e-4582-aef3-5df79c45fb84',
+            label: 'ANC',
+            controlType: 'select',
+            options: [
+              'First antenatal visit < 1st trimester',
+              'First antenatal visit > 1st trimester',
+              'Second antenatal visit',
+              'Third antenatal visit',
+              'Four or more antenatal visits',
+            ],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+            optional: true,
+          },
+          {
             conceptUuid: SRH_LMP_CONCEPT_UUID,
             label: 'LMP (Last Menstrual Period)',
             controlType: 'date',
