@@ -609,9 +609,12 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
 function OrderBasketItemActions({ orderItem, patient }: OrderBasketItemActionsProps) {
   const { t } = useTranslation();
   const isDeclined = orderItem.fulfillerStatus === 'DECLINED';
-  // A dispensed (completed) drug order can no longer be cancelled
-  const isDispensedDrugOrder = orderItem.type === ORDER_TYPES.DRUG_ORDER && orderItem.fulfillerStatus === 'COMPLETED';
+  // A completed order (a dispensed drug order, or a test order with results) can no longer be cancelled
+  const isCompletedOrder =
+    (orderItem.type === ORDER_TYPES.DRUG_ORDER || orderItem.type === ORDER_TYPES.TEST_ORDER) &&
+    orderItem.fulfillerStatus === 'COMPLETED';
   const session = useSession();
+  const canAddLabResults = userHasAccess('Task: laboratory.addLabResults', session?.user);
   const canManageOrders =
     orderItem.type === ORDER_TYPES.DRUG_ORDER
       ? userHasAccess('Task: patientChart.addDrugOrder', session?.user)
@@ -738,7 +741,7 @@ function OrderBasketItemActions({ orderItem, patient }: OrderBasketItemActionsPr
           itemText={t('modifyOrder', 'Modify order')}
           onClick={handleModifyOrder}
         />
-        {orderItem?.type === ORDER_TYPES.TEST_ORDER && (
+        {orderItem?.type === ORDER_TYPES.TEST_ORDER && canAddLabResults && (
           <OverflowMenuItem
             className={styles.menuItem}
             disabled={alreadyInBasket}
@@ -751,7 +754,7 @@ function OrderBasketItemActions({ orderItem, patient }: OrderBasketItemActionsPr
             onClick={handleAddOrEditTestResults}
           />
         )}
-        {!isDispensedDrugOrder && (
+        {!isCompletedOrder && (
           <OverflowMenuItem
             className={styles.menuItem}
             disabled={alreadyInBasket || orderItem?.action === 'DISCONTINUE'}
