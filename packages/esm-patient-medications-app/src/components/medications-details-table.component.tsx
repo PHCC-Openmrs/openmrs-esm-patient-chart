@@ -435,6 +435,7 @@ function OrderBasketItemActions({
 }) {
   const { mutate: globalMutate } = useSWRConfig();
   const { t } = useTranslation();
+  const launchOrderBasket = useLaunchWorkspaceRequiringVisit(patient.id, 'order-basket');
   const isTablet = useLayoutType() === 'tablet';
   const alreadyInBasket = items.some((x) => x.uuid === medication.uuid);
 
@@ -474,13 +475,10 @@ function OrderBasketItemActions({
 
   const handleRenewClick = useCallback(() => {
     setItems([...items, buildMedicationOrder(medication, 'RENEW')]);
-    launchWorkspace2<{}, OrderBasketWindowProps, PatientWorkspaceGroupProps>(
-      'order-basket',
-      {},
-      { encounterUuid: medication.encounter.uuid },
-      workspaceGroupProps,
-    );
-  }, [items, setItems, medication, workspaceGroupProps]);
+    // A renewal is a new prescription: launch the basket like a new order, so it uses the patient's
+    // current visit and a fresh encounter dated today, rather than the original (possibly closed) visit.
+    launchOrderBasket({}, { encounterUuid: '' });
+  }, [items, setItems, medication, launchOrderBasket]);
 
   return (
     <OverflowMenu
