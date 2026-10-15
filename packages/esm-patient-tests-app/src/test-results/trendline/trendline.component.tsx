@@ -70,7 +70,7 @@ const Trendline: React.FC<TrendlineProps> = ({
   showBackToTimelineButton = false,
 }) => {
   const { t } = useTranslation();
-  const { trendlineData, isLoading, isValidating } = useObstreeData(patientUuid, conceptUuid);
+  const { trendlineData, rangeBounds, isLoading, isValidating } = useObstreeData(patientUuid, conceptUuid);
   const { obs, display: chartTitle, hiNormal, lowNormal, units: leftAxisTitle } = trendlineData;
   const bottomAxisTitle = t('date', 'Date');
   const [range, setRange] = useState<[Date, Date]>();
@@ -119,14 +119,14 @@ const Trendline: React.FC<TrendlineProps> = ({
       dateTime: string;
       range: string;
       value: {
-        value: number;
+        value: number | string;
         interpretation: OBSERVATION_INTERPRETATION;
       };
     }> = [];
 
-    obs.forEach((observation, idx) => {
-      const resolvedLow = observation.lowNormal ?? lowNormal;
-      const resolvedHigh = observation.hiNormal ?? hiNormal;
+    const getNormalRange = (observation?: (typeof obs)[number]) => {
+      const resolvedLow = observation?.lowNormal ?? lowNormal;
+      const resolvedHigh = observation?.hiNormal ?? hiNormal;
       const hasRange = resolvedLow !== undefined && resolvedHigh !== undefined;
       const normalRange = hasRange
         ? {
@@ -144,28 +144,50 @@ const Trendline: React.FC<TrendlineProps> = ({
           : null,
         leftAxisTitle,
       );
+      return { normalRange, rangeLabel };
+    };
 
-      chartData.push({
-        date: new Date(Date.parse(observation.obsDatetime)),
-        value: parseFloat(observation.value),
-        group: chartTitle,
-        ...normalRange,
-        rangeLabel,
-      });
+    obs.forEach((observation, idx) => {
+      const { normalRange, rangeLabel } = getNormalRange(observation);
+
+      // A range test's obs read "100 – 120"; its Lower and Upper bounds are plotted as two lines below instead
+      if (!rangeBounds) {
+        chartData.push({
+          date: new Date(Date.parse(observation.obsDatetime)),
+          value: parseFloat(observation.value),
+          group: chartTitle,
+          ...normalRange,
+          rangeLabel,
+        });
+      }
 
       table.push({
         id: `${idx}`,
         dateTime: observation.obsDatetime,
         range: rangeLabel,
         value: {
-          value: parseFloat(observation.value),
+          value: rangeBounds ? observation.value : parseFloat(observation.value),
           interpretation: observation.interpretation,
         },
       });
     });
 
+    rangeBounds?.forEach((bound, boundIndex) => {
+      bound.obs.forEach((observation) => {
+        // Only the lower bound's normal range is shaded, as it is the range test's reference range
+        const { normalRange, rangeLabel } = getNormalRange(boundIndex === 0 ? observation : undefined);
+        chartData.push({
+          date: new Date(Date.parse(observation.obsDatetime)),
+          value: parseFloat(observation.value),
+          group: bound.display,
+          ...(boundIndex === 0 ? normalRange : {}),
+          rangeLabel,
+        });
+      });
+    });
+
     return { data: chartData, tableData: table };
-  }, [obs, chartTitle, hiNormal, leftAxisTitle, lowNormal]);
+  }, [obs, chartTitle, hiNormal, leftAxisTitle, lowNormal, rangeBounds]);
 
   const chartOptions = useMemo(
     () => ({
@@ -192,24 +214,32 @@ const Trendline: React.FC<TrendlineProps> = ({
       },
       height: '400px',
       color: {
-        scale: {
-          [chartTitle]: '#6929c4',
-        },
+        scale: rangeBounds
+          ? { [rangeBounds[0].display]: '#6929c4', [rangeBounds[1].display]: '#1192e8' }
+          : { [chartTitle]: '#6929c4' },
       },
       points: {
         radius: 4,
         enabled: true,
       },
       legend: {
-        enabled: false,
+        // A range test has a line per bound, so name them
+        enabled: Boolean(rangeBounds),
       },
       tooltip: {
-        customHTML: ([{ date, value, rangeLabel }]) => {
+        customHTML: (points: Array<{ date: Date; value: number; group: string; rangeLabel?: string }>) => {
+          const [{ date, rangeLabel }] = points;
           const valueLabel = t('trendlineTooltipValue', 'Value');
           const dateLabel = t('trendlineTooltipDate', 'Date');
           const rangeLabelText = t('trendlineTooltipRange', 'Range');
+          const valueLines = (rangeBounds ? points : points.slice(0, 1))
+            .map(
+              ({ value, group }) =>
+                `<div style="font-size:1rem; line-height:1.4">${rangeBounds ? group : valueLabel}: <span>${value} ${leftAxisTitle}</span></div>`,
+            )
+            .join('');
           return `<div class="cds--tooltip cds--tooltip--shown" style="min-width: max-content; font-weight:600">
-            <div style="font-size:1rem; line-height:1.4">${valueLabel}: <span>${value} ${leftAxisTitle}</span></div>
+            ${valueLines}
             <div style="font-size:0.875rem; font-weight:500; margin-top:0.125rem">${rangeLabelText}: ${rangeLabel || '--'}</div>
             <div style="color:#6F6F6F; font-size:0.875rem; font-weight:500; margin-top:0.125rem">${dateLabel}: ${formatDate(date)}</div>
           </div>`;
@@ -245,7 +275,7 @@ const Trendline: React.FC<TrendlineProps> = ({
         },
       },
     }),
-    [bottomAxisTitle, leftAxisTitle, range, chartTitle, t],
+    [bottomAxisTitle, leftAxisTitle, range, chartTitle, rangeBounds, t],
   );
 
   const tableHeaderData = useMemo(
@@ -327,7 +357,7 @@ interface DrawTableProps {
     dateTime: string;
     range: string;
     value: {
-      value: number;
+      value: number | string;
       interpretation: OBSERVATION_INTERPRETATION;
     };
   }>;

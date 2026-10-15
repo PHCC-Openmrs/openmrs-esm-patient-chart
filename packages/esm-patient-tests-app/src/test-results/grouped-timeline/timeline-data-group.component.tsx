@@ -204,7 +204,8 @@ const DataRows: React.FC<DataRowsProps> = ({ patientUuid, timeColumns, rowData, 
       {rowData.map((row, index) => {
         const obs = row.entries;
         const { obs: values } = row;
-        const isString = isNaN(parseFloat(values?.[0]?.value));
+        // A range test reads "100 – 120" (or "? – 120"), but its bounds are numeric and can be trended
+        const isString = !row.isRangeResult && isNaN(parseFloat(values?.[0]?.value));
 
         // Note: Units are only at the concept/node level, not observation-level
         const mostRecentObsWithRange = getMostRecentObservationWithRange(row.entries);

@@ -2,13 +2,14 @@ import React, { type ComponentProps, useCallback, useMemo } from 'react';
 import classNames from 'classnames';
 import { useTranslation } from 'react-i18next';
 import { Button, DataTableSkeleton } from '@carbon/react';
-import { ArrowRightIcon, navigate } from '@openmrs/esm-framework';
+import { ArrowRightIcon, navigate, useConfig } from '@openmrs/esm-framework';
 import {
   EmptyState,
   type ExternalOverviewProps,
   type PanelFilterProps,
   type PatientData,
 } from '@openmrs/esm-patient-common-lib';
+import { type ConfigObject } from '../../config-schema';
 import { parseSingleEntry, type OverviewPanelEntry } from './useOverviewData';
 import usePatientResultsData from '../loadPatientTestData/usePatientResultsData';
 import CommonOverview from './common-overview.component';
@@ -16,7 +17,7 @@ import styles from './external-overview.scss';
 
 const resultsToShow = 3;
 
-function getFilteredOverviewData(sortedObs: PatientData, filter) {
+function getFilteredOverviewData(sortedObs: PatientData, filter, rangeResultConcepts: Array<string>) {
   return Object.entries(sortedObs)
     .flatMap(([panelName, { entries, type, uuid }]) => {
       return entries.map((e) => [e, uuid, type, panelName] as PanelFilterProps);
@@ -26,7 +27,7 @@ function getFilteredOverviewData(sortedObs: PatientData, filter) {
       return [
         panelName,
         type,
-        parseSingleEntry(entry, type, panelName),
+        parseSingleEntry(entry, type, panelName, rangeResultConcepts),
         new Date(entry.effectiveDateTime),
         new Date(entry.issued),
         uuid,
@@ -37,7 +38,11 @@ function getFilteredOverviewData(sortedObs: PatientData, filter) {
 
 function useFilteredOverviewData(patientUuid: string, filter: (filterProps: PanelFilterProps) => boolean = () => true) {
   const { sortedObs, loaded, error } = usePatientResultsData(patientUuid);
-  const overviewData = useMemo(() => getFilteredOverviewData(sortedObs, filter), [filter, sortedObs]);
+  const { rangeResultConcepts } = useConfig<ConfigObject>();
+  const overviewData = useMemo(
+    () => getFilteredOverviewData(sortedObs, filter, rangeResultConcepts),
+    [filter, sortedObs, rangeResultConcepts],
+  );
 
   return { overviewData, loaded, error };
 }

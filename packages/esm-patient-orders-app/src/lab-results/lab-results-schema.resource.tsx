@@ -1,9 +1,15 @@
 import { z } from 'zod';
+import { isRangeResult, parseRangeResult } from '@openmrs/esm-patient-common-lib';
 import { type LabOrderConcept } from './lab-results.resource';
 
 type SchemaRecord = Record<string, z.ZodType>;
 
-function createSchemaForConcept(labOrderConcept: LabOrderConcept): SchemaRecord {
+function createSchemaForConcept(labOrderConcept: LabOrderConcept, rangeResultConcepts: Array<string>): SchemaRecord {
+  // A range test is entered as one value under its own uuid, so its members get no fields of their own
+  if (isRangeResult(labOrderConcept, rangeResultConcepts)) {
+    return { [labOrderConcept.uuid]: createRangeSchema(labOrderConcept) };
+  }
+
   const schema = {};
   const conceptSchema = createSchema(labOrderConcept);
   if (conceptSchema) {
@@ -14,7 +20,7 @@ function createSchemaForConcept(labOrderConcept: LabOrderConcept): SchemaRecord 
     ? labOrderConcept.setMembers.reduce((acc, member) => {
         return {
           ...acc,
-          ...createSchemaForConcept(member),
+          ...createSchemaForConcept(member, rangeResultConcepts),
         };
       }, {})
     : {};
@@ -25,11 +31,14 @@ function createSchemaForConcept(labOrderConcept: LabOrderConcept): SchemaRecord 
   };
 }
 
-function createSchemaForConceptArray(labOrderConcepts: Array<LabOrderConcept>): SchemaRecord {
+function createSchemaForConceptArray(
+  labOrderConcepts: Array<LabOrderConcept>,
+  rangeResultConcepts: Array<string>,
+): SchemaRecord {
   return labOrderConcepts.reduce((acc, concept) => {
     return {
       ...acc,
-      ...createSchemaForConcept(concept), // reuses recursive logic
+      ...createSchemaForConcept(concept, rangeResultConcepts), // reuses recursive logic
     };
   }, {});
 }
@@ -38,13 +47,17 @@ function createSchemaForConceptArray(labOrderConcepts: Array<LabOrderConcept>): 
  * Custom hook to generate a Zod schema for lab results form based on multiple lab order concepts.
  * This function is used to generate the schema for the lab results form.
  * @param {Array<string>} labOrderConceptUuid - The List of UUID of the lab order concepts.
+ * @param rangeResultConcepts - UUIDs of the concepts whose result is entered as a range.
  * @returns A Zod schema object for the lab results form.
  */
-export const createLabResultsFormCompositeSchema = (labOrderConcepts: Array<LabOrderConcept>) => {
+export const createLabResultsFormCompositeSchema = (
+  labOrderConcepts: Array<LabOrderConcept>,
+  rangeResultConcepts: Array<string> = [],
+) => {
   if (!labOrderConcepts) {
     return z.object({});
   }
-  const schema = createSchemaForConceptArray(labOrderConcepts);
+  const schema = createSchemaForConceptArray(labOrderConcepts, rangeResultConcepts);
 
   return z.object(schema);
 };
@@ -144,4 +157,47 @@ const createNumericSchema = (
   }
 
   return baseSchema;
+};
+
+/**
+ * Creates a Zod schema for a range test entered as one value such as "100-120". A single value such as "100"
+ * is accepted as the range 100 - 100. Each bound is checked against its own member concept's absolute limits
+ * and decimal setting, and the lower value must not be greater than the upper value.
+ * @param labOrderConcept - The range test, whose first member is the lower bound and second the upper bound.
+ * @returns A Zod schema type that accepts an empty value or a valid range.
+ */
+export const createRangeSchema = (labOrderConcept: LabOrderConcept): z.ZodType => {
+  const { display } = labOrderConcept;
+  const [lowerConcept, upperConcept] = labOrderConcept.setMembers;
+
+  const checkBound = (value: number, concept: LabOrderConcept, bound: string): string | null => {
+    const { allowDecimal, lowAbsolute, hiAbsolute } = concept;
+    if (!allowDecimal && !Number.isInteger(value)) {
+      return `${display} ${bound} value must be a whole number`;
+    }
+    if (lowAbsolute !== null && lowAbsolute !== undefined && value < lowAbsolute) {
+      return `${display} ${bound} value must be greater than or equal to ${lowAbsolute}`;
+    }
+    if (hiAbsolute !== null && hiAbsolute !== undefined && value > hiAbsolute) {
+      return `${display} ${bound} value must be less than or equal to ${hiAbsolute}`;
+    }
+    return null;
+  };
+
+  return z
+    .preprocess((val) => (val === '' || val === null || val === undefined ? undefined : val), z.unknown())
+    .superRefine((val, ctx) => {
+      if (val === undefined) {
+        return;
+      }
+      const range = parseRangeResult(val);
+      const message = !range
+        ? `${display} must be a range such as 100-120`
+        : checkBound(range.low, lowerConcept, 'lower') ??
+          checkBound(range.high, upperConcept, 'upper') ??
+          (range.low > range.high ? `${display} lower value must not be greater than the upper value` : null);
+      if (message) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+      }
+    });
 };

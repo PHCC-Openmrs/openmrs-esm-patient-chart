@@ -33,6 +33,15 @@ export const configSchema = {
       },
     ],
   },
+  rangeResultConcepts: {
+    _type: Type.Array,
+    _elements: {
+      _type: Type.UUID,
+    },
+    _description:
+      'UUIDs of LabSet concepts whose result is entered as a range such as "100-120". Each must have exactly two Numeric set members: the first holds the lower bound and the second the upper bound. Results for these tests are shown as a single row (e.g. "100 – 120 mg/dL") instead of one row per bound. Other two-member sets (e.g. blood pressure) are unaffected unless listed here.',
+    _default: [],
+  },
   orderTypeUuid: {
     _type: Type.UUID,
     _description:
@@ -156,6 +165,7 @@ export interface ConfigObject {
     labOrderableConcepts: Array<string>;
   };
   showReferenceNumberField: boolean;
+  rangeResultConcepts: Array<string>;
   additionalTestOrderTypes: Array<{
     label?: string;
     orderTypeUuid: string;

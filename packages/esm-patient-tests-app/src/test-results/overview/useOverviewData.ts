@@ -1,5 +1,12 @@
 import { useState, useEffect } from 'react';
-import { type ObsRecord, type OBSERVATION_INTERPRETATION } from '@openmrs/esm-patient-common-lib';
+import { useConfig } from '@openmrs/esm-framework';
+import {
+  formatRangeResult,
+  type ObsRecord,
+  type OBSERVATION_INTERPRETATION,
+  worstInterpretation,
+} from '@openmrs/esm-patient-common-lib';
+import { type ConfigObject } from '../../config-schema';
 import usePatientResultsData from '../loadPatientTestData/usePatientResultsData';
 
 export interface OverviewPanelData {
@@ -21,7 +28,12 @@ interface Coding {
 
 export type OverviewPanelEntry = [string, string, Array<OverviewPanelData>, Date, Date, string];
 
-export function parseSingleEntry(entry: ObsRecord, type: string, panelName: string): Array<OverviewPanelData> {
+export function parseSingleEntry(
+  entry: ObsRecord,
+  type: string,
+  panelName: string,
+  rangeResultConcepts: Array<string> = [],
+): Array<OverviewPanelData> {
   if (type === 'Test') {
     // Use observation-level interpretation set during data loading
     const interpretation = entry.interpretation || 'NORMAL';
@@ -33,6 +45,23 @@ export function parseSingleEntry(entry: ObsRecord, type: string, panelName: stri
         interpretation,
         value: {
           value: entry.value,
+          interpretation,
+        },
+      },
+    ];
+  } else if (rangeResultConcepts.includes(entry.conceptClass) && entry.members?.length === 2) {
+    // A range test is a single "100 – 120" row: its members are the Lower and Upper bounds, in that order
+    const [lower, upper] = entry.members;
+    const interpretation = worstInterpretation(lower?.interpretation, upper?.interpretation) || 'NORMAL';
+    return [
+      {
+        id: entry.id,
+        key: entry.id,
+        name: panelName,
+        range: lower?.meta?.range || '--',
+        interpretation,
+        value: {
+          value: formatRangeResult(lower?.value, upper?.value, lower?.meta?.units ?? upper?.meta?.units),
           interpretation,
         },
       },
@@ -58,6 +87,7 @@ export function parseSingleEntry(entry: ObsRecord, type: string, panelName: stri
 
 function useOverviewData(patientUuid: string) {
   const { sortedObs, loaded, error } = usePatientResultsData(patientUuid);
+  const { rangeResultConcepts } = useConfig<ConfigObject>();
   const [overviewData, setOverviewData] = useState<Array<OverviewPanelEntry>>([]);
 
   useEffect(() => {
@@ -69,7 +99,7 @@ function useOverviewData(patientUuid: string) {
           return [
             panelName,
             type,
-            parseSingleEntry(newestEntry, type, panelName),
+            parseSingleEntry(newestEntry, type, panelName, rangeResultConcepts),
             new Date(newestEntry.effectiveDateTime),
             new Date(newestEntry.issued),
             uuid,
@@ -77,7 +107,7 @@ function useOverviewData(patientUuid: string) {
         })
         .sort(([, , , date1], [, , , date2]) => date2.getTime() - date1.getTime()),
     );
-  }, [sortedObs]);
+  }, [sortedObs, rangeResultConcepts]);
 
   return { overviewData, loaded, error };
 }

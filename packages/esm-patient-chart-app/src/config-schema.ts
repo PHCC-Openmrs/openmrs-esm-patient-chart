@@ -73,6 +73,15 @@ export const esmPatientChartSchema = {
     _description: 'The UUID of the visit type to be used for the automatically created offline visits.',
     _default: 'a22733fa-3501-4020-a520-da024eeff088',
   },
+  rangeResultConcepts: {
+    _type: Type.Array,
+    _elements: {
+      _type: Type.UUID,
+    },
+    _description:
+      'UUIDs of LabSet concepts whose result is entered as a range such as "100-120". Each must have exactly two Numeric set members: the first holds the lower bound and the second the upper bound. In the Encounters summary table such a result is shown on one line (e.g. "Range Test: 100 – 120 mg/dL") instead of as a group with two members. Other two-member sets (e.g. blood pressure) are unaffected unless listed here. Should match the `rangeResultConcepts` config of the tests app.',
+    _default: [],
+  },
   restrictByVisitLocationTag: {
     _type: Type.Boolean,
     _description:
@@ -204,7 +213,9 @@ export interface ChartConfig {
     src: string;
   };
   notesConceptUuids: string[];
+  obsConceptUuidsToHide: Array<string>;
   offlineVisitTypeUuid: string;
+  rangeResultConcepts: Array<string>;
   restrictByVisitLocationTag: boolean;
   showAllEncountersTab: boolean;
   showRecommendedVisitTypeTab: boolean;

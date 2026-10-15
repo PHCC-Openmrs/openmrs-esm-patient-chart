@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import useSWR from 'swr';
 import { openmrsFetch, restBaseUrl, type FetchResponse, type OpenmrsResource } from '@openmrs/esm-framework';
-import { type Order } from '@openmrs/esm-patient-common-lib';
+import { isRangeResult, parseRangeResult, type Order } from '@openmrs/esm-patient-common-lib';
 import { type Encounter, type Observation } from '../types/encounter';
 import { type OrderDiscontinuationPayload } from '../types/order';
 
@@ -512,24 +512,84 @@ function getValue(concept: LabOrderConcept, values: Record<string, unknown>) {
   return null;
 }
 
+/**
+ * A range test is entered as one text value (e.g. "100-120") under the range concept's uuid, but saved as
+ * two numeric observations, one per member. This replaces each range value with its lower and upper member
+ * values so the existing payload code builds the obs group unchanged.
+ */
+export function expandRangeResultValues(
+  concepts: Array<LabOrderConcept>,
+  values: Record<string, unknown>,
+  rangeResultConcepts: Array<string>,
+): Record<string, unknown> {
+  const expanded = { ...values };
+
+  const expand = (concept: LabOrderConcept) => {
+    if (isRangeResult(concept, rangeResultConcepts)) {
+      const range = parseRangeResult(expanded[concept.uuid]);
+      delete expanded[concept.uuid];
+      if (range) {
+        const [lower, upper] = concept.setMembers;
+        expanded[lower.uuid] = range.low;
+        expanded[upper.uuid] = range.high;
+      }
+      return;
+    }
+    concept.setMembers?.forEach(expand);
+  };
+
+  concepts.forEach(expand);
+  return expanded;
+}
+
+export interface RangeBound {
+  concept: LabOrderConcept;
+  obs: Observation | undefined;
+}
+
 export interface PanelResultRow {
   concept: LabOrderConcept;
   /** The saved observation for this concept, if one exists. */
   obs: Observation | undefined;
   /** True for a sub-panel heading, whose tests follow it in the list. */
   isHeading: boolean;
+  /** Set for a range test, which is shown as one row built from its lower and upper member observations. */
+  range?: { lower: RangeBound; upper: RangeBound };
+}
+
+function createRangeRow(concept: LabOrderConcept, obs: Observation | undefined): PanelResultRow {
+  const [lower, upper] = concept.setMembers.map((member) => ({
+    concept: member,
+    obs: obs?.groupMembers?.find((groupMember) => groupMember.concept?.uuid === member.uuid),
+  }));
+  return { concept, obs, isHeading: false, range: { lower, upper } };
 }
 
 /**
  * Flattens a panel into display rows in order. Sub-panels (e.g. "Urine physical examination"
  * inside "Urine Analysis") produce a heading row followed by their own tests, so results from
- * nested panels are shown instead of being skipped.
+ * nested panels are shown instead of being skipped. A range test produces one row for both of its
+ * members, whether it is the panel itself or one of its members.
  */
-export function flattenPanelResults(concept: LabOrderConcept, obs: Observation | undefined): Array<PanelResultRow> {
+export function flattenPanelResults(
+  concept: LabOrderConcept,
+  obs: Observation | undefined,
+  rangeResultConcepts: Array<string> = [],
+): Array<PanelResultRow> {
+  if (isRangeResult(concept, rangeResultConcepts)) {
+    return [createRangeRow(concept, obs)];
+  }
+
   return (concept.setMembers ?? []).flatMap((member) => {
     const memberObs = obs?.groupMembers?.find((groupMember) => groupMember.concept?.uuid === member.uuid);
+    if (isRangeResult(member, rangeResultConcepts)) {
+      return [createRangeRow(member, memberObs)];
+    }
     return isPanel(member)
-      ? [{ concept: member, obs: memberObs, isHeading: true }, ...flattenPanelResults(member, memberObs)]
+      ? [
+          { concept: member, obs: memberObs, isHeading: true },
+          ...flattenPanelResults(member, memberObs, rangeResultConcepts),
+        ]
       : [{ concept: member, obs: memberObs, isHeading: false }];
   });
 }

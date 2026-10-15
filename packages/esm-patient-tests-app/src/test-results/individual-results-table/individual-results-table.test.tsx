@@ -1,8 +1,12 @@
 import React from 'react';
 import { vi, describe, it, expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { showModal } from '@openmrs/esm-framework';
 import { type GroupedObservation } from '../../types';
 import IndividualResultsTable from './individual-results-table.component';
+
+const mockShowModal = vi.mocked(showModal);
 
 describe('IndividualResultsTable', () => {
   const mockSubRows = {
@@ -109,5 +113,53 @@ describe('IndividualResultsTable', () => {
 
     // Should display observation-level range (35 – 147) not node-level (0 – 270)
     expect(screen.getByRole('row', { name: /alkaline phosphatase.*15 u\/l.*35 – 147 u\/l/i })).toBeInTheDocument();
+  });
+  it('renders a merged range test as one row with its worst flag and a trendline link', async () => {
+    const user = userEvent.setup();
+    const rangeEntry = {
+      obsDatetime: '2024-10-15 03:20:19.0',
+      key: 'Tests Orderability-Range Test',
+      datatype: 'Numeric',
+      display: 'Range Test',
+      conceptUuid: '4881482b-0cc7-4201-8ce9-39f00e1fd5a4',
+      units: 'mg/dL',
+      flatName: 'Tests Orderability-Range Test',
+      hasData: true,
+      range: '90 – 110 mg/dL',
+      lowNormal: 90,
+      hiNormal: 110,
+      isRangeResult: true,
+    };
+    const mockRangeSubRows = {
+      key: 'Range Test',
+      date: '2024-10-15',
+      flatName: 'Tests Orderability-Range Test',
+      entries: [
+        { ...rangeEntry, value: '100 – 120', interpretation: 'CRITICALLY_HIGH' },
+        { ...rangeEntry, obsDatetime: '2024-10-15 04:20:19.0', value: '? – 120', interpretation: 'NORMAL' },
+      ],
+    } as GroupedObservation;
+
+    render(
+      <IndividualResultsTable
+        patientUuid={'patient-uuid'}
+        isLoading={false}
+        subRows={mockRangeSubRows}
+        index={0}
+        title={'Range Test'}
+      />,
+    );
+
+    expect(screen.getByRole('row', { name: /range test.*100 – 120 mg\/dL.*90 – 110 mg\/dL/i })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: '100 – 120 mg/dL' })).toHaveClass('critically-high');
+    expect(screen.getByRole('row', { name: /range test.*\? – 120 mg\/dL.*90 – 110 mg\/dL/i })).toBeInTheDocument();
+
+    // Even a range missing its lower bound can still open the trendline of the range test
+    const [, secondRowTitle] = screen.getAllByText('Range Test', { selector: '[class*="trendline-link-view"]' });
+    await user.click(secondRowTitle);
+    expect(mockShowModal).toHaveBeenCalledWith(
+      'timeline-results-modal',
+      expect.objectContaining({ testUuid: '4881482b-0cc7-4201-8ce9-39f00e1fd5a4', title: 'Range Test' }),
+    );
   });
 });

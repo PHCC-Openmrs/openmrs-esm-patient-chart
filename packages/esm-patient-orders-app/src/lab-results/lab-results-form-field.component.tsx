@@ -10,7 +10,9 @@ import {
 } from '@carbon/react';
 import { useTranslation } from 'react-i18next';
 import { type Control, Controller } from 'react-hook-form';
-import { useLayoutType } from '@openmrs/esm-framework';
+import { useConfig, useLayoutType } from '@openmrs/esm-framework';
+import { isRangeResult } from '@openmrs/esm-patient-common-lib';
+import { type ConfigObject } from '../config-schema';
 import { isCoded, isNumeric, isPanel, isText, type LabOrderConcept } from './lab-results.resource';
 import { type Observation } from '../types/encounter';
 import styles from './lab-results-form.scss';
@@ -23,6 +25,7 @@ interface ResultFormFieldProps {
 
 const ResultFormField: React.FC<ResultFormFieldProps> = ({ concept, control, defaultValue }) => {
   const { t } = useTranslation();
+  const { rangeResultConcepts } = useConfig<ConfigObject>();
   const isTablet = useLayoutType() === 'tablet';
   const responsiveFieldSize = isTablet ? 'lg' : 'sm';
 
@@ -65,10 +68,13 @@ const ResultFormField: React.FC<ResultFormFieldProps> = ({ concept, control, def
     [defaultValue],
   );
 
+  const isRangeField = useMemo(() => isRangeResult(concept, rangeResultConcepts), [concept, rangeResultConcepts]);
+
   const labelText = useMemo(() => {
     const displayText = concept.display?.trim() || concept.name?.name?.trim() || concept.name?.display?.trim() || '--';
-    return `${displayText} ${formatLabRange(concept)}`.trim();
-  }, [concept]);
+    // A range test has no limits of its own, so show its lower member's limits and units
+    return `${displayText} ${formatLabRange(isRangeField ? concept.setMembers[0] : concept)}`.trim();
+  }, [concept, isRangeField]);
 
   const { isTextField, isNumericField, isCodedField, isPanelField } = useMemo(
     () => ({
@@ -79,6 +85,35 @@ const ResultFormField: React.FC<ResultFormFieldProps> = ({ concept, control, def
     }),
     [concept],
   );
+
+  if (isRangeField) {
+    return (
+      <div className={styles.formField}>
+        <Controller
+          control={control}
+          name={concept.uuid}
+          render={({ field, fieldState: { error } }) => (
+            <TextInput
+              {...field}
+              id={concept.uuid}
+              key={concept.uuid}
+              labelText={labelText}
+              type="text"
+              placeholder={t('rangeResultPlaceholder', 'e.g. 100-120')}
+              helperText={t(
+                'rangeResultHelperText',
+                'Enter the lower and upper value separated by a dash, or one value',
+              )}
+              invalidText={error?.message}
+              invalid={Boolean(error?.message)}
+              size={responsiveFieldSize}
+              value={typeof field.value === 'string' || typeof field.value === 'number' ? field.value : ''}
+            />
+          )}
+        />
+      </div>
+    );
+  }
 
   if (isTextField || isNumericField || isCodedField || isPanelField) {
     return (

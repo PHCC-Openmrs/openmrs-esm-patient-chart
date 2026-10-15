@@ -1,5 +1,7 @@
 import {
   assessValue,
+  formatRangeResult,
+  worstInterpretation,
   type DrugOrderBasketItem,
   type OBSERVATION_INTERPRETATION,
   type Order,
@@ -9,7 +11,7 @@ import {
   type TestOrderBasketItem,
 } from '@openmrs/esm-patient-common-lib';
 import { type Observation, type ObservationValue } from '../types/encounter';
-import { type LabOrderConcept } from '../lab-results/lab-results.resource';
+import { type LabOrderConcept, type RangeBound } from '../lab-results/lab-results.resource';
 
 /**
  * Enables a comparison of arbitrary values with support for undefined/null.
@@ -272,4 +274,30 @@ export function interpretObservation(obs: Observation, ranges: ReferenceRanges):
   const valueIsNumeric = typeof obs.value === 'number';
   const valueWithUnits = valueIsNumeric && units ? `${displayValue} ${units}` : displayValue;
   return { displayValue: valueWithUnits, interpretation };
+}
+
+export interface InterpretedRangeResult extends InterpretedResult {
+  /** The lower member's ranges, used as the reference range of the whole range test. */
+  ranges: ReferenceRanges;
+}
+
+/**
+ * Computes the display value (e.g. "100 – 120 mg/dL") and interpretation of a range test from its lower and
+ * upper member observations. The interpretation is the worse of the two bounds' interpretations.
+ */
+export function interpretRangeResult(
+  range: { lower: RangeBound; upper: RangeBound },
+  referenceRangesMap?: Map<string, ReferenceRanges>,
+): InterpretedRangeResult {
+  const ranges = getEffectiveRanges(range.lower.concept, referenceRangesMap);
+  const interpretBound = ({ concept, obs }: RangeBound) =>
+    obs ? interpretObservation(obs, getEffectiveRanges(concept, referenceRangesMap)).interpretation : undefined;
+  const boundValue = ({ obs }: RangeBound) =>
+    obs ? (typeof obs.value === 'number' ? obs.value : getObservationDisplayValue(obs.value)) : undefined;
+
+  return {
+    displayValue: formatRangeResult(boundValue(range.lower), boundValue(range.upper), ranges.units),
+    interpretation: worstInterpretation(interpretBound(range.lower), interpretBound(range.upper)) ?? 'NORMAL',
+    ranges,
+  };
 }

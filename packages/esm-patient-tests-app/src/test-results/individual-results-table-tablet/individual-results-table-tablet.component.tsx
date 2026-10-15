@@ -43,7 +43,13 @@ const IndividualResultsTableTablet: React.FC<IndividualResultsTableTabletProps> 
   }, [timelineData, activePanel]);
 
   const activeTimelineParent = useMemo(() => {
-    return activePanel ? lowestParents.find((parent) => parent.display == activePanel.key) : null;
+    // A test with no panel of its own (e.g. a merged range test) has no lowest parent, so head it with its own name
+    return activePanel
+      ? lowestParents.find((parent) => parent.display == activePanel.key) ?? {
+          display: activePanel.key,
+          flatName: activePanel.key,
+        }
+      : null;
   }, [lowestParents, activePanel]);
 
   const filteredPanels = useMemo(() => {

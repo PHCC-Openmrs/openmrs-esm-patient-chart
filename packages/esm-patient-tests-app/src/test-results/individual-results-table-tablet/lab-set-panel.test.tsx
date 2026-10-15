@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { isDesktop, useLayoutType } from '@openmrs/esm-framework';
 import { mockBasePanel } from '__mocks__';
+import { type GroupedObservation } from '../../types';
 import LabSetPanel from './lab-set-panel.component';
 
 const mockUseLayoutType = vi.mocked(useLayoutType);
@@ -63,6 +64,38 @@ describe('LabSetPanel', () => {
 
     expect(screen.getByRole('row', { name: /hemoglobin.*8 g\/dL/i })).toBeInTheDocument();
     expect(screen.getByRole('row', { name: /hematocrit.*50 %/i })).toBeInTheDocument();
+  });
+
+  it('renders a merged range test as one row with the lower bound reference range and the worst flag', () => {
+    const rangeEntry = {
+      obsDatetime: '2024-01-01T10:00:00.000Z',
+      key: 'Tests Orderability-Range Test',
+      datatype: 'Numeric',
+      display: 'Range Test',
+      conceptUuid: '4881482b-0cc7-4201-8ce9-39f00e1fd5a4',
+      units: 'mg/dL',
+      flatName: 'Tests Orderability-Range Test',
+      hasData: true,
+      range: '90 – 110 mg/dL',
+      lowNormal: 90,
+      hiNormal: 110,
+      isRangeResult: true,
+      value: '100 – 120',
+      interpretation: 'HIGH',
+    };
+    const rangePanel = {
+      key: 'Range Test',
+      date: '2024-01-01',
+      flatName: 'Tests Orderability-Range Test',
+      entries: [rangeEntry],
+    } as unknown as GroupedObservation;
+
+    render(<LabSetPanel activePanel={null} panel={rangePanel} setActivePanel={mockSetActivePanel} />);
+
+    const rangeRow = screen.getByRole('row', { name: /range test.*100 – 120 mg\/dL.*90 – 110 mg\/dL/i });
+    expect(rangeRow).toHaveClass('high');
+    // header row + the single range test row
+    expect(screen.getAllByRole('row')).toHaveLength(2);
   });
 
   it('adjusts the table size based on the layout', () => {

@@ -30,7 +30,7 @@
 .yarn/install-state.gz
 
 # Test artefacts
-**/test-results
+/test-results
 **/playwright-report
 **/playwright/.cache
 e2e/storageState.json
