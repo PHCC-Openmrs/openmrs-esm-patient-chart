@@ -15,12 +15,13 @@ import {
   Workspace2,
   type Workspace2DefinitionProps,
 } from '@openmrs/esm-framework';
-import { useOrderBasket, type Order, type OrderBasketItem } from '@openmrs/esm-patient-common-lib';
+import { isRangeResult, useOrderBasket, type Order, type OrderBasketItem } from '@openmrs/esm-patient-common-lib';
 import { type ConfigObject } from '../config-schema';
 import { type Observation, type ObservationValue } from '../types/encounter';
 import {
   createCompositeObservationPayload,
   createObservationSaveTasks,
+  expandRangeResultValues,
   isCoded,
   isNumeric,
   isPanel,
@@ -52,14 +53,17 @@ const ExportedLabResultsForm: React.FC<Workspace2DefinitionProps<LabResultsFormP
   closeWorkspace,
 }) => {
   const { t } = useTranslation();
-  const { enableAddTestsDuringResultEntry } = useConfig<ConfigObject>();
+  const { enableAddTestsDuringResultEntry, rangeResultConcepts } = useConfig<ConfigObject>();
   const abortController = useAbortController();
   const isTablet = useLayoutType() === 'tablet';
   const isEditMode = order.fulfillerStatus === 'COMPLETED';
   const [orderConceptUuids, setOrderConceptUuids] = useState([order.concept.uuid]);
   const { isLoading: isLoadingResultConcepts, concepts: conceptArray } = useOrderConceptsByUuids(orderConceptUuids);
   const [showEmptyFormErrorNotification, setShowEmptyFormErrorNotification] = useState(false);
-  const compositeSchema = useMemo(() => createLabResultsFormCompositeSchema(conceptArray), [conceptArray]);
+  const compositeSchema = useMemo(
+    () => createLabResultsFormCompositeSchema(conceptArray, rangeResultConcepts),
+    [conceptArray, rangeResultConcepts],
+  );
   const { mutate } = useSWRConfig();
   const { orders, clearOrders } = useOrderBasket(patient);
   const [isSavingOrders, setIsSavingOrders] = useState(false);
@@ -148,6 +152,15 @@ const ExportedLabResultsForm: React.FC<Workspace2DefinitionProps<LabResultsFormP
       if (!obs) {
         return;
       }
+      if (isRangeResult(concept, rangeResultConcepts)) {
+        const [lower, upper] = concept.setMembers.map(
+          (member) => obs.groupMembers?.find((groupMember) => groupMember.concept?.uuid === member.uuid)?.value,
+        );
+        if (lower !== undefined && lower !== null && upper !== undefined && upper !== null) {
+          setValue(concept.uuid, `${lower}-${upper}`);
+        }
+        return;
+      }
       if (isPanel(concept)) {
         concept.setMembers.forEach((member) =>
           prefill(
@@ -177,7 +190,7 @@ const ExportedLabResultsForm: React.FC<Workspace2DefinitionProps<LabResultsFormP
         completeLabResults.find((r) => r.concept.uuid === concept.uuid),
       ),
     );
-  }, [conceptArray, completeLabResults, isEditMode, setValue]);
+  }, [conceptArray, completeLabResults, isEditMode, rangeResultConcepts, setValue]);
 
   if (isLoadingResultConcepts) {
     return (
@@ -196,7 +209,9 @@ const ExportedLabResultsForm: React.FC<Workspace2DefinitionProps<LabResultsFormP
     );
   }
 
-  const saveLabResults = async (formValues: Record<string, unknown>) => {
+  const saveLabResults = async (enteredValues: Record<string, unknown>) => {
+    // Range tests are entered as one value but saved as their lower and upper member values
+    const formValues = expandRangeResultValues(conceptArray, enteredValues, rangeResultConcepts);
     const isEmptyForm = Object.values(formValues).every(
       (value) => value === '' || value === null || value === undefined,
     );

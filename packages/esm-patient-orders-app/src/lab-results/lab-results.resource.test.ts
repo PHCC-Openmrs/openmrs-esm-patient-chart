@@ -5,6 +5,7 @@ import { type Observation } from '../types/encounter';
 import {
   createCompositeObservationPayload,
   createObservationSaveTasks,
+  expandRangeResultValues,
   flattenPanelResults,
   type LabOrderConcept,
 } from './lab-results.resource';
@@ -178,5 +179,63 @@ describe('flattenPanelResults', () => {
       ['chemical', true, undefined],
       ['protein', false, undefined],
     ]);
+  });
+});
+
+describe('range results', () => {
+  const lower = leaf('lower');
+  const upper = leaf('upper');
+  const rangeTest = panel('range-test', [lower, upper]);
+  const chemistry = panel('chemistry', [protein, rangeTest]);
+  const rangeResultConcepts = ['range-test'];
+
+  it('splits a range value into its lower and upper member values', () => {
+    expect(expandRangeResultValues([rangeTest], { 'range-test': '100-120' }, rangeResultConcepts)).toEqual({
+      lower: 100,
+      upper: 120,
+    });
+  });
+
+  it('splits a range inside a panel and saves a single value as equal bounds', () => {
+    const values = expandRangeResultValues([chemistry], { protein: 1, 'range-test': '4.5' }, rangeResultConcepts);
+    expect(values).toEqual({ protein: 1, lower: 4.5, upper: 4.5 });
+
+    const [root] = createCompositeObservationPayload([chemistry], order, values, 'FINAL').obs as any;
+    expect(root.groupMembers[1].groupMembers.map((m) => [m.concept.uuid, m.value])).toEqual([
+      ['lower', 4.5],
+      ['upper', 4.5],
+    ]);
+  });
+
+  it('leaves values alone when the concept is not configured as a range', () => {
+    expect(expandRangeResultValues([rangeTest], { lower: 1, upper: 2 }, [])).toEqual({ lower: 1, upper: 2 });
+  });
+
+  it('drops an empty range value', () => {
+    expect(expandRangeResultValues([rangeTest], { 'range-test': '' }, rangeResultConcepts)).toEqual({});
+  });
+
+  it('shows a range test as one row carrying both member observations', () => {
+    const rangeObs = obs('obs-range', 'range-test', {
+      groupMembers: [obs('obs-lower', 'lower'), obs('obs-upper', 'upper')],
+    });
+
+    const [row] = flattenPanelResults(rangeTest, rangeObs, rangeResultConcepts);
+    expect(row).toMatchObject({ concept: rangeTest, isHeading: false });
+    expect([row.range.lower.obs.uuid, row.range.upper.obs.uuid]).toEqual(['obs-lower', 'obs-upper']);
+
+    const rows = flattenPanelResults(
+      chemistry,
+      obs('obs-chemistry', 'chemistry', { groupMembers: [rangeObs] }),
+      rangeResultConcepts,
+    );
+    expect(rows.map((r) => [r.concept.uuid, Boolean(r.range)])).toEqual([
+      ['protein', false],
+      ['range-test', true],
+    ]);
+  });
+
+  it('keeps one row per member when the concept is not configured as a range', () => {
+    expect(flattenPanelResults(rangeTest, undefined).map((r) => r.concept.uuid)).toEqual(['lower', 'upper']);
   });
 });

@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
 import useSWR from 'swr';
-import { type FetchResponse, openmrsFetch, showSnackbar, restBaseUrl } from '@openmrs/esm-framework';
+import { type FetchResponse, openmrsFetch, showSnackbar, restBaseUrl, useConfig } from '@openmrs/esm-framework';
+import { type ConfigObject } from '../../config-schema';
 import { assessValue } from '../loadPatientTestData/helpers';
 import { type TreeNode } from '../filter/filter-types';
+import { mergeRangeNodes } from '../range-result-helpers';
 import { selectReferenceRange, type ReferenceRanges } from '../grouped-timeline/reference-range-helpers';
 
 export function computeTrendlineData(treeNode: TreeNode): Array<TreeNode> {
@@ -79,8 +81,11 @@ export function useObstreeData(
 ): {
   isLoading: boolean;
   trendlineData: TreeNode;
+  /** For a range test, its Lower and Upper bound nodes, plotted as two lines. */
+  rangeBounds?: [TreeNode, TreeNode];
   isValidating: boolean;
 } {
+  const rangeResultConcepts = useConfig<ConfigObject>()?.rangeResultConcepts;
   const { data, error, isLoading, isValidating } = useSWR<FetchResponse<TreeNode>, Error>(
     `${restBaseUrl}/obstree?patient=${patientUuid}&concept=${conceptUuid}`,
     openmrsFetch,
@@ -94,22 +99,28 @@ export function useObstreeData(
     });
   }
 
-  const returnValue = useMemo(
-    () => ({
+  const returnValue = useMemo(() => {
+    const tests = computeTrendlineData(data?.data);
+    // obstree lists a set's members in concept set order, so a range test's tests are its Lower and Upper bounds
+    const rangeBounds: [TreeNode, TreeNode] | undefined =
+      rangeResultConcepts?.includes(conceptUuid) && tests.length === 2 ? [tests[0], tests[1]] : undefined;
+
+    return {
       isLoading,
-      trendlineData:
-        computeTrendlineData(data?.data)?.[0] ??
-        ({
-          obs: [],
-          display: '',
-          hiNormal: 0,
-          lowNormal: 0,
-          units: '',
-        } as TreeNode),
+      trendlineData: rangeBounds
+        ? mergeRangeNodes({ display: data.data.display, flatName: data.data.display }, conceptUuid, ...rangeBounds)
+        : tests[0] ??
+          ({
+            obs: [],
+            display: '',
+            hiNormal: 0,
+            lowNormal: 0,
+            units: '',
+          } as TreeNode),
+      rangeBounds,
       isValidating,
-    }),
-    [data?.data, isLoading, isValidating],
-  );
+    };
+  }, [conceptUuid, data?.data, isLoading, isValidating, rangeResultConcepts]);
 
   return returnValue;
 }

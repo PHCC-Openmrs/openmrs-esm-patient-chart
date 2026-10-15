@@ -97,6 +97,15 @@ export const configSchema = {
     _description:
       'Whether signing an order basket containing drug orders (lab orders are exempt) requires the patient to have at least one Active entry on their Diagnoses page. When none exists, the orders are not submitted and the user is asked to add a diagnosis first.',
   },
+  rangeResultConcepts: {
+    _type: Type.Array,
+    _elements: {
+      _type: Type.UUID,
+    },
+    _description:
+      'UUIDs of lab test concepts whose result is entered as a range such as 100-120. Each must be a set with exactly two Numeric members: the first stores the lower value and the second the upper value. The result is entered in one text box and shown as one value.',
+    _default: [],
+  },
 };
 
 export interface OrderTypeDefinition {
@@ -119,4 +128,5 @@ export interface ConfigObject {
   enableDrugOrderFavorites: boolean;
   maxPinnedDrugOrders: number;
   requireDiagnosisBeforeOrdering: boolean;
+  rangeResultConcepts: Array<string>;
 }

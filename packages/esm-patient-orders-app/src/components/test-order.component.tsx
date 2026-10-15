@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@carbon/react';
-import { useLayoutType } from '@openmrs/esm-framework';
+import { useConfig, useLayoutType } from '@openmrs/esm-framework';
 import {
   type Order,
   type OBSERVATION_INTERPRETATION,
@@ -26,7 +26,14 @@ import {
   useOrderConceptByUuid,
   useOrderConceptsByUuids,
 } from '../lab-results/lab-results.resource';
-import { getConceptUuids, getEffectiveRanges, getInterpretationClass, interpretObservation } from '../utils';
+import { type ConfigObject } from '../config-schema';
+import {
+  getConceptUuids,
+  getEffectiveRanges,
+  getInterpretationClass,
+  interpretObservation,
+  interpretRangeResult,
+} from '../utils';
 import styles from './test-order.scss';
 
 interface TestOrderProps {
@@ -38,6 +45,7 @@ interface TestOrderProps {
 const TestOrder: React.FC<TestOrderProps> = ({ testOrder, patientUuid: patientUuidProp }) => {
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
+  const { rangeResultConcepts } = useConfig<ConfigObject>();
   const { concept, isLoading: isLoadingTestConcepts } = useOrderConceptByUuid(testOrder?.concept?.uuid);
   const { encounter, isLoading: isLoadingResult } = useLabEncounter(testOrder?.encounter?.uuid);
 
@@ -84,35 +92,47 @@ const TestOrder: React.FC<TestOrderProps> = ({ testOrder, patientUuid: patientUu
 
       // Handle panel tests (with set members / groupMembers)
       if (concept.setMembers && concept.setMembers.length > 0) {
-        return flattenPanelResults(concept, obs).map(({ concept: memberConcept, obs: memberObs, isHeading }) => {
-          if (isHeading) {
+        return flattenPanelResults(concept, obs, rangeResultConcepts).map(
+          ({ concept: memberConcept, obs: memberObs, isHeading, range }) => {
+            if (range) {
+              const { displayValue, interpretation, ranges } = interpretRangeResult(range, referenceRanges);
+              return {
+                id: `${obs.uuid}:${memberConcept.uuid}`,
+                testType: memberConcept.display || '--',
+                result: isLoadingResult ? <SkeletonText /> : { value: displayValue, interpretation },
+                normalRange: <ReferenceRangeDisplay ranges={ranges} />,
+              };
+            }
+
+            if (isHeading) {
+              return {
+                id: `${obs.uuid}:${memberConcept.uuid}:heading`,
+                testType: <strong>{memberConcept.display || '--'}</strong>,
+                result: '',
+                normalRange: '',
+              };
+            }
+
+            const ranges = getEffectiveRanges(memberConcept, referenceRanges);
+
+            let result: { value: string; interpretation: OBSERVATION_INTERPRETATION } | React.ReactNode;
+            if (isLoadingResult) {
+              result = <SkeletonText />;
+            } else if (memberObs) {
+              const { displayValue, interpretation } = interpretObservation(memberObs, ranges);
+              result = { value: displayValue, interpretation };
+            } else {
+              result = '--';
+            }
+
             return {
-              id: `${obs.uuid}:${memberConcept.uuid}:heading`,
-              testType: <strong>{memberConcept.display || '--'}</strong>,
-              result: '',
-              normalRange: '',
+              id: memberObs?.uuid ?? `${obs.uuid}:${memberConcept.uuid}`,
+              testType: memberConcept.display || '--',
+              result,
+              normalRange: <ReferenceRangeDisplay ranges={ranges} />,
             };
-          }
-
-          const ranges = getEffectiveRanges(memberConcept, referenceRanges);
-
-          let result: { value: string; interpretation: OBSERVATION_INTERPRETATION } | React.ReactNode;
-          if (isLoadingResult) {
-            result = <SkeletonText />;
-          } else if (memberObs) {
-            const { displayValue, interpretation } = interpretObservation(memberObs, ranges);
-            result = { value: displayValue, interpretation };
-          } else {
-            result = '--';
-          }
-
-          return {
-            id: memberObs?.uuid ?? `${obs.uuid}:${memberConcept.uuid}`,
-            testType: memberConcept.display || '--',
-            result,
-            normalRange: <ReferenceRangeDisplay ranges={ranges} />,
-          };
-        });
+          },
+        );
       }
 
       // Handle single test (no set members)
@@ -133,7 +153,7 @@ const TestOrder: React.FC<TestOrderProps> = ({ testOrder, patientUuid: patientUu
         normalRange: <ReferenceRangeDisplay ranges={ranges} />,
       };
     });
-  }, [isLoadingResult, testResultObs, conceptList, referenceRanges]);
+  }, [isLoadingResult, testResultObs, conceptList, rangeResultConcepts, referenceRanges]);
 
   if (isLoadingTestConcepts || isLoadingResultsConcepts || isLoadingResult || isLoadingRanges) {
     return <DataTableSkeleton role="progressbar" compact={!isTablet} zebra />;

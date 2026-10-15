@@ -190,6 +190,8 @@ export type MappedObservation = {
   flatName: string;
   /** All flatNames that collapsed into this entry's normalized branch. */
   flatNames?: Array<string>;
+  /** Set on a range test whose Lower and Upper bounds were merged into one "100 – 120" row. */
+  isRangeResult?: boolean;
   hasData: boolean;
   range: string;
   obsDatetime: string;

@@ -1041,3 +1041,169 @@ describe('LabResultsForm', () => {
     expect(saveButton).toBeDisabled();
   });
 });
+
+describe('LabResultsForm with a range test', () => {
+  const rangeBound = (uuid: string, display: string) => ({
+    uuid,
+    display,
+    setMembers: [],
+    datatype: { display: 'Numeric', hl7Abbreviation: 'NM' } as Datatype,
+    lowAbsolute: 80,
+    hiAbsolute: 200,
+    units: 'mg/dL',
+    allowDecimal: false,
+  });
+  const rangeConcept = {
+    uuid: 'concept-uuid',
+    display: 'Range Test',
+    set: true,
+    datatype: { display: 'N/A', hl7Abbreviation: 'ZZ' } as Datatype,
+    setMembers: [rangeBound('lower-uuid', 'Range Test Lower'), rangeBound('upper-uuid', 'Range Test Upper')],
+  } as LabOrderConcept;
+
+  const mockConcepts = (concepts: Array<LabOrderConcept>) =>
+    mockUseOrderConceptByUuids.mockReturnValue({
+      concepts,
+      isLoading: false,
+      error: null,
+      isValidating: false,
+      mutate: vi.fn(),
+    });
+
+  const rangeInput = () => screen.findByRole('textbox', { name: 'Range Test (80 - 200 mg/dL)' });
+
+  const expectSavedRange = (lower: number, upper: number) =>
+    expect(updateOrderResult).toHaveBeenCalledWith(
+      'order-uuid',
+      'encounter-uuid',
+      {
+        obs: [
+          {
+            concept: { uuid: 'concept-uuid' },
+            order: { uuid: 'order-uuid' },
+            status: 'FINAL',
+            groupMembers: [
+              { concept: { uuid: 'lower-uuid' }, order: { uuid: 'order-uuid' }, status: 'FINAL', value: lower },
+              { concept: { uuid: 'upper-uuid' }, order: { uuid: 'order-uuid' }, status: 'FINAL', value: upper },
+            ],
+          },
+        ],
+      },
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+    );
+
+  beforeEach(() => {
+    vi.mocked(updateOrderResult).mockClear();
+    mockUseConfig.mockReturnValue({
+      ...getDefaultsFromConfigSchema(configSchema),
+      rangeResultConcepts: ['concept-uuid'],
+    });
+    mockUseOrderBasket.mockReturnValue({ orders: [], setOrders: vi.fn(), clearOrders: vi.fn() });
+    mockConcepts([rangeConcept]);
+    mockUseCompletedLabResultsArray.mockReturnValue({
+      completeLabResults: [],
+      isLoading: false,
+      error: null,
+      mutate: vi.fn(),
+    });
+  });
+
+  test('shows one text box for the range instead of a box per member', async () => {
+    render(<LabResultsForm {...testProps} />);
+
+    expect(await rangeInput()).toHaveAttribute('placeholder', 'e.g. 100-120');
+    expect(screen.queryByText('Range Test Lower', { exact: false })).not.toBeInTheDocument();
+    expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+  });
+
+  test('shows the members as separate boxes when the concept is not configured as a range', async () => {
+    mockUseConfig.mockReturnValue(getDefaultsFromConfigSchema(configSchema));
+    render(<LabResultsForm {...testProps} />);
+
+    expect(await screen.findAllByRole('spinbutton')).toHaveLength(2);
+  });
+
+  test('saves a range as its lower and upper member values', async () => {
+    const user = userEvent.setup();
+    render(<LabResultsForm {...testProps} />);
+
+    await user.type(await rangeInput(), '100 - 120');
+    await user.click(screen.getByRole('button', { name: 'Save and close' }));
+
+    expectSavedRange(100, 120);
+  });
+
+  test('saves a single value as a range with equal bounds', async () => {
+    const user = userEvent.setup();
+    render(<LabResultsForm {...testProps} />);
+
+    await user.type(await rangeInput(), '100');
+    await user.click(screen.getByRole('button', { name: 'Save and close' }));
+
+    expectSavedRange(100, 100);
+  });
+
+  test('saves decimal values when the members allow decimals', async () => {
+    const user = userEvent.setup();
+    mockConcepts([
+      {
+        ...rangeConcept,
+        setMembers: rangeConcept.setMembers.map((member) => ({ ...member, allowDecimal: true })),
+      },
+    ]);
+    render(<LabResultsForm {...testProps} />);
+
+    await user.type(await rangeInput(), '100.5-120.25');
+    await user.click(screen.getByRole('button', { name: 'Save and close' }));
+
+    expectSavedRange(100.5, 120.25);
+  });
+
+  test.each([
+    ['abc', 'Range Test must be a range such as 100-120'],
+    ['70-120', 'Range Test lower value must be greater than or equal to 80'],
+    ['100-250', 'Range Test upper value must be less than or equal to 200'],
+    ['120-100', 'Range Test lower value must not be greater than the upper value'],
+    ['100.5-120', 'Range Test lower value must be a whole number'],
+  ])('rejects %s', async (value, message) => {
+    const user = userEvent.setup();
+    render(<LabResultsForm {...testProps} />);
+
+    await user.type(await rangeInput(), value);
+
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save and close' })).toBeDisabled();
+  });
+
+  test('prefills the saved range when editing results', async () => {
+    mockUseCompletedLabResultsArray.mockReturnValue({
+      completeLabResults: [
+        {
+          uuid: 'range-obs',
+          concept: { uuid: 'concept-uuid' },
+          groupMembers: [
+            { uuid: 'lower-obs', concept: { uuid: 'lower-uuid' }, value: 100 },
+            { uuid: 'upper-obs', concept: { uuid: 'upper-uuid' }, value: 120 },
+          ],
+        },
+      ] as any,
+      isLoading: false,
+      error: null,
+      mutate: vi.fn(),
+    });
+
+    render(
+      <LabResultsForm
+        {...testProps}
+        workspaceProps={{
+          ...testProps.workspaceProps,
+          order: { ...mockOrder, fulfillerStatus: 'COMPLETED' } as Order,
+        }}
+      />,
+    );
+
+    await waitFor(async () => expect(await rangeInput()).toHaveValue('100-120'));
+  });
+});

@@ -1,7 +1,15 @@
+import React from 'react';
+import { SWRConfig } from 'swr';
+import { renderHook, waitFor } from '@testing-library/react';
+import { openmrsFetch, useConfig } from '@openmrs/esm-framework';
 import { type OBSERVATION_INTERPRETATION } from '@openmrs/esm-patient-common-lib';
-import { vi, describe, it, expect } from 'vitest';
+import { vi, describe, it, expect, afterEach } from 'vitest';
+import { type ConfigObject } from '../../config-schema';
 import { type TreeNode } from '../filter/filter-types';
-import { computeTrendlineData } from './trendline-resource';
+import { computeTrendlineData, useObstreeData } from './trendline-resource';
+
+const mockUseConfig = vi.mocked(useConfig<ConfigObject>);
+const mockOpenmrsFetch = vi.mocked(openmrsFetch);
 
 describe('computeTrendlineData', () => {
   it('resolves observation-level reference ranges for each observation', () => {
@@ -102,5 +110,63 @@ describe('computeTrendlineData', () => {
 
     expect(node.obs[0].lowCritical).toBe(2);
     expect(node.obs[0].hiCritical).toBe(200);
+  });
+});
+
+describe('useObstreeData for a range test', () => {
+  const rangeTestUuid = '4881482b-0cc7-4201-8ce9-39f00e1fd5a4';
+  // /obstree for a range test: the range test with its Lower and Upper bounds, in concept set order
+  const rangeTree = {
+    display: 'Range Test',
+    subSets: [
+      {
+        display: 'Range Test Lower',
+        conceptUuid: 'lower-uuid',
+        units: 'mg/dL',
+        lowNormal: 90,
+        hiNormal: 110,
+        obs: [{ obsDatetime: '2024-02-01T10:00:00.000Z', value: '100' }],
+      },
+      {
+        display: 'Range Test Upper',
+        conceptUuid: 'upper-uuid',
+        units: 'mg/dL',
+        lowNormal: 100,
+        hiNormal: 115,
+        obs: [{ obsDatetime: '2024-02-01T10:00:00.000Z', value: '120' }],
+      },
+    ],
+  };
+  const wrapper = ({ children }) => <SWRConfig value={{ provider: () => new Map() }}>{children}</SWRConfig>;
+
+  afterEach(() => {
+    mockUseConfig.mockReturnValue({} as ConfigObject);
+  });
+
+  it('returns the merged range and both bounds so they can be plotted as two lines', async () => {
+    mockUseConfig.mockReturnValue({ rangeResultConcepts: [rangeTestUuid] } as ConfigObject);
+    mockOpenmrsFetch.mockResolvedValue({ data: rangeTree } as any);
+
+    const { result } = renderHook(() => useObstreeData('patient-uuid', rangeTestUuid), { wrapper });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.rangeBounds.map((bound) => bound.display)).toEqual(['Range Test Lower', 'Range Test Upper']);
+    expect(result.current.trendlineData).toEqual(
+      expect.objectContaining({ display: 'Range Test', units: 'mg/dL', lowNormal: 90, hiNormal: 110 }),
+    );
+    expect(result.current.trendlineData.obs).toEqual([
+      expect.objectContaining({ obsDatetime: '2024-02-01T10:00:00.000Z', value: '100 – 120', interpretation: 'HIGH' }),
+    ]);
+  });
+
+  it('keeps the first test only when the concept is not a configured range test', async () => {
+    mockUseConfig.mockReturnValue({ rangeResultConcepts: [] } as ConfigObject);
+    mockOpenmrsFetch.mockResolvedValue({ data: rangeTree } as any);
+
+    const { result } = renderHook(() => useObstreeData('patient-uuid', rangeTestUuid), { wrapper });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.rangeBounds).toBeUndefined();
+    expect(result.current.trendlineData.display).toBe('Range Test Lower');
   });
 });

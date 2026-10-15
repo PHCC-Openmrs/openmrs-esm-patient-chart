@@ -117,6 +117,8 @@
   "quantity": "Quantity",
   "quantityDispensedOfTotal": "{{dispensed}} of {{total}} {{unit}}",
   "quantityUnit": "Quantity unit",
+  "rangeResultHelperText": "Enter the lower and upper value separated by a dash, or one value",
+  "rangeResultPlaceholder": "e.g. 100-120",
   "reasonForCancelling": "Reason for Cancelling",
   "reasonForCancellingPrompt": "Reason for cancelling this order:",
   "referenceNumber": "Reference number",

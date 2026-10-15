@@ -20,7 +20,15 @@ import {
   useReferenceRanges,
 } from '@openmrs/esm-patient-common-lib';
 import { flattenPanelResults, useLabEncounter, useOrderConceptByUuid } from '../../lab-results.resource';
-import { getConceptUuids, getEffectiveRanges, getInterpretationClass, interpretObservation } from '../../../utils';
+import { useConfig } from '@openmrs/esm-framework';
+import { type ConfigObject } from '../../../config-schema';
+import {
+  getConceptUuids,
+  getEffectiveRanges,
+  getInterpretationClass,
+  interpretObservation,
+  interpretRangeResult,
+} from '../../../utils';
 import styles from './print-preview.scss';
 
 interface PrintableReportProps {
@@ -30,6 +38,7 @@ interface PrintableReportProps {
 
 const PrintableReport: React.FC<PrintableReportProps> = ({ order, index }) => {
   const { t } = useTranslation();
+  const { rangeResultConcepts } = useConfig<ConfigObject>();
   const { concept, isLoading: isLoadingTestConcepts } = useOrderConceptByUuid(order?.concept?.uuid);
   const { encounter, isLoading: isLoadingResult } = useLabEncounter(order?.encounter?.uuid);
   const patientUuid = encounter?.patient?.uuid;
@@ -65,8 +74,18 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ order, index }) => {
     }
 
     if (concept.setMembers?.length > 0) {
-      return flattenPanelResults(concept, testResultObs).map(
-        ({ concept: memberConcept, obs: memberObs, isHeading }) => {
+      return flattenPanelResults(concept, testResultObs, rangeResultConcepts).map(
+        ({ concept: memberConcept, obs: memberObs, isHeading, range }) => {
+          if (range) {
+            const { displayValue, interpretation, ranges } = interpretRangeResult(range, referenceRanges);
+            return {
+              id: `${testResultObs?.uuid}:${memberConcept.uuid}`,
+              testType: <div className={styles.testType}>{memberConcept.display || '--'}</div>,
+              result: isLoadingResult ? <SkeletonText /> : { value: displayValue, interpretation },
+              normalRange: <ReferenceRangeDisplay ranges={ranges} />,
+            };
+          }
+
           if (isHeading) {
             return {
               id: `${testResultObs?.uuid}:${memberConcept.uuid}:heading`,
@@ -118,7 +137,7 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ order, index }) => {
         normalRange: <ReferenceRangeDisplay ranges={ranges} />,
       },
     ];
-  }, [concept, encounter, isLoadingResult, testResultObs, referenceRanges]);
+  }, [concept, encounter, isLoadingResult, testResultObs, rangeResultConcepts, referenceRanges]);
 
   if (isLoadingTestConcepts || isLoadingResult || isLoadingRanges) {
     return <DataTableSkeleton role="progressbar" zebra />;

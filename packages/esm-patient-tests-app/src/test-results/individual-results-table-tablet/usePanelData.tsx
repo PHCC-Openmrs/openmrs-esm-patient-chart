@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import useSWRInfinite from 'swr/infinite';
-import { type FetchResponse, openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
+import { type FetchResponse, openmrsFetch, restBaseUrl, useConfig } from '@openmrs/esm-framework';
+import { formatRangeResult, isRangeResult, worstInterpretation } from '@openmrs/esm-patient-common-lib';
+import { type ConfigObject } from '../../config-schema';
 import { extractMetaInformation, getConceptUuid } from './helper';
 import {
   type Concept,
@@ -99,6 +101,7 @@ export default function usePanelData(patientUuid: string) {
     isLoading: isLoadingObservations,
   } = useObservations(patientUuid);
   const { concepts } = useConcepts(conceptUuids);
+  const { rangeResultConcepts } = useConfig<ConfigObject>();
 
   const conceptData: Record<string, ConceptMeta> = useMemo(
     () =>
@@ -180,12 +183,29 @@ export default function usePanelData(patientUuid: string) {
             usedIndividualObsIds.add(membUuid);
           }
         });
+
+        const concept = concepts?.find(({ uuid }) => uuid === obs.conceptUuid);
+        if (isRangeResult(concept, rangeResultConcepts)) {
+          // A range test is printed as one "100 – 120" result: its first set member is the Lower bound, the second
+          // the Upper bound, and the Lower bound's normal range is the reference range
+          const [lower, upper] = concept.setMembers.map(({ uuid }) =>
+            relatedObs.find((related) => related.conceptUuid === uuid),
+          );
+          return {
+            ...obs,
+            relatedObs,
+            value: formatRangeResult(lower?.value, upper?.value, lower?.meta?.units ?? upper?.meta?.units),
+            meta: lower?.meta,
+            interpretation: worstInterpretation(lower?.interpretation, upper?.interpretation),
+          };
+        }
+
         return {
           ...obs,
           relatedObs,
         };
       });
-  }, [individualObservations, observations]);
+  }, [concepts, individualObservations, observations, rangeResultConcepts]);
 
   const remainingIndividualObservations = useMemo(() => {
     const usedIds = new Set<string>();

@@ -13,8 +13,9 @@ import {
 } from '@carbon/react';
 import { useTranslation } from 'react-i18next';
 import { type Order } from '@openmrs/esm-patient-common-lib';
-import { useLayoutType } from '@openmrs/esm-framework';
-import { getObservationDisplayValue } from '../utils';
+import { useConfig, useLayoutType } from '@openmrs/esm-framework';
+import { type ConfigObject } from '../config-schema';
+import { getObservationDisplayValue, interpretRangeResult } from '../utils';
 import { flattenPanelResults, useLabEncounter, useOrderConceptByUuid } from '../lab-results/lab-results.resource';
 import styles from './general-order-table.scss';
 
@@ -25,6 +26,7 @@ interface GeneralOrderProps {
 const GeneralOrderTable: React.FC<GeneralOrderProps> = ({ order }) => {
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
+  const { rangeResultConcepts } = useConfig<ConfigObject>();
   const { concept, isLoading: isLoadingConcept } = useOrderConceptByUuid(order.concept.uuid);
   const { encounter, isLoading: isLoadingResult } = useLabEncounter(order.encounter?.uuid);
 
@@ -53,31 +55,47 @@ const GeneralOrderTable: React.FC<GeneralOrderProps> = ({ order }) => {
 
   const rows = useMemo(() => {
     if (concept && concept.setMembers.length > 0) {
-      return flattenPanelResults(concept, obs).map(({ concept: memberConcept, obs: memberObs, isHeading }) =>
-        isHeading
-          ? {
-              id: memberConcept.uuid,
-              orderName: (
-                <div className={styles.type}>
-                  <strong>{memberConcept.display}</strong>
-                </div>
-              ),
-              instructions: '',
-              result: '',
-              normalRange: '',
-              referenceNumber: '',
-            }
-          : {
+      return flattenPanelResults(concept, obs, rangeResultConcepts).map(
+        ({ concept: memberConcept, obs: memberObs, isHeading, range }) => {
+          if (range) {
+            const { displayValue, ranges } = interpretRangeResult(range);
+            return {
               id: memberConcept.uuid,
               orderName: <div className={styles.type}>{memberConcept.display}</div>,
               instructions: '--',
-              result: isLoadingResult ? <SkeletonText /> : getObservationDisplayValue(memberObs?.value) ?? '--',
+              result: isLoadingResult ? <SkeletonText /> : displayValue,
               normalRange:
-                memberConcept.hiNormal && memberConcept.lowNormal
-                  ? `${memberConcept.lowNormal} - ${memberConcept.hiNormal}`
+                ranges.hiNormal && ranges.lowNormal
+                  ? `${ranges.lowNormal} - ${ranges.hiNormal}`
                   : t('notApplicable', 'Not applicable'),
               referenceNumber: order?.accessionNumber,
-            },
+            };
+          }
+          return isHeading
+            ? {
+                id: memberConcept.uuid,
+                orderName: (
+                  <div className={styles.type}>
+                    <strong>{memberConcept.display}</strong>
+                  </div>
+                ),
+                instructions: '',
+                result: '',
+                normalRange: '',
+                referenceNumber: '',
+              }
+            : {
+                id: memberConcept.uuid,
+                orderName: <div className={styles.type}>{memberConcept.display}</div>,
+                instructions: '--',
+                result: isLoadingResult ? <SkeletonText /> : getObservationDisplayValue(memberObs?.value) ?? '--',
+                normalRange:
+                  memberConcept.hiNormal && memberConcept.lowNormal
+                    ? `${memberConcept.lowNormal} - ${memberConcept.hiNormal}`
+                    : t('notApplicable', 'Not applicable'),
+                referenceNumber: order?.accessionNumber,
+              };
+        },
       );
     } else if (concept && concept.setMembers.length === 0) {
       return [
@@ -96,7 +114,7 @@ const GeneralOrderTable: React.FC<GeneralOrderProps> = ({ order }) => {
     } else {
       return [];
     }
-  }, [concept, isLoadingResult, obs, order?.accessionNumber, order?.instructions, t]);
+  }, [concept, isLoadingResult, obs, order?.accessionNumber, order?.instructions, rangeResultConcepts, t]);
 
   return (
     <div className={styles.order}>

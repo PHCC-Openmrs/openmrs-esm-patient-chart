@@ -1,6 +1,8 @@
 import type { Order } from '@openmrs/esm-patient-common-lib';
 import { describe, it, expect } from 'vitest';
-import { buildMedicationOrder } from './index';
+import { type LabOrderConcept } from '../lab-results/lab-results.resource';
+import { type Observation } from '../types/encounter';
+import { buildMedicationOrder, interpretRangeResult } from './index';
 
 const medicationOrder = {
   uuid: 'order-uuid',
@@ -148,5 +150,30 @@ describe('buildMedicationOrder', () => {
     const result = buildMedicationOrder(medicationOrder, 'REVISE');
 
     expect(result.previousOrderDateActivated).toBe(medicationOrder.dateActivated);
+  });
+});
+
+describe('interpretRangeResult', () => {
+  const bound = (uuid: string, value?: number) => ({
+    concept: { uuid, units: 'mg/dL', lowNormal: 90, hiNormal: 110, hiCritical: 150 } as unknown as LabOrderConcept,
+    obs: value === undefined ? undefined : ({ uuid: `obs-${uuid}`, value } as Observation),
+  });
+
+  it('formats both bounds with the lower member units and reference range', () => {
+    const result = interpretRangeResult({ lower: bound('lower', 100), upper: bound('upper', 105) });
+    expect(result).toMatchObject({ displayValue: '100 – 105 mg/dL', interpretation: 'NORMAL' });
+    expect(result.ranges).toMatchObject({ lowNormal: 90, hiNormal: 110 });
+  });
+
+  it('flags the range with the worse of its two bounds', () => {
+    expect(interpretRangeResult({ lower: bound('lower', 85), upper: bound('upper', 160) }).interpretation).toBe(
+      'CRITICALLY_HIGH',
+    );
+  });
+
+  it('shows a missing bound as ?', () => {
+    expect(interpretRangeResult({ lower: bound('lower', 100), upper: bound('upper') }).displayValue).toBe(
+      '100 – ? mg/dL',
+    );
   });
 });

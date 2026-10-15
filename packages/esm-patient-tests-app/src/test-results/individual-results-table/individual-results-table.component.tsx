@@ -99,7 +99,8 @@ const IndividualResultsTable: React.FC<IndividualResultsTableProps> = ({
         // MappedObservation has range and units fields, but they may come from node-level
         const displayRange = row.range ?? '';
         const displayUnits = row.units ?? '';
-        const isString = isNaN(parseFloat(row.value));
+        // A range test reads "100 – 120" (or "? – 120"), but its bounds are numeric and can be trended
+        const isString = !row.isRangeResult && isNaN(parseFloat(row.value));
 
         const referenceRangeDisplay = formatRangeWithUnits(displayRange, displayUnits);
 

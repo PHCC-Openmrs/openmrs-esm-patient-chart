@@ -1,9 +1,16 @@
 import React, { useContext } from 'react';
-import { vi, describe, it, expect, test } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { vi, describe, it, expect, test, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { FilterProvider, FilterContext } from './filter-context';
+import { openmrsFetch, useConfig } from '@openmrs/esm-framework';
+import { type RangeResultConcept } from '@openmrs/esm-patient-common-lib';
+import { type ConfigObject } from '../../config-schema';
+import GroupedTimeline from '../grouped-timeline/grouped-timeline.component';
+import { FilterProvider, FilterContext, mergeRangeResults } from './filter-context';
 import { type TreeNode } from './filter-types';
+
+const mockUseConfig = vi.mocked(useConfig<ConfigObject>);
+const mockOpenmrsFetch = vi.mocked(openmrsFetch);
 
 // Test component to access context values
 const TestConsumer = () => {
@@ -943,5 +950,270 @@ describe('FilterContext', () => {
         expect(screen.getByTestId('filtered-count')).toHaveTextContent('3');
       });
     });
+  });
+});
+
+const rangeTestUuid = '4881482b-0cc7-4201-8ce9-39f00e1fd5a4';
+const rangeLowerUuid = 'c0eb98e9-dae8-4b82-8b11-20d87c63eac1';
+const rangeUpperUuid = '6ae28db0-135b-4443-a330-e9b4ea45f6c2';
+
+const rangeTestConcept: RangeResultConcept = {
+  uuid: rangeTestUuid,
+  datatype: { display: 'N/A', hl7Abbreviation: 'ZZ' },
+  setMembers: [
+    { uuid: rangeLowerUuid, datatype: { display: 'Numeric', hl7Abbreviation: 'NM' } },
+    { uuid: rangeUpperUuid, datatype: { display: 'Numeric', hl7Abbreviation: 'NM' } },
+  ],
+};
+
+// Shaped like augmented /obstree data: obstree does not tag nested sets with their conceptUuid
+const buildRangeRoots = (earlierObsDatetime = '2024-01-01T10:00:00.000Z'): Array<TreeNode> => [
+  {
+    display: 'Tests Orderability',
+    flatName: 'Tests Orderability',
+    conceptUuid: '1748a953-d12e-4be1-914c-f6b096c6cdef',
+    hasData: true,
+    subSets: [
+      {
+        display: 'Range Test',
+        flatName: 'Tests Orderability-Range Test',
+        hasData: true,
+        subSets: [
+          {
+            display: 'Range Test Lower',
+            flatName: 'Tests Orderability-Range Test-Range Test Lower',
+            conceptUuid: rangeLowerUuid,
+            datatype: 'Numeric',
+            units: 'mg/dL',
+            lowNormal: 90,
+            hiNormal: 110,
+            range: '90 – 110 mg/dL',
+            hasData: true,
+            obs: [
+              {
+                obsDatetime: '2024-02-01T10:00:00.000Z',
+                value: '100',
+                interpretation: 'NORMAL',
+                range: '90 – 110 mg/dL',
+              },
+              { obsDatetime: earlierObsDatetime, value: '80', interpretation: 'LOW', range: '90 – 110 mg/dL' },
+            ],
+          },
+          {
+            display: 'Range Test Upper',
+            flatName: 'Tests Orderability-Range Test-Range Test Upper',
+            conceptUuid: rangeUpperUuid,
+            datatype: 'Numeric',
+            units: 'mg/dL',
+            lowNormal: 100,
+            hiNormal: 115,
+            range: '100 – 115 mg/dL',
+            hasData: true,
+            obs: [
+              {
+                obsDatetime: '2024-02-01T10:00:00.000Z',
+                value: '120',
+                interpretation: 'CRITICALLY_HIGH',
+                range: '100 – 115 mg/dL',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        display: 'Blood pressure',
+        flatName: 'Tests Orderability-Blood pressure',
+        hasData: true,
+        subSets: [
+          {
+            display: 'Systolic',
+            flatName: 'Tests Orderability-Blood pressure-Systolic',
+            conceptUuid: '5085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+            hasData: true,
+            obs: [{ obsDatetime: '2024-02-01T10:00:00.000Z', value: '120', interpretation: 'NORMAL' }],
+          },
+          {
+            display: 'Diastolic',
+            flatName: 'Tests Orderability-Blood pressure-Diastolic',
+            conceptUuid: '5086AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+            hasData: true,
+            obs: [{ obsDatetime: '2024-02-01T10:00:00.000Z', value: '80', interpretation: 'NORMAL' }],
+          },
+        ],
+      },
+    ],
+  },
+];
+
+describe('mergeRangeResults', () => {
+  it('collapses a nested range test into one leaf, recognised by its members', () => {
+    const [root] = mergeRangeResults(buildRangeRoots(), [rangeTestUuid], [rangeTestConcept]);
+    const [rangeTest, bloodPressure] = root.subSets;
+
+    expect(rangeTest).toEqual(
+      expect.objectContaining({
+        display: 'Range Test',
+        flatName: 'Tests Orderability-Range Test',
+        conceptUuid: rangeTestUuid,
+        units: 'mg/dL',
+        range: '90 – 110 mg/dL',
+        lowNormal: 90,
+        hiNormal: 110,
+        isRangeResult: true,
+      }),
+    );
+    expect(rangeTest.subSets).toBeUndefined();
+    expect(rangeTest.obs).toEqual([
+      expect.objectContaining({
+        obsDatetime: '2024-02-01T10:00:00.000Z',
+        value: '100 – 120',
+        interpretation: 'CRITICALLY_HIGH',
+        range: '90 – 110 mg/dL',
+      }),
+      expect.objectContaining({
+        obsDatetime: '2024-01-01T10:00:00.000Z',
+        value: '80 – ?',
+        interpretation: 'LOW',
+        range: '90 – 110 mg/dL',
+      }),
+    ]);
+    // A two-member panel that is not configured as a range test is left alone
+    expect(bloodPressure).toEqual(buildRangeRoots()[0].subSets[1]);
+  });
+
+  it('takes the Lower and Upper bounds in concept set order rather than the order of the data', () => {
+    const roots = buildRangeRoots();
+    roots[0].subSets[0].subSets.reverse();
+
+    const [root] = mergeRangeResults(roots, [rangeTestUuid], [rangeTestConcept]);
+
+    expect(root.subSets[0].obs[0].value).toBe('100 – 120');
+  });
+
+  it('keeps a range test requested as a root as the heading of its single merged row', () => {
+    const rangeRoot: TreeNode = {
+      ...buildRangeRoots()[0].subSets[0],
+      flatName: 'Range Test',
+      conceptUuid: rangeTestUuid,
+    };
+
+    // Without the concept definitions, the configured root uuid and the obstree member order are used
+    const [root] = mergeRangeResults([rangeRoot], [rangeTestUuid], []);
+
+    expect(root.display).toBe('Range Test');
+    expect(root.subSets).toHaveLength(1);
+    expect(root.subSets[0]).toEqual(
+      expect.objectContaining({ display: 'Range Test', flatName: 'Range Test-Range Test', conceptUuid: rangeTestUuid }),
+    );
+    expect(root.subSets[0].obs.map((ob) => ob.value)).toEqual(['100 – 120', '80 – ?']);
+  });
+
+  it('returns the roots untouched when no range tests are configured', () => {
+    const roots = buildRangeRoots();
+
+    expect(mergeRangeResults(roots, [], [rangeTestConcept])).toBe(roots);
+  });
+});
+
+describe('FilterProvider with range tests', () => {
+  beforeEach(() => {
+    mockUseConfig.mockReturnValue({ rangeResultConcepts: [rangeTestUuid] } as ConfigObject);
+    mockOpenmrsFetch.mockResolvedValue({ data: { results: [rangeTestConcept] } } as any);
+  });
+
+  afterEach(() => {
+    mockUseConfig.mockReturnValue({} as ConfigObject);
+  });
+
+  const RangeConsumer = () => {
+    const { timelineData, tableData, totalResultsCount } = useContext(FilterContext);
+    return (
+      <div>
+        <div data-testid="total-count">{totalResultsCount}</div>
+        <ul data-testid="timeline-rows">
+          {timelineData?.data?.rowData?.map((row) => (
+            <li key={row.flatName}>
+              {row.display}: {row.entries.map((entry) => entry?.value ?? '').join(' | ')}
+            </li>
+          ))}
+        </ul>
+        <ul data-testid="table-entries">
+          {tableData?.flatMap((group) =>
+            group.entries.map((entry) => (
+              <li key={`${group.key}-${entry.obsDatetime}-${entry.display}`}>
+                {group.key}/{entry.display}: {entry.value} {entry.units} [{entry.interpretation}] ({entry.range})
+              </li>
+            )),
+          )}
+        </ul>
+      </div>
+    );
+  };
+
+  it('exposes one row per range test to the timeline and the tables', async () => {
+    render(
+      <FilterProvider roots={buildRangeRoots()} isLoading={false}>
+        <RangeConsumer />
+      </FilterProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('total-count')).toHaveTextContent('4'));
+    expect(mockOpenmrsFetch).toHaveBeenCalledWith(
+      expect.stringContaining(`/concept?references=${rangeTestUuid}&v=custom:`),
+    );
+
+    const timelineRows = within(screen.getByTestId('timeline-rows'))
+      .getAllByRole('listitem')
+      .map((row) => row.textContent);
+    expect(timelineRows).toEqual(['Range Test: 100 – 120 | 80 – ?', 'Systolic: 120 | ', 'Diastolic: 80 | ']);
+
+    const tableEntries = within(screen.getByTestId('table-entries'))
+      .getAllByRole('listitem')
+      .map((entry) => entry.textContent);
+    expect(tableEntries).toEqual([
+      'Range Test/Range Test: 100 – 120 mg/dL [CRITICALLY_HIGH] (90 – 110 mg/dL)',
+      'Blood pressure/Systolic: 120  [NORMAL] ()',
+      'Blood pressure/Diastolic: 80  [NORMAL] ()',
+      'Range Test/Range Test: 80 – ? mg/dL [LOW] (90 – 110 mg/dL)',
+    ]);
+  });
+
+  it('renders a range test as one timeline row with one cell per date', async () => {
+    // Both results on one day, so the timeline renders the Range Test panel once
+    render(
+      <FilterProvider roots={buildRangeRoots('2024-02-01T08:00:00.000Z')} isLoading={false}>
+        <GroupedTimeline patientUuid="patient-uuid" />
+      </FilterProvider>,
+    );
+
+    expect(await screen.findByText('100 – 120')).toBeInTheDocument();
+    expect(screen.getByText('80 – ?')).toBeInTheDocument();
+    expect(screen.getByText('Range Test', { selector: '[class*="trendline-link-view"]' })).toBeInTheDocument();
+    expect(screen.getByText('90 – 110 mg/dL')).toBeInTheDocument();
+    expect(screen.queryByText('Range Test Lower')).not.toBeInTheDocument();
+    expect(screen.queryByText('Range Test Upper')).not.toBeInTheDocument();
+    expect(screen.getByText('Systolic')).toBeInTheDocument();
+    expect(screen.getByText('Diastolic')).toBeInTheDocument();
+  });
+
+  it('leaves the bounds as separate rows when the range test is not configured', async () => {
+    mockUseConfig.mockReturnValue({ rangeResultConcepts: [] } as ConfigObject);
+
+    render(
+      <FilterProvider roots={buildRangeRoots()} isLoading={false}>
+        <RangeConsumer />
+      </FilterProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('total-count')).toHaveTextContent('5'));
+    const timelineRows = within(screen.getByTestId('timeline-rows'))
+      .getAllByRole('listitem')
+      .map((row) => row.textContent);
+    expect(timelineRows).toEqual([
+      'Range Test Lower: 100 | 80',
+      'Range Test Upper: 120 | ',
+      'Systolic: 120 | ',
+      'Diastolic: 80 | ',
+    ]);
   });
 });

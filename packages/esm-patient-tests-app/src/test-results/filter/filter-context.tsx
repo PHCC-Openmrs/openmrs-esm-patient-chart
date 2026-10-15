@@ -1,5 +1,8 @@
 import React, { createContext, useReducer, useEffect, useMemo } from 'react';
-import { formatDate, formatTime, parseDate } from '@openmrs/esm-framework';
+import { formatDate, formatTime, parseDate, useConfig } from '@openmrs/esm-framework';
+import { type RangeResultConcept } from '@openmrs/esm-patient-common-lib';
+import { type ConfigObject } from '../../config-schema';
+import { mergeRangeNodes, useRangeResultConcepts } from '../range-result-helpers';
 import { type MappedObservation, type TestResult, type GroupedObservation, type Observation } from '../../types';
 import {
   ReducerActionType,
@@ -44,6 +47,66 @@ function parseTime(sortedTimes: Array<string>) {
 function deriveGroupKey(flatName: string): string {
   const flatNameParts = flatName.split('-');
   return flatNameParts.length >= 2 ? flatNameParts[1] : flatNameParts[0];
+}
+
+const noRangeResultConcepts: Array<string> = [];
+
+// Collapse each range test (see the `rangeResultConcepts` config) into a single leaf, so that the filter tree,
+// timeline and tables show one "100 – 120" row for it instead of a heading with separate Lower and Upper rows.
+// obstree only tags the requested root with its conceptUuid, so a nested range test is recognised by its members'
+// uuids; `rangeConcepts` holds the configured concepts with their set members in Lower, Upper order.
+export function mergeRangeResults(
+  roots: Array<TreeNode>,
+  rangeResultConcepts: Array<string>,
+  rangeConcepts: Array<RangeResultConcept>,
+): Array<TreeNode> {
+  if (!rangeResultConcepts.length) {
+    return roots;
+  }
+
+  const findBounds = (node: TreeNode) => {
+    const children = node.subSets ?? [];
+    if (
+      node.obs?.length ||
+      !children.length ||
+      children.length > 2 ||
+      children.some((child) => child.subSets?.length)
+    ) {
+      return null;
+    }
+
+    const concept = rangeConcepts.find(
+      (rangeConcept) =>
+        rangeConcept.uuid === node.conceptUuid ||
+        children.every((child) => rangeConcept.setMembers?.some((member) => member.uuid === child.conceptUuid)),
+    );
+    if (concept) {
+      const [lower, upper] = (concept.setMembers ?? []).map((member) =>
+        children.find((child) => child.conceptUuid === member.uuid),
+      );
+      return lower || upper ? { conceptUuid: concept.uuid, lower, upper } : null;
+    }
+
+    // Without the concept definition, trust the configured uuid and take the members in the order obstree gives
+    if (rangeResultConcepts.includes(node.conceptUuid) && children.length === 2) {
+      return { conceptUuid: node.conceptUuid, lower: children[0], upper: children[1] };
+    }
+    return null;
+  };
+
+  const merge = (node: TreeNode, isRoot: boolean): TreeNode => {
+    const bounds = findBounds(node);
+    if (!bounds) {
+      return node.subSets?.length ? { ...node, subSets: node.subSets.map((child) => merge(child, false)) } : node;
+    }
+
+    // The filter tree only lists roots that have subSets, so a range test requested as a root keeps a heading
+    const flatName = isRoot ? `${node.flatName}-${node.display}` : node.flatName;
+    const leaf = mergeRangeNodes({ display: node.display, flatName }, bounds.conceptUuid, bounds.lower, bounds.upper);
+    return isRoot ? { ...node, subSets: [leaf] } : leaf;
+  };
+
+  return roots.map((root) => merge(root, true));
 }
 
 // A rendered branch: one concept under one rendered panel, after collapsing the
@@ -91,8 +154,16 @@ export interface FilterProviderProps {
   children: React.ReactNode;
 }
 
-const FilterProvider = ({ roots, isLoading, children }: FilterProviderProps) => {
+const FilterProvider = ({ roots, isLoading: isLoadingRoots, children }: FilterProviderProps) => {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const rangeResultConcepts = useConfig<ConfigObject>()?.rangeResultConcepts ?? noRangeResultConcepts;
+  const { rangeConcepts, isLoading: isLoadingRangeConcepts } = useRangeResultConcepts(rangeResultConcepts);
+  const isLoading = isLoadingRoots || isLoadingRangeConcepts;
+
+  const mergedRoots = useMemo(
+    () => mergeRangeResults(roots, rangeResultConcepts, rangeConcepts),
+    [roots, rangeResultConcepts, rangeConcepts],
+  );
 
   const actions = useMemo(
     () => ({
@@ -227,10 +298,11 @@ const FilterProvider = ({ roots, isLoading, children }: FilterProviderProps) => 
   }, [normalizedTests]);
 
   useEffect(() => {
-    if (roots.length) {
-      actions.initialize(roots); //ensures ui updates when new data comes up
+    // Wait for the range test definitions so range tests never flash as separate Lower and Upper rows
+    if (mergedRoots.length && !isLoadingRangeConcepts) {
+      actions.initialize(mergedRoots); //ensures ui updates when new data comes up
     }
-  }, [actions, roots]);
+  }, [actions, mergedRoots, isLoadingRangeConcepts]);
 
   // Both counts derive from the same normalized branches that tableData
   // renders, so the header count stays aligned with the visible rows.

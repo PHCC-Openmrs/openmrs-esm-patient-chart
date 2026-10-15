@@ -222,4 +222,64 @@ describe('Trendline', () => {
 
     expect(tooltipHtml).toContain('1 – 10 mg/dL');
   });
+  it('plots the lower and upper bounds of a range test as two lines', async () => {
+    const user = userEvent.setup();
+    const bound = (display: string, value: string, lowNormal: number, hiNormal: number) => ({
+      display,
+      flatName: display,
+      units: 'mg/dL',
+      lowNormal,
+      hiNormal,
+      obs: [{ obsDatetime: '2024-02-01T10:00:00.000Z', value, interpretation: 'NORMAL' as const, lowNormal, hiNormal }],
+    });
+    mockUseObstreeData.mockReturnValue({
+      trendlineData: {
+        display: 'Range Test',
+        flatName: 'Range Test',
+        units: 'mg/dL',
+        lowNormal: 90,
+        hiNormal: 110,
+        obs: [
+          {
+            obsDatetime: '2024-02-01T10:00:00.000Z',
+            value: '100 – 120',
+            interpretation: 'HIGH',
+            lowNormal: 90,
+            hiNormal: 110,
+          },
+        ],
+      },
+      rangeBounds: [bound('Range Test Lower', '100', 90, 110), bound('Range Test Upper', '120', 100, 115)],
+      isLoading: false,
+      isValidating: false,
+    });
+
+    render(<Trendline patientUuid={patientUuid} conceptUuid={conceptUuid} />);
+
+    const calls = mockLineChart.mock.calls as unknown as Array<
+      [
+        {
+          data: Array<{ date: Date; value: number; group: string; min?: number; max?: number; rangeLabel?: string }>;
+          options: { legend: { enabled: boolean }; tooltip: { customHTML: (data: Array<unknown>) => string } };
+        },
+      ]
+    >;
+    const chartProps = calls[0][0];
+    expect(chartProps.data).toEqual([
+      expect.objectContaining({ group: 'Range Test Lower', value: 100, min: 90, max: 110 }),
+      expect.objectContaining({ group: 'Range Test Upper', value: 120, rangeLabel: '90 – 110 mg/dL' }),
+    ]);
+    // Only the lower bound's normal range is shaded
+    expect(chartProps.data[1]).not.toHaveProperty('min');
+    expect(chartProps.options.legend.enabled).toBe(true);
+
+    const tooltipHtml = chartProps.options.tooltip.customHTML(chartProps.data);
+    expect(tooltipHtml).toContain('Range Test Lower: <span>100 mg/dL</span>');
+    expect(tooltipHtml).toContain('Range Test Upper: <span>120 mg/dL</span>');
+
+    expect(screen.getByText('Range Test')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /show results table/i }));
+    expect(screen.getByText('100 – 120')).toBeInTheDocument();
+    expect(screen.getByText('90 – 110 mg/dL')).toBeInTheDocument();
+  });
 });
