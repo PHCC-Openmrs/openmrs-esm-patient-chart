@@ -67,7 +67,7 @@ import {
 } from '@openmrs/esm-framework';
 import { buildGeneralOrder, buildLabOrder, buildMedicationOrder } from '../utils';
 import { useDiscontinuedOrderReasons } from '../hooks/useDiscontinuedOrderReasons';
-import { useMedicationDispenseReasons } from '../hooks/useMedicationDispenseReasons';
+import { useCompletedDispenseQuantities, useMedicationDispenseReasons } from '../hooks/useMedicationDispenseReasons';
 import { ORDER_TYPES, getOrderGrouping, isValidOmrsOrderType } from '../constants/order-types';
 import GeneralOrderTable from './general-order-table.component';
 import MedicationRecord from './medication-record.component';
@@ -85,6 +85,10 @@ interface OrderDetailsProps {
 interface OrderBasketItemActionsProps {
   orderItem: Order;
   patient: fhir.Patient;
+  /** The entry shows the dispensed part of a partly dispensed order, so it is treated as completed. */
+  isCompletedPart?: boolean;
+  /** A newer order already revised this one, so it can no longer be modified or cancelled. */
+  isReplaced?: boolean;
 }
 
 interface OrderHeaderProps {
@@ -123,6 +127,8 @@ function getStatusTagType(status: FulfillerStatus) {
   }
 }
 
+const COMPLETED_ROW_SUFFIX = '::completed';
+
 const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
   patientUuid,
   patient,
@@ -142,6 +148,7 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
   const { excludePatientIdentifierCodeTypes } = useConfig();
   const discontinuedOrderReasons = useDiscontinuedOrderReasons(patientUuid);
   const medicationDispenseReasons = useMedicationDispenseReasons(patientUuid);
+  const completedDispenseQuantities = useCompletedDispenseQuantities(patientUuid);
   const [isPrinting, setIsPrinting] = useState(false);
   const { data: orderTypes } = useOrderTypes();
   const [selectedOrderTypeUuid, setSelectedOrderTypeUuid] = useState(null);
@@ -208,6 +215,20 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
 
   const displayedOrders = useMemo(() => allOrders ?? [], [allOrders]);
 
+  // An order that has been modified is stopped by the server and replaced by a new order pointing
+  // back at it, so it can't be modified again: only the newest order in the chain can. The replacing
+  // order is not always in the list (it may itself have been cancelled), hence the dateStopped check
+  // where the menu is rendered.
+  const replacedOrderUuids = useMemo(
+    () =>
+      new Set(
+        (allOrders ?? [])
+          .filter((order) => order.action === 'REVISE' && order.previousOrder?.uuid)
+          .map((order) => order.previousOrder.uuid),
+      ),
+    [allOrders],
+  );
+
   const launchOrderBasketForNewItem = useCallback(
     () => _launchOrderBasket(null, { encounterUuid: '' }),
     [_launchOrderBasket],
@@ -258,47 +279,121 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
 
   const tableRows = useMemo(
     () =>
-      displayedOrders?.map((order) => ({
-        id: order.uuid,
-        dateActivated: order.dateActivated,
-        orderNumber: order.orderNumber,
-        dateOfOrder: <div className={styles.singleLineText}>{formatDate(parseDate(order.dateActivated))}</div>,
-        orderType: capitalize(order.orderType?.display ?? '-'),
-        order: order.display,
-        priority: (
-          <Tag type={getPriorityTagType(order.urgency)}>
+      displayedOrders?.flatMap((order) => {
+        const row = {
+          id: order.uuid,
+          dateActivated: order.dateActivated,
+          orderNumber: order.orderNumber,
+          dateOfOrder: <div className={styles.singleLineText}>{formatDate(parseDate(order.dateActivated))}</div>,
+          orderType: capitalize(order.orderType?.display ?? '-'),
+          order: order.display,
+          priority: (
+            <Tag type={getPriorityTagType(order.urgency)}>
+              {
+                // t('ON_SCHEDULED_DATE', 'On scheduled date')
+                // t('ROUTINE', 'Routine')
+                // t('STAT', 'STAT')
+              }
+              {t(order.urgency, capitalize(order.urgency.replaceAll('_', ' ')))}
+            </Tag>
+          ),
+          orderedBy: order.orderer?.display,
+          // A new order nobody has acted on yet has no fulfiller status: it is in progress.
+          status: (
+            <Tag
+              className={order.fulfillerStatus === 'DECLINED' ? styles.declinedTag : undefined}
+              type={getStatusTagType(order.fulfillerStatus ?? 'IN_PROGRESS')}
+            >
+              {
+                // t('COMPLETED', 'Completed')
+                // t('DECLINED', 'Declined')
+                // t('DISCONTINUED', 'Discontinued')
+                // t('EXCEPTION', 'Exception')
+                // t('IN_PROGRESS', 'In progress')
+                // t('ON_HOLD', 'On hold')
+                // t('RECEIVED', 'Received')
+              }
+              {t(
+                order.fulfillerStatus ?? 'IN_PROGRESS',
+                capitalize((order.fulfillerStatus ?? 'IN_PROGRESS').replaceAll('_', ' ')),
+              )}
+            </Tag>
+          ),
+          reasonForCancelling:
+            order.fulfillerComment ||
+            discontinuedOrderReasons[order.uuid] ||
+            medicationDispenseReasons[order.uuid] ||
+            '--',
+        };
+
+        // Part of it was dispensed but the order is still open: show it as in progress, with how much
+        // has been dispensed so far, instead of an empty status.
+        const dispensedSoFar = completedDispenseQuantities[order.uuid];
+        const isOpen = !order.fulfillerStatus || ['RECEIVED', 'IN_PROGRESS'].includes(order.fulfillerStatus);
+        if (
+          isOpen &&
+          dispensedSoFar &&
+          (dispensedSoFar.ordered == null || dispensedSoFar.quantity < dispensedSoFar.ordered)
+        ) {
+          const { quantity, ordered, unit } = dispensedSoFar;
+          const dispensedLabel = unit ? `${quantity} ${unit}` : quantity;
+          return [
             {
-              // t('ON_SCHEDULED_DATE', 'On scheduled date')
-              // t('ROUTINE', 'Routine')
-              // t('STAT', 'STAT')
-            }
-            {t(order.urgency, capitalize(order.urgency.replaceAll('_', ' ')))}
-          </Tag>
-        ),
-        orderedBy: order.orderer?.display,
-        status: order.fulfillerStatus ? (
-          <Tag type={getStatusTagType(order.fulfillerStatus)}>
-            {
-              // t('COMPLETED', 'Completed')
-              // t('DECLINED', 'Declined')
-              // t('DISCONTINUED', 'Discontinued')
-              // t('EXCEPTION', 'Exception')
-              // t('IN_PROGRESS', 'In progress')
-              // t('ON_HOLD', 'On hold')
-              // t('RECEIVED', 'Received')
-            }
-            {t(order.fulfillerStatus, capitalize(order.fulfillerStatus.replaceAll('_', ' ')))}
-          </Tag>
-        ) : (
-          '--'
-        ),
-        reasonForCancelling:
-          order.fulfillerComment ||
-          discontinuedOrderReasons[order.uuid] ||
-          medicationDispenseReasons[order.uuid] ||
-          '--',
-      })) ?? [],
-    [displayedOrders, t, discontinuedOrderReasons, medicationDispenseReasons],
+              ...row,
+              status: (
+                <Tag type={getStatusTagType('IN_PROGRESS')}>
+                  {ordered != null
+                    ? t('inProgressQuantity', 'In progress ({{dispensed}} of {{total}})', {
+                        dispensed: quantity,
+                        total: unit ? `${ordered} ${unit}` : ordered,
+                      })
+                    : t('inProgressDispensed', 'In progress ({{dispensed}} dispensed)', { dispensed: dispensedLabel })}
+                </Tag>
+              ),
+            },
+          ];
+        }
+
+        // Closed or put on hold after part of it was dispensed: show the dispensed part as its own
+        // completed entry, so completed and declined/on-hold quantities are clearly separated.
+        const isClosedOrOnHold = order.fulfillerStatus === 'DECLINED' || order.fulfillerStatus === 'ON_HOLD';
+        if (!isClosedOrOnHold || !completedDispenseQuantities[order.uuid]) {
+          return [row];
+        }
+        const { quantity, unit, ordered } = completedDispenseQuantities[order.uuid];
+        const formatQuantity = (value: number) => (unit ? `${value} ${unit}` : value);
+        const remaining = ordered != null ? ordered - quantity : 0;
+        const completedRow = {
+          ...row,
+          id: `${order.uuid}${COMPLETED_ROW_SUFFIX}`,
+          status: (
+            <Tag type={getStatusTagType('COMPLETED')}>
+              {t('completedQuantity', 'Completed ({{quantity}})', {
+                quantity: formatQuantity(quantity),
+              })}
+            </Tag>
+          ),
+          reasonForCancelling: '--',
+        };
+        // Same label as the completed entry, with the part that was not dispensed.
+        const remainingRow =
+          remaining > 0
+            ? {
+                ...row,
+                status: (
+                  <Tag
+                    className={order.fulfillerStatus === 'DECLINED' ? styles.declinedTag : undefined}
+                    type={getStatusTagType(order.fulfillerStatus)}
+                  >
+                    {t(order.fulfillerStatus, capitalize(order.fulfillerStatus.replaceAll('_', ' ')))}
+                    {` (${formatQuantity(remaining)})`}
+                  </Tag>
+                ),
+              }
+            : row;
+        return [completedRow, remainingRow];
+      }) ?? [],
+    [displayedOrders, t, discontinuedOrderReasons, medicationDispenseReasons, completedDispenseQuantities],
   );
 
   const { results: paginatedOrders, goTo, currentPage } = usePagination(tableRows, defaultPageSize);
@@ -506,7 +601,10 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
                           </TableHead>
                           <TableBody>
                             {rows.map((row) => {
-                              const matchingOrder = allOrders?.find((order) => order.uuid === row.id);
+                              const isCompletedPartRow = row.id.endsWith(COMPLETED_ROW_SUFFIX);
+                              const matchingOrder = allOrders?.find(
+                                (order) => order.uuid === row.id.replace(COMPLETED_ROW_SUFFIX, ''),
+                              );
                               const isExpandable =
                                 matchingOrder?.type === ORDER_TYPES.DRUG_ORDER ||
                                 matchingOrder?.type === ORDER_TYPES.GENERAL_ORDER;
@@ -520,7 +618,17 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
                               const actionCell = !isPrinting && (
                                 <TableCell className="cds--table-column-menu">
                                   {matchingOrder && isOmrsOrder(matchingOrder) ? (
-                                    <OrderBasketItemActions patient={patient} orderItem={matchingOrder} />
+                                    <OrderBasketItemActions
+                                      patient={patient}
+                                      orderItem={matchingOrder}
+                                      isCompletedPart={isCompletedPartRow}
+                                      isReplaced={
+                                        replacedOrderUuids.has(matchingOrder.uuid) ||
+                                        // Revising or cancelling a drug/general order stops it on the server;
+                                        // dispensing statuses (completed, declined, on hold) do not.
+                                        (!!matchingOrder.dateStopped && matchingOrder.type !== ORDER_TYPES.TEST_ORDER)
+                                      }
+                                    />
                                   ) : (
                                     <ExtensionSlot
                                       name={`${matchingOrder?.type}-action-menu-items-slot`}
@@ -606,13 +714,13 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
   );
 };
 
-function OrderBasketItemActions({ orderItem, patient }: OrderBasketItemActionsProps) {
+function OrderBasketItemActions({ orderItem, patient, isCompletedPart, isReplaced }: OrderBasketItemActionsProps) {
   const { t } = useTranslation();
   const isDeclined = orderItem.fulfillerStatus === 'DECLINED';
   // A completed order (a dispensed drug order, or a test order with results) can no longer be cancelled
   const isCompletedOrder =
     (orderItem.type === ORDER_TYPES.DRUG_ORDER || orderItem.type === ORDER_TYPES.TEST_ORDER) &&
-    orderItem.fulfillerStatus === 'COMPLETED';
+    (orderItem.fulfillerStatus === 'COMPLETED' || isCompletedPart);
   const session = useSession();
   const canAddLabResults = userHasAccess('Task: laboratory.addLabResults', session?.user);
   const canManageOrders =
@@ -726,8 +834,7 @@ function OrderBasketItemActions({ orderItem, patient }: OrderBasketItemActionsPr
     launchWorkspace2('test-results-form-workspace', { order: orderItem, patient });
   }, [orderItem, patient]);
 
-  // No actions available for declined orders
-  if (isDeclined || !canManageOrders) {
+  if (!canManageOrders || isReplaced) {
     return null;
   }
 
@@ -754,7 +861,8 @@ function OrderBasketItemActions({ orderItem, patient }: OrderBasketItemActionsPr
             onClick={handleAddOrEditTestResults}
           />
         )}
-        {!isCompletedOrder && (
+        {/* A declined order can be reordered (modify), but there is nothing left to cancel */}
+        {!isCompletedOrder && !isDeclined && (
           <OverflowMenuItem
             className={styles.menuItem}
             disabled={alreadyInBasket || orderItem?.action === 'DISCONTINUE'}

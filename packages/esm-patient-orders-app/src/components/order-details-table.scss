@@ -3,6 +3,11 @@
 @use '@carbon/type';
 @use '@openmrs/esm-styleguide/src/vars' as vars;
 
+.declinedTag {
+  background-color: colors.$red-30;
+  color: colors.$red-90;
+}
+
 .widgetCard {
   border: 1px solid colors.$gray-20;
 
