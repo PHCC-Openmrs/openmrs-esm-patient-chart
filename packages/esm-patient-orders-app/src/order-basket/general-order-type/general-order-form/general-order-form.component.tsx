@@ -15,6 +15,10 @@ import {
   useMutatePatientOrders,
 } from '@openmrs/esm-patient-common-lib';
 import {
+  getOrderErrorMessage,
+  isOrderAlreadyStoppedError,
+} from '@openmrs/esm-patient-medications-app/src/api/order-errors';
+import {
   useLayoutType,
   useConfig,
   ExtensionSlot,
@@ -148,7 +152,12 @@ export function OrderForm({
             isLowContrast: false,
             kind: 'error',
             title: t('errorSavingDrugOrder', 'Error saving order'),
-            subtitle: error,
+            subtitle: isOrderAlreadyStoppedError(error)
+              ? t(
+                  'orderAlreadyRevisedOrStopped',
+                  'This order has already been revised, discontinued or expired, so it cannot be changed again. Refresh the orders list and modify the latest order instead.',
+                )
+              : getOrderErrorMessage(error),
           });
         });
     },

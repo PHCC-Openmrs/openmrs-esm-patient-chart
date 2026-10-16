@@ -83,6 +83,7 @@
   "orderActionNew": "جديد",
   "orderActionRenew": "تجديد",
   "orderActionRevise": "تعديل",
+  "orderAlreadyRevisedOrStopped": "تم تعديل هذا الطلب أو إيقافه أو انتهت صلاحيته بالفعل، لذا لا يمكن تغييره مرة أخرى. حدّث قائمة الطلبات وعدّل أحدث طلب بدلاً من ذلك.",
   "orderDiscontinued": "تم إيقاف الطلب",
   "orderedFor": "تم تقديم طلب لـ",
   "orderForm": "نموذج الطلب",

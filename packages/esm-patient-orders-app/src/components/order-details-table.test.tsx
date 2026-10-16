@@ -52,6 +52,12 @@ vi.mock('@openmrs/esm-patient-common-lib', async () => {
   };
 });
 
+const mockUseCompletedDispenseQuantities = vi.fn();
+vi.mock('../hooks/useMedicationDispenseReasons', () => ({
+  useMedicationDispenseReasons: () => ({ 'declined-order': 'Incomplete data' }),
+  useCompletedDispenseQuantities: () => mockUseCompletedDispenseQuantities(),
+}));
+
 vi.mock('./general-order-table.component', () => ({
   default: function MockGeneralOrderTable() {
     return 'General order details';
@@ -117,6 +123,7 @@ describe('OrderDetailsTable', () => {
   const user = userEvent.setup();
 
   beforeEach(() => {
+    mockUseCompletedDispenseQuantities.mockReturnValue({});
     mockUseOrderBasket.mockReturnValue({
       orders: [],
       setOrders: vi.fn(),
@@ -298,7 +305,7 @@ describe('OrderDetailsTable', () => {
     expect(screen.getByText('On scheduled date')).toBeInTheDocument();
   });
 
-  it('renders status tags for orders with fulfiller statuses and a dash for orders without', async () => {
+  it('renders status tags for orders with fulfiller statuses and in progress for orders without', async () => {
     const ordersWithStatuses = [
       { ...mockOrders[1], uuid: 'received-order', orderNumber: 'ORD-RCV', fulfillerStatus: 'RECEIVED' },
       { ...mockOrders[1], uuid: 'in-progress-order', orderNumber: 'ORD-PRG', fulfillerStatus: 'IN_PROGRESS' },
@@ -319,7 +326,7 @@ describe('OrderDetailsTable', () => {
     await screen.findByRole('table');
 
     expect(screen.getByText('Received')).toBeInTheDocument();
-    expect(screen.getByText('In progress')).toBeInTheDocument();
+    expect(screen.getAllByText('In progress')).toHaveLength(2);
     expect(screen.getByText('Completed')).toBeInTheDocument();
 
     const statusColumnIndex = screen
@@ -327,7 +334,53 @@ describe('OrderDetailsTable', () => {
       .findIndex((header) => /^status$/i.test(header.textContent ?? ''));
     const noStatusRow = screen.getAllByRole('row').find((row) => within(row).queryByText('ORD-NUL'));
     const statusCell = within(noStatusRow).getAllByRole('cell')[statusColumnIndex];
-    expect(statusCell).toHaveTextContent('--');
+    expect(statusCell).toHaveTextContent('In progress');
+  });
+
+  it('splits an order that was closed after part of it was dispensed into a completed and a declined entry', async () => {
+    mockUseCompletedDispenseQuantities.mockReturnValue({
+      'declined-order': { quantity: 4, ordered: 8, unit: 'Bottle' },
+    });
+    mockUsePatientOrders.mockReturnValue({
+      data: [
+        { ...mockOrders[0], uuid: 'declined-order', orderNumber: 'ORD-DEC', fulfillerStatus: 'DECLINED' },
+        { ...mockOrders[0], uuid: 'other-declined', orderNumber: 'ORD-OTH', fulfillerStatus: 'DECLINED' },
+      ] as unknown as Array<Order>,
+      error: undefined,
+      isLoading: false,
+      isValidating: false,
+      mutate: vi.fn(),
+    });
+
+    renderOrderDetailsTable();
+
+    await screen.findByRole('table');
+
+    expect(screen.getAllByText('ORD-DEC')).toHaveLength(2);
+    expect(screen.getAllByText('ORD-OTH')).toHaveLength(1);
+    expect(screen.getByText('Completed (4 Bottle)')).toBeInTheDocument();
+    expect(screen.getByText('Declined (4 Bottle)')).toBeInTheDocument();
+    expect(screen.getAllByText('Declined')).toHaveLength(1);
+  });
+
+  it('shows an open, partly dispensed order as in progress with the dispensed quantity', async () => {
+    mockUseCompletedDispenseQuantities.mockReturnValue({ 'open-order': { quantity: 2, ordered: 4, unit: 'Box' } });
+    mockUsePatientOrders.mockReturnValue({
+      data: [
+        { ...mockOrders[0], uuid: 'open-order', orderNumber: 'ORD-OPEN', fulfillerStatus: null },
+      ] as unknown as Array<Order>,
+      error: undefined,
+      isLoading: false,
+      isValidating: false,
+      mutate: vi.fn(),
+    });
+
+    renderOrderDetailsTable();
+
+    await screen.findByRole('table');
+
+    expect(screen.getAllByText('ORD-OPEN')).toHaveLength(1);
+    expect(screen.getByText('In progress (2 of 4 Box)')).toBeInTheDocument();
   });
 
   it('shows medication details when expanding a drug order row', async () => {
@@ -536,7 +589,7 @@ describe('OrderDetailsTable', () => {
     expect(validationIndicator).toBeInTheDocument();
   });
 
-  it('does not show an overflow menu for declined orders', async () => {
+  it('lets a declined order be modified, but not cancelled', async () => {
     const declinedOrder = {
       ...mockOrders[0],
       uuid: 'declined-order-uuid',
@@ -557,7 +610,67 @@ describe('OrderDetailsTable', () => {
     await screen.findByRole('table');
 
     expect(screen.getByText(/ORD-DECLINED/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /options/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /options/i }));
+    expect(screen.getByText('Modify order')).toBeInTheDocument();
+    expect(screen.queryByText('Cancel order')).not.toBeInTheDocument();
+  });
+
+  it('does not offer to modify an order that a newer order has already revised', async () => {
+    mockUsePatientOrders.mockReturnValue({
+      data: [
+        { ...mockOrders[0], uuid: 'old-order', orderNumber: 'ORD-OLD', action: 'NEW', fulfillerStatus: null },
+        {
+          ...mockOrders[0],
+          uuid: 'new-order',
+          orderNumber: 'ORD-NEW',
+          action: 'REVISE',
+          previousOrder: { uuid: 'old-order', type: 'drugorder', display: 'x' },
+          fulfillerStatus: null,
+        },
+      ] as unknown as Array<Order>,
+      error: undefined,
+      isLoading: false,
+      isValidating: false,
+      mutate: vi.fn(),
+    });
+
+    renderOrderDetailsTable();
+
+    await screen.findByRole('table');
+
+    // only the newest order of the chain has an actions menu
+    expect(screen.getAllByRole('button', { name: /options/i })).toHaveLength(1);
+  });
+
+  it('does not offer to modify a drug order that was already stopped, even if its replacement is not listed', async () => {
+    mockUsePatientOrders.mockReturnValue({
+      data: [
+        {
+          ...mockOrders[0],
+          uuid: 'stopped-order',
+          orderNumber: 'ORD-STP',
+          fulfillerStatus: 'COMPLETED',
+          dateStopped: '2026-10-16T06:39:07.000+0000',
+        },
+        {
+          ...mockOrders[0],
+          uuid: 'completed-order',
+          orderNumber: 'ORD-CMP2',
+          fulfillerStatus: 'COMPLETED',
+          dateStopped: null,
+        },
+      ] as unknown as Array<Order>,
+      error: undefined,
+      isLoading: false,
+      isValidating: false,
+      mutate: vi.fn(),
+    });
+
+    renderOrderDetailsTable();
+
+    await screen.findByRole('table');
+
+    expect(screen.getAllByRole('button', { name: /options/i })).toHaveLength(1);
   });
 
   it('renders an empty state when there are order types but no orders', async () => {
