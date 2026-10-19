@@ -673,6 +673,34 @@ describe('OrderDetailsTable', () => {
     expect(screen.getAllByRole('button', { name: /options/i })).toHaveLength(1);
   });
 
+  it('lets a completed lab order have its results edited, but not be modified', async () => {
+    mockUsePatientOrders.mockReturnValue({
+      data: [
+        {
+          ...mockOrders[1],
+          uuid: 'lab-order',
+          orderNumber: 'ORD-LAB',
+          type: 'testorder',
+          fulfillerStatus: 'COMPLETED',
+          dateStopped: '2026-10-19T06:10:00.000+0000',
+        },
+      ] as unknown as Array<Order>,
+      error: undefined,
+      isLoading: false,
+      isValidating: false,
+      mutate: vi.fn(),
+    });
+
+    renderOrderDetailsTable();
+
+    await screen.findByRole('table');
+    await user.click(screen.getByRole('button', { name: /options/i }));
+
+    expect(screen.getByText('Edit results')).toBeInTheDocument();
+    expect(screen.queryByText('Modify order')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cancel order')).not.toBeInTheDocument();
+  });
+
   it('renders an empty state when there are order types but no orders', async () => {
     mockUsePatientOrders.mockReturnValue({
       data: [],

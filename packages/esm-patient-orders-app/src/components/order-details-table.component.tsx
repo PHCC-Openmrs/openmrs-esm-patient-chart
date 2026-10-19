@@ -89,6 +89,8 @@ interface OrderBasketItemActionsProps {
   isCompletedPart?: boolean;
   /** A newer order already revised this one, so it can no longer be modified or cancelled. */
   isReplaced?: boolean;
+  /** A completed lab order: its results filing stopped it, so it can't be revised, only have its results edited. */
+  isStopped?: boolean;
 }
 
 interface OrderHeaderProps {
@@ -622,6 +624,10 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
                                       patient={patient}
                                       orderItem={matchingOrder}
                                       isCompletedPart={isCompletedPartRow}
+                                      isStopped={
+                                        matchingOrder.type === ORDER_TYPES.TEST_ORDER &&
+                                        (matchingOrder.fulfillerStatus === 'COMPLETED' || !!matchingOrder.dateStopped)
+                                      }
                                       isReplaced={
                                         replacedOrderUuids.has(matchingOrder.uuid) ||
                                         // Revising or cancelling a drug/general order stops it on the server;
@@ -714,7 +720,13 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
   );
 };
 
-function OrderBasketItemActions({ orderItem, patient, isCompletedPart, isReplaced }: OrderBasketItemActionsProps) {
+function OrderBasketItemActions({
+  orderItem,
+  patient,
+  isCompletedPart,
+  isReplaced,
+  isStopped,
+}: OrderBasketItemActionsProps) {
   const { t } = useTranslation();
   const isDeclined = orderItem.fulfillerStatus === 'DECLINED';
   // A completed order (a dispensed drug order, or a test order with results) can no longer be cancelled
@@ -834,21 +846,26 @@ function OrderBasketItemActions({ orderItem, patient, isCompletedPart, isReplace
     launchWorkspace2('test-results-form-workspace', { order: orderItem, patient });
   }, [orderItem, patient]);
 
-  if (!canManageOrders || isReplaced) {
+  const canModify = !isStopped;
+  const hasResultsAction = orderItem?.type === ORDER_TYPES.TEST_ORDER && canAddLabResults;
+  const hasCancelAction = !isCompletedOrder && !isDeclined;
+  if (!canManageOrders || isReplaced || (!canModify && !hasResultsAction && !hasCancelAction)) {
     return null;
   }
 
   return (
     <Layer className={styles.layer}>
       <OverflowMenu aria-label={t('actionsMenu', 'Actions menu')} align="left" flipped selectorPrimaryFocus="#modify">
-        <OverflowMenuItem
-          className={styles.menuItem}
-          disabled={alreadyInBasket}
-          id="modify"
-          itemText={t('modifyOrder', 'Modify order')}
-          onClick={handleModifyOrder}
-        />
-        {orderItem?.type === ORDER_TYPES.TEST_ORDER && canAddLabResults && (
+        {canModify && (
+          <OverflowMenuItem
+            className={styles.menuItem}
+            disabled={alreadyInBasket}
+            id="modify"
+            itemText={t('modifyOrder', 'Modify order')}
+            onClick={handleModifyOrder}
+          />
+        )}
+        {hasResultsAction && (
           <OverflowMenuItem
             className={styles.menuItem}
             disabled={alreadyInBasket}
@@ -862,7 +879,7 @@ function OrderBasketItemActions({ orderItem, patient, isCompletedPart, isReplace
           />
         )}
         {/* A declined order can be reordered (modify), but there is nothing left to cancel */}
-        {!isCompletedOrder && !isDeclined && (
+        {hasCancelAction && (
           <OverflowMenuItem
             className={styles.menuItem}
             disabled={alreadyInBasket || orderItem?.action === 'DISCONTINUE'}
