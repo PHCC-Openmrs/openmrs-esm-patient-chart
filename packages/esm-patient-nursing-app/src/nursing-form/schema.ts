@@ -11,10 +11,14 @@ export const NursingFormSchema = z
     spirometry: z.number(),
     monofilament: z.number(),
     // Nursing procedures
-    imInjection: z.string(),
-    ivInjection: z.string(),
-    oral: z.string(),
-    nebulization: z.string(),
+    imInjectionDrug: z.string(),
+    imInjectionQty: z.number(),
+    ivInjectionDrug: z.string(),
+    ivInjectionQty: z.number(),
+    oralDrug: z.string(),
+    oralQty: z.number(),
+    nebulizationDrug: z.string(),
+    nebulizationQty: z.number(),
   })
   .partial()
   .refine(
@@ -24,6 +28,19 @@ export const NursingFormSchema = z
       message: 'Please fill at least one field',
       path: ['oneFieldRequired'],
     },
-  );
+  )
+  // A procedure's drug and its quantity go together: the report counts and totals them as a pair.
+  .superRefine((fields, context) => {
+    for (const procedure of ['imInjection', 'ivInjection', 'oral', 'nebulization'] as const) {
+      const hasDrug = Boolean(fields[`${procedure}Drug`]);
+      const hasQuantity = fields[`${procedure}Qty`] != null;
+      if (hasDrug && !hasQuantity) {
+        context.addIssue({ code: 'custom', message: 'quantityRequired', path: [`${procedure}Qty`] });
+      }
+      if (hasQuantity && !hasDrug) {
+        context.addIssue({ code: 'custom', message: 'drugRequired', path: [`${procedure}Drug`] });
+      }
+    }
+  });
 
 export type NursingFormData = z.infer<typeof NursingFormSchema>;

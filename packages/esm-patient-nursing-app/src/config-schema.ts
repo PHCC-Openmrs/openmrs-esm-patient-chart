@@ -37,22 +37,70 @@ export const configSchema = {
     imInjectionUuid: {
       _type: Type.ConceptUuid,
       _default: '33db9b1c-77b6-4360-9fc5-f8724145fcb7',
-      _description: 'Free-text concept recording the intramuscular injection given.',
+      _description:
+        'Free-text concept recording the intramuscular injection given. Superseded by the drug dropdown and quantity concepts below: it is only read, to show answers recorded before them.',
     },
     ivInjectionUuid: {
       _type: Type.ConceptUuid,
       _default: 'bfeb3e24-1aab-42c3-beb1-33ab91fdbe7b',
-      _description: 'Free-text concept recording the intravenous injection given.',
+      _description:
+        'Free-text concept recording the intravenous injection given. Superseded by the drug dropdown and quantity concepts below: it is only read, to show answers recorded before them.',
     },
     oralUuid: {
       _type: Type.ConceptUuid,
       _default: '99a79867-1b40-43ab-ac08-6483acfd3a46',
-      _description: 'Free-text concept recording the oral medication given.',
+      _description:
+        'Free-text concept recording the oral medication given. Superseded by the drug dropdown and quantity concepts below: it is only read, to show answers recorded before them.',
     },
     nebulizationUuid: {
       _type: Type.ConceptUuid,
       _default: '992966a6-45b5-4b32-b515-b0a298881e35',
-      _description: 'Free-text concept recording the nebulization given.',
+      _description:
+        'Free-text concept recording the nebulization given. Superseded by the drug dropdown and quantity concepts below: it is only read, to show answers recorded before them.',
+    },
+    imInjectionDrugUuid: {
+      _type: Type.ConceptUuid,
+      _default: '9d317dc3-9e7c-4ca0-a195-fb5fb444057a',
+      _description:
+        'Coded concept recording the drug given for the IM injection procedure. Its answers drive the options of the dropdown, so drugs are added or removed in the concept dictionary rather than here.',
+    },
+    imInjectionQtyUuid: {
+      _type: Type.ConceptUuid,
+      _default: '8c449bc5-522e-4bc9-96a5-bf94a9598830',
+      _description: 'Numeric concept recording the quantity of the drug given for the IM injection procedure.',
+    },
+    ivInjectionDrugUuid: {
+      _type: Type.ConceptUuid,
+      _default: '65bd62b4-cabb-4c43-bfae-4a39bff70ff5',
+      _description:
+        'Coded concept recording the drug given for the IV injection procedure. Its answers drive the options of the dropdown, so drugs are added or removed in the concept dictionary rather than here.',
+    },
+    ivInjectionQtyUuid: {
+      _type: Type.ConceptUuid,
+      _default: 'ebab3ca6-66b3-4295-a524-2833bc17a636',
+      _description: 'Numeric concept recording the quantity of the drug given for the IV injection procedure.',
+    },
+    oralDrugUuid: {
+      _type: Type.ConceptUuid,
+      _default: '9a67de0d-0b5f-465b-b08a-43af10577ba1',
+      _description:
+        'Coded concept recording the drug given for the Oral procedure. Its answers drive the options of the dropdown, so drugs are added or removed in the concept dictionary rather than here.',
+    },
+    oralQtyUuid: {
+      _type: Type.ConceptUuid,
+      _default: '3861a9c6-ded7-4b86-abb6-cd9de557ac43',
+      _description: 'Numeric concept recording the quantity of the drug given for the Oral procedure.',
+    },
+    nebulizationDrugUuid: {
+      _type: Type.ConceptUuid,
+      _default: '5ea5d0e1-453b-4414-9a6b-6033ebd44174',
+      _description:
+        'Coded concept recording the drug given for the Nebulization procedure. Its answers drive the options of the dropdown, so drugs are added or removed in the concept dictionary rather than here.',
+    },
+    nebulizationQtyUuid: {
+      _type: Type.ConceptUuid,
+      _default: '393a7a86-abcb-4e40-9065-1e25a25867cd',
+      _description: 'Numeric concept recording the quantity of the drug given for the Nebulization procedure.',
     },
   },
   nursing: {
@@ -91,6 +139,14 @@ export interface ConfigObject {
     ivInjectionUuid: string;
     oralUuid: string;
     nebulizationUuid: string;
+    imInjectionDrugUuid: string;
+    imInjectionQtyUuid: string;
+    ivInjectionDrugUuid: string;
+    ivInjectionQtyUuid: string;
+    oralDrugUuid: string;
+    oralQtyUuid: string;
+    nebulizationDrugUuid: string;
+    nebulizationQtyUuid: string;
   };
   nursing: {
     encounterTypeUuid: string;

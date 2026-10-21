@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Button,
   ButtonSet,
+  ComboBox,
   Column,
   FileUploader,
   Form,
@@ -35,6 +36,7 @@ import {
   createOrUpdateNursingEncounter,
   getEcgAttachmentSrc,
   uploadEcgAttachment,
+  useConceptAnswers,
   useInvalidateNursingRecords,
   useNursingEncounter,
   useOintmentAnswers,
@@ -68,6 +70,10 @@ const NursingForm: React.FC<PatientWorkspace2DefinitionProps<NursingFormProps, o
   const isEditing = formContext === 'editing';
 
   const { answers: ointmentAnswers, isLoading: isLoadingOintments } = useOintmentAnswers();
+  const imInjectionDrugs = useConceptAnswers(concepts.imInjectionDrugUuid);
+  const ivInjectionDrugs = useConceptAnswers(concepts.ivInjectionDrugUuid);
+  const oralDrugs = useConceptAnswers(concepts.oralDrugUuid);
+  const nebulizationDrugs = useConceptAnswers(concepts.nebulizationDrugUuid);
   const {
     existingObsByField,
     existingOintmentObs,
@@ -85,6 +91,8 @@ const NursingForm: React.FC<PatientWorkspace2DefinitionProps<NursingFormProps, o
     control,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { dirtyFields, isSubmitting },
   } = useForm<NursingFormData>({
     mode: 'all',
@@ -387,26 +395,63 @@ const NursingForm: React.FC<PatientWorkspace2DefinitionProps<NursingFormProps, o
             <Column>
               <p className={styles.title}>{t('nursingProcedures', 'Nursing Procedures')}</p>
             </Column>
-            <Row className={styles.row}>
-              {(
-                [
-                  { id: 'imInjection', label: t('imInjection', 'IM injection') },
-                  { id: 'ivInjection', label: t('ivInjection', 'IV injection') },
-                  { id: 'oral', label: t('oral', 'Oral') },
-                  { id: 'nebulization', label: t('nebulization', 'Nebulization') },
-                ] as const
-              ).map(({ id, label }) => (
-                <Column className={styles.fullWidth} key={id}>
+            {(
+              [
+                { id: 'imInjection', label: t('imInjection', 'IM injection'), drugs: imInjectionDrugs },
+                { id: 'ivInjection', label: t('ivInjection', 'IV injection'), drugs: ivInjectionDrugs },
+                { id: 'oral', label: t('oral', 'Oral'), drugs: oralDrugs },
+                { id: 'nebulization', label: t('nebulization', 'Nebulization'), drugs: nebulizationDrugs },
+              ] as const
+            ).map(({ id, label, drugs }) => (
+              <Row className={`${styles.row} ${styles.procedureRow}`} key={id}>
+                <Column className={styles.procedureDrug}>
                   <ResponsiveWrapper>
                     <Controller
-                      name={id}
+                      name={`${id}Drug`}
                       control={control}
-                      render={({ field: { onChange, onBlur, ref, value } }) => (
-                        <TextInput
-                          id={id}
-                          labelText={label}
+                      render={({ field: { onChange, value }, fieldState: { error } }) => (
+                        <ComboBox
+                          id={`${id}Drug`}
+                          disabled={drugs.isLoading}
+                          titleText={label}
+                          placeholder={t('selectDrug', 'Select a drug')}
+                          items={drugs.answers}
+                          itemToString={(answer: ConceptAnswer) => answer?.display ?? ''}
+                          selectedItem={drugs.answers.find((answer) => answer.uuid === value) ?? null}
+                          invalid={Boolean(error)}
+                          invalidText={t('drugRequired', 'Select the drug that was given')}
+                          onChange={({ selectedItem }: { selectedItem?: ConceptAnswer | null }) => {
+                            onChange(selectedItem?.uuid ?? '');
+                            if (!selectedItem) {
+                              // A quantity without a drug is meaningless: clear it with the drug.
+                              setValue(`${id}Qty`, undefined, { shouldDirty: true });
+                            }
+                          }}
+                        />
+                      )}
+                    />
+                  </ResponsiveWrapper>
+                </Column>
+                <Column className={styles.procedureQuantity}>
+                  <ResponsiveWrapper>
+                    <Controller
+                      name={`${id}Qty`}
+                      control={control}
+                      render={({ field: { onChange, onBlur, ref, value }, fieldState: { error } }) => (
+                        <NumberInput
+                          allowEmpty
+                          disableWheel
+                          hideSteppers
+                          disabled={!watch(`${id}Drug`)}
+                          id={`${id}Qty`}
+                          invalid={Boolean(error)}
+                          invalidText={t('quantityRequired', 'Enter the quantity that was given')}
+                          label={t('quantity', 'Quantity')}
+                          min={0}
                           onBlur={onBlur}
-                          onChange={onChange}
+                          onChange={(_event, { value: nextValue }) =>
+                            onChange(nextValue === '' || nextValue == null ? undefined : Number(nextValue))
+                          }
                           ref={ref}
                           value={value ?? ''}
                         />
@@ -414,8 +459,8 @@ const NursingForm: React.FC<PatientWorkspace2DefinitionProps<NursingFormProps, o
                     />
                   </ResponsiveWrapper>
                 </Column>
-              ))}
-            </Row>
+              </Row>
+            ))}
           </Stack>
         </div>
 

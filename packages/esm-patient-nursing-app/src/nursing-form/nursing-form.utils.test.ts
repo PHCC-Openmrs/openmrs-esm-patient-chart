@@ -16,7 +16,7 @@ describe('buildObsForSubmission', () => {
   describe('creating a new record', () => {
     it('writes an obs for each field that was filled in, and nothing for the rest', () => {
       const { newObs, toBeVoided } = buildObsForSubmission({
-        data: { typeOfWound: 'Abrasion', imInjection: 'Ceftriaxone' },
+        data: { typeOfWound: 'Abrasion', imInjectionDrug: 'hyoscine-uuid', imInjectionQty: 2 },
         initialValues: {},
         ...noExistingObs,
       });
@@ -24,7 +24,8 @@ describe('buildObsForSubmission', () => {
       expect(toBeVoided).toEqual([]);
       expect(newObs).toEqual([
         { concept: concepts.typeOfWoundUuid, value: 'Abrasion' },
-        { concept: concepts.imInjectionUuid, value: 'Ceftriaxone' },
+        { concept: concepts.imInjectionDrugUuid, value: 'hyoscine-uuid' },
+        { concept: concepts.imInjectionQtyUuid, value: 2 },
       ]);
     });
 
@@ -62,6 +63,20 @@ describe('buildObsForSubmission', () => {
         { concept: concepts.ointmentUuid, value: 'fucidin-uuid' },
         { concept: concepts.ointmentUuid, value: 'silver-uuid' },
       ]);
+    });
+
+    it('leaves an answer recorded as free text before the drug dropdown existed untouched', () => {
+      const legacyObs = obs('legacy-obs', concepts.imInjectionUuid, 'Decort 3 ampul');
+      const { newObs, toBeVoided } = buildObsForSubmission({
+        data: { imInjectionDrug: 'hyoscine-uuid', imInjectionQty: 1 },
+        initialValues: { imInjection: 'Decort 3 ampul' },
+        existingObsByField: new Map<ScalarNursingField, NursingObs>([['imInjection', legacyObs]]),
+        existingOintmentObs: [],
+        concepts,
+      });
+
+      expect(toBeVoided).toEqual([]);
+      expect(newObs).toHaveLength(2);
     });
 
     it('writes nothing at all for an untouched form', () => {

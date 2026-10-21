@@ -1,6 +1,7 @@
 import { type OpenmrsResource } from '@openmrs/esm-framework';
 import { type ConfigObject } from '../config-schema';
 import { type NursingObs, type ScalarNursingField } from '../common/types';
+import { numericFields } from '../common/helpers';
 import { type NursingFormData } from './schema';
 
 /** The scalar (single-obs) fields, paired with the config key holding their concept uuid. */
@@ -9,13 +10,15 @@ export const scalarFields: Array<{ field: ScalarNursingField; conceptKey: keyof 
   { field: 'dressingGeneralNotes', conceptKey: 'dressingGeneralNotesUuid' },
   { field: 'spirometry', conceptKey: 'spirometryUuid' },
   { field: 'monofilament', conceptKey: 'monofilamentUuid' },
-  { field: 'imInjection', conceptKey: 'imInjectionUuid' },
-  { field: 'ivInjection', conceptKey: 'ivInjectionUuid' },
-  { field: 'oral', conceptKey: 'oralUuid' },
-  { field: 'nebulization', conceptKey: 'nebulizationUuid' },
+  { field: 'imInjectionDrug', conceptKey: 'imInjectionDrugUuid' },
+  { field: 'imInjectionQty', conceptKey: 'imInjectionQtyUuid' },
+  { field: 'ivInjectionDrug', conceptKey: 'ivInjectionDrugUuid' },
+  { field: 'ivInjectionQty', conceptKey: 'ivInjectionQtyUuid' },
+  { field: 'oralDrug', conceptKey: 'oralDrugUuid' },
+  { field: 'oralQty', conceptKey: 'oralQtyUuid' },
+  { field: 'nebulizationDrug', conceptKey: 'nebulizationDrugUuid' },
+  { field: 'nebulizationQty', conceptKey: 'nebulizationQtyUuid' },
 ];
-
-const numericFields = new Set<ScalarNursingField>(['spirometry', 'monofilament']);
 
 /** Normalises a field value so an untouched field never reads as changed. */
 export function normalise(value: unknown): string {
