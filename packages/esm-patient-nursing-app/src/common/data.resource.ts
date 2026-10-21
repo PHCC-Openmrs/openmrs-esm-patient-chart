@@ -11,6 +11,7 @@ import {
   useConfig,
 } from '@openmrs/esm-framework';
 import { type ConfigObject } from '../config-schema';
+import { codedFields, numericFields } from './helpers';
 import type { ConceptAnswer, NursingEncounter, NursingObs, NursingRecord, ScalarNursingField } from './types';
 
 // `value` is deliberately left unqualified: REST then returns a plain string/number for
@@ -79,10 +80,10 @@ function toNursingRecord(
       continue;
     }
 
-    if (field === 'spirometry' || field === 'monofilament') {
-      record[field] = Number(getObsDisplayValue(obs));
+    if (numericFields.has(field)) {
+      (record as unknown as Record<string, number>)[field] = Number(getObsDisplayValue(obs));
     } else {
-      record[field] = getObsDisplayValue(obs);
+      (record as unknown as Record<string, string>)[field] = getObsDisplayValue(obs);
     }
   }
 
@@ -141,8 +142,13 @@ export function useInvalidateNursingRecords(patientUuid: string) {
  */
 export function useOintmentAnswers() {
   const { concepts } = useConfig<ConfigObject>();
-  const url = concepts.ointmentUuid
-    ? `${restBaseUrl}/concept/${concepts.ointmentUuid}?v=custom:(uuid,display,answers:(uuid,display))`
+  return useConceptAnswers(concepts.ointmentUuid);
+}
+
+/** The answers configured on a coded concept, as the options of a dropdown. */
+export function useConceptAnswers(conceptUuid: string) {
+  const url = conceptUuid
+    ? `${restBaseUrl}/concept/${conceptUuid}?v=custom:(uuid,display,answers:(uuid,display))`
     : null;
 
   const { data, error, isLoading } = useSWRImmutable<
@@ -199,7 +205,12 @@ export function useNursingEncounter(encounterUuid: string | null) {
 
     existingObsByField?.forEach((obs, field) => {
       const value = getObsDisplayValue(obs);
-      initialValues[field] = field === 'spirometry' || field === 'monofilament' ? Number(value) : value;
+      // The form edits a coded answer by its concept uuid, not by the name shown in tables.
+      initialValues[field] = numericFields.has(field)
+        ? Number(value)
+        : codedFields.has(field)
+          ? getObsCodedUuid(obs) ?? ''
+          : value;
     });
     initialValues.ointments = existingOintmentObs.map((obs) => getObsCodedUuid(obs)).filter(Boolean);
 

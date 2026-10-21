@@ -45,6 +45,29 @@ describe('NursingProceduresOverview', () => {
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
+  it('renders the drug and quantity given for each procedure', async () => {
+    mockRecords([
+      {
+        id: 'encounter-3',
+        date: '2026-09-10T10:00:00.000+0000',
+        ointments: [],
+        imInjectionDrug: 'Hyoscine',
+        imInjectionQty: 2,
+        nebulizationDrug: 'Ipratropium (Nursing)',
+        nebulizationQty: 1,
+        oral: 'Paracetamol 500mg',
+      },
+    ]);
+
+    renderWithSwr(<NursingProceduresOverview patientUuid="patient-uuid" />);
+    await waitForLoadingToFinish();
+
+    expect(screen.getByText('Hyoscine × 2')).toBeInTheDocument();
+    expect(screen.getByText('Ipratropium (Nursing) × 1')).toBeInTheDocument();
+    // an answer recorded as free text before the dropdowns existed still shows
+    expect(screen.getByText('Paracetamol 500mg')).toBeInTheDocument();
+  });
+
   it('renders every procedure recorded on an encounter', async () => {
     mockRecords([
       {

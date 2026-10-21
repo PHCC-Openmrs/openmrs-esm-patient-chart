@@ -28,7 +28,16 @@ export interface NursingRecord {
   ecgImage?: string;
   spirometry?: number;
   monofilament?: number;
-  // Nursing procedures
+  // Nursing procedures: the drug given (a coded answer) and its quantity
+  imInjectionDrug?: string;
+  imInjectionQty?: number;
+  ivInjectionDrug?: string;
+  ivInjectionQty?: number;
+  oralDrug?: string;
+  oralQty?: number;
+  nebulizationDrug?: string;
+  nebulizationQty?: number;
+  /** Free-text answers recorded before the drug dropdown and quantity fields existed. */
   imInjection?: string;
   ivInjection?: string;
   oral?: string;

@@ -1,8 +1,14 @@
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import NursingWidget, { type NursingWidgetColumn } from '../nursing-widget/nursing-widget.component';
+import { formatProcedure, nursingProcedures, type NursingProcedure } from '../common';
 import { type NursingRecord } from '../common/types';
 import styles from '../nursing-widget/nursing-widget.scss';
+
+/** The drug and quantity given for a procedure, or the older free-text answer recorded before them. */
+function procedureText(record: NursingRecord, procedure: NursingProcedure): string | undefined {
+  return formatProcedure(record[`${procedure}Drug`], record[`${procedure}Qty`], record[procedure]);
+}
 
 interface NursingProceduresOverviewProps {
   patientUuid: string;
@@ -20,40 +26,25 @@ const NursingProceduresOverview: React.FC<NursingProceduresOverviewProps> = ({
   const { t } = useTranslation();
 
   const columns: Array<NursingWidgetColumn> = useMemo(
-    () => [
-      {
-        key: 'imInjection',
-        header: t('imInjection', 'IM injection'),
-        render: (record) =>
-          record.imInjection ? <span className={styles.wrappedText}>{record.imInjection}</span> : '--',
-      },
-      {
-        key: 'ivInjection',
-        header: t('ivInjection', 'IV injection'),
-        render: (record) =>
-          record.ivInjection ? <span className={styles.wrappedText}>{record.ivInjection}</span> : '--',
-      },
-      {
-        key: 'oral',
-        header: t('oral', 'Oral'),
-        render: (record) => (record.oral ? <span className={styles.wrappedText}>{record.oral}</span> : '--'),
-      },
-      {
-        key: 'nebulization',
-        header: t('nebulization', 'Nebulization'),
-        render: (record) =>
-          record.nebulization ? <span className={styles.wrappedText}>{record.nebulization}</span> : '--',
-      },
-    ],
+    () =>
+      [
+        { key: 'imInjection', header: t('imInjection', 'IM injection') },
+        { key: 'ivInjection', header: t('ivInjection', 'IV injection') },
+        { key: 'oral', header: t('oral', 'Oral') },
+        { key: 'nebulization', header: t('nebulization', 'Nebulization') },
+      ].map(({ key, header }) => ({
+        key,
+        header,
+        render: (record: NursingRecord) => {
+          const text = procedureText(record, key as NursingProcedure);
+          return text ? <span className={styles.wrappedText}>{text}</span> : '--';
+        },
+      })),
     [t],
   );
 
   const hasContent = useCallback(
-    (record: NursingRecord) =>
-      Boolean(record.imInjection) ||
-      Boolean(record.ivInjection) ||
-      Boolean(record.oral) ||
-      Boolean(record.nebulization),
+    (record: NursingRecord) => nursingProcedures.some((procedure) => Boolean(procedureText(record, procedure))),
     [],
   );
 
