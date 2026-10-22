@@ -76,7 +76,7 @@ export const configSchema = {
   },
   maxPinnedTestOrders: {
     _type: Type.Number,
-    _default: 10,
+    _default: 20,
     _description: 'Maximum number of pinned test orders per user and order type',
     _validators: [validators.inRange(1, 50)],
   },
