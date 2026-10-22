@@ -87,7 +87,7 @@ export const configSchema = {
   },
   maxPinnedDrugOrders: {
     _type: Type.Number,
-    _default: 10,
+    _default: 20,
     _description: 'Maximum number of pinned drug orders per user',
     _validators: [validators.inRange(1, 50)],
   },
