@@ -46,26 +46,9 @@ export const configSchema = {
         _default: [],
       },
     },
-    _default: [
-      {
-        // Sexual Reproductive Health (SRH) -- only offered at Deir Al-Balah PHCC, not Beir 19 point.
-        programUuid: 'f73376c9-7bdf-44e5-ba97-ddf4db5bc9f9',
-        allowedLocationUuids: ['de3b87c1-9688-4162-bfc5-d5eeccf3354d'],
-      },
-      {
-        // Primary Health Care -- only offered at Deir Al-Balah PHCC, not Beir 19 point.
-        programUuid: 'bd6b8c0a-49c9-4f98-afea-8b8fcd999688',
-        allowedLocationUuids: ['de3b87c1-9688-4162-bfc5-d5eeccf3354d'],
-      },
-      {
-        // Pediatric Consultation -- only offered at Deir Al-Balah PHCC, not Beir 19 point.
-        programUuid: '9138885e-f9f4-4981-b1fb-ef3d022228bd',
-        allowedLocationUuids: ['de3b87c1-9688-4162-bfc5-d5eeccf3354d'],
-      },
-      // Nutrition Registration has no entry here -- an empty/missing restriction means it's
-      // offered everywhere, including Beir 19 point. This makes it the only service visible
-      // at Beir 19 point, since every other program above is restricted to Deir Al-Balah PHCC.
-    ],
+    // No restrictions by default -- every service is offered at every location. Add entries in the
+    // distro config JSON to restrict a program again.
+    _default: [],
     _description:
       'Restricts a program to being offered only when the user is logged in at one of the allowed locations.',
   },
