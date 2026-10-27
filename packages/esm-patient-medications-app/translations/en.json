@@ -82,6 +82,7 @@
   "orderActionNew": "New",
   "orderActionRenew": "Renew",
   "orderActionRevise": "Modify",
+  "orderAlreadyRenewedOrModified": "This medication has already been renewed or modified once, so it cannot be renewed or modified again. Use the newer order instead.",
   "orderAlreadyRevisedOrStopped": "This order has already been revised, discontinued or expired, so it cannot be changed again. Refresh the orders list and modify the latest order instead.",
   "orderDiscontinued": "Order discontinued",
   "orderedFor": "Placed order for",
