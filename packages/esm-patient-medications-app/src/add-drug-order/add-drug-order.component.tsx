@@ -19,7 +19,7 @@ import {
   useMutatePatientOrders,
   useOrderBasket,
 } from '@openmrs/esm-patient-common-lib';
-import { getOrderErrorMessage, isOrderAlreadyStoppedError } from '../api/order-errors';
+import { getOrderErrorMessage, isOrderAlreadyFollowedUpError, isOrderAlreadyStoppedError } from '../api/order-errors';
 
 import { type ConfigObject } from '../config-schema';
 import { prepMedicationOrderPostData } from '../api/api';
@@ -153,12 +153,17 @@ const AddDrugOrder: React.FC<AddDrugOrderProps> = ({
           isLowContrast: false,
           kind: 'error',
           title: t('errorSavingDrugOrder', 'Error saving drug order'),
-          subtitle: isOrderAlreadyStoppedError(error)
+          subtitle: isOrderAlreadyFollowedUpError(error)
             ? t(
-                'orderAlreadyRevisedOrStopped',
-                'This order has already been revised, discontinued or expired, so it cannot be changed again. Refresh the orders list and modify the latest order instead.',
+                'orderAlreadyRenewedOrModified',
+                'This medication has already been renewed or modified once, so it cannot be renewed or modified again. Use the newer order instead.',
               )
-            : getOrderErrorMessage(error),
+            : isOrderAlreadyStoppedError(error)
+              ? t(
+                  'orderAlreadyRevisedOrStopped',
+                  'This order has already been revised, discontinued or expired, so it cannot be changed again. Refresh the orders list and modify the latest order instead.',
+                )
+              : getOrderErrorMessage(error),
         });
       };
 

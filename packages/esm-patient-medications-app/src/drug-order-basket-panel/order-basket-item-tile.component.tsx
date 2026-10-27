@@ -5,6 +5,7 @@ import { ClickableTile, IconButton, Tile } from '@carbon/react';
 import { ExtensionSlot, TrashCanIcon, useLayoutType, WarningIcon } from '@openmrs/esm-framework';
 import { type DrugOrderBasketItem } from '@openmrs/esm-patient-common-lib';
 import styles from './order-basket-item-tile.scss';
+import { isOrderAlreadyFollowedUpError } from '../api/order-errors';
 
 export interface OrderBasketItemTileProps {
   orderBasketItem: DrugOrderBasketItem;
@@ -84,7 +85,12 @@ export default function OrderBasketItemTile({ orderBasketItem, onItemClick, onRe
                 <span className={styles.orderErrorText}>
                   <WarningIcon size={16} /> &nbsp;{' '}
                   <span className={styles.label01}>{t('error', 'Error').toUpperCase()}</span> &nbsp;
-                  {orderBasketItem.orderError.responseBody?.error?.message ?? orderBasketItem.orderError.message}
+                  {isOrderAlreadyFollowedUpError(orderBasketItem.orderError)
+                    ? t(
+                        'orderAlreadyRenewedOrModified',
+                        'This medication has already been renewed or modified once, so it cannot be renewed or modified again. Use the newer order instead.',
+                      )
+                    : orderBasketItem.orderError.responseBody?.error?.message ?? orderBasketItem.orderError.message}
                 </span>
               </>
             )}

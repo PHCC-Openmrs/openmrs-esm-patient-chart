@@ -49,10 +49,11 @@ import {
   userHasAccess,
   UserIcon,
 } from '@openmrs/esm-framework';
-import { buildMedicationOrder } from '../api';
+import { buildMedicationOrder, useMedicationOrders } from '../api';
 import { type AddDrugOrderWorkspaceProps } from '../add-drug-order/add-drug-order.workspace';
 import { type ConfigObject } from '../config-schema';
 import PrintComponent from '../print/print.component';
+import { getOrdersWithFollowUp } from './orders-with-follow-up';
 import styles from './medications-details-table.scss';
 
 export interface MedicationsDetailsTableProps {
@@ -128,6 +129,15 @@ const MedicationsDetailsTable: React.FC<MedicationsDetailsTableProps> = ({
       isVisible: true,
     },
   ];
+
+  // A medication that a newer order already renewed or revised can't be renewed or modified again.
+  // The renewal may itself have been stopped or discontinued since, which moves it out of this list
+  // (and out of Active Medications altogether), so look through all of the patient's drug orders.
+  const { activeOrders, futureOrders, pastOrders } = useMedicationOrders(patient.id);
+  const ordersWithFollowUp = useMemo(
+    () => getOrdersWithFollowUp([...(medications ?? []), ...activeOrders, ...futureOrders, ...pastOrders]),
+    [medications, activeOrders, futureOrders, pastOrders],
+  );
 
   const medicationsByUuid = useMemo(
     () => new Map(results?.map((medication) => [medication.uuid, medication]) ?? []),
@@ -380,8 +390,8 @@ const MedicationsDetailsTable: React.FC<MedicationsDetailsTableProps> = ({
                             <OrderBasketItemActions
                               patient={patient}
                               showDiscontinueButton={showDiscontinueButton}
-                              showModifyButton={showModifyButton}
-                              showRenewButton={showRenewButton}
+                              showModifyButton={showModifyButton && !ordersWithFollowUp.has(medication.uuid)}
+                              showRenewButton={showRenewButton && !ordersWithFollowUp.has(medication.uuid)}
                               medication={medication}
                               items={orders}
                               setItems={setOrders}
