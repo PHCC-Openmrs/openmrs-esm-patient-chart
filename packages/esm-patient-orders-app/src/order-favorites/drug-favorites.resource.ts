@@ -5,6 +5,24 @@ import type { DrugFavoriteOrder, UserResponse } from './types';
 
 export const FAVORITES_PROPERTY_KEY = 'order_favorites_drugs';
 
+// The server HTML-escapes user property values on save, so every read-then-save cycle adds another level of
+// escaping (& -> &amp; -> &amp;amp; ...). Decode on read so the stored value only ever gains one level.
+function decodeEntities(value: string | undefined): string | undefined {
+  let current = value;
+  while (current !== undefined && /&amp;/.test(current)) {
+    current = current.replace(/&amp;/g, '&');
+  }
+  return current;
+}
+
+function decodeFavorite(favorite: DrugFavoriteOrder): DrugFavoriteOrder {
+  return {
+    ...favorite,
+    conceptName: decodeEntities(favorite.conceptName),
+    displayName: decodeEntities(favorite.displayName) ?? favorite.displayName,
+  };
+}
+
 export function getFavoriteKey(favorite: DrugFavoriteOrder): string {
   return favorite.id;
 }
@@ -20,7 +38,7 @@ export function useDrugFavorites(userUuid: string | undefined) {
     if (!rawValue) return [];
     try {
       const stored: { favorites: DrugFavoriteOrder[] } = JSON.parse(rawValue);
-      return stored.favorites ?? [];
+      return (stored.favorites ?? []).map(decodeFavorite);
     } catch (e) {
       console.error('Error parsing drug favorites:', e);
       return [];
