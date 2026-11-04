@@ -15,7 +15,7 @@ export { createProgramEnrollment, filterHiddenPrograms, filterProgramsByLocation
 export const customRepresentation = `custom:(uuid,display,program,dateEnrolled,dateCompleted,location:(uuid,display),states:(startDate,endDate,voided,state:(uuid,concept:(display))))`;
 
 export function useEnrollments(patientUuid: string) {
-  const enrollmentsUrl = `${restBaseUrl}/programenrollment?patient=${patientUuid}&v=${customRepresentation}`;
+  const enrollmentsUrl = `${restBaseUrl}/programenrollment?patient=${patientUuid}&v=${customRepresentation}&limit=1000`;
   const { data, error, isLoading, isValidating, mutate } = useSWR<{ data: ProgramsFetchResponse }, Error>(
     patientUuid ? enrollmentsUrl : null,
     openmrsFetch,

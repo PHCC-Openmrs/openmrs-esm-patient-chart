@@ -46,7 +46,7 @@ export async function completeVisitServiceEnrollment(visitUuid: string): Promise
     }
 
     const { data } = await openmrsFetch<{ results: Array<PatientProgram> }>(
-      `${restBaseUrl}/programenrollment?patient=${visit.patient.uuid}&v=${customRepresentation}`,
+      `${restBaseUrl}/programenrollment?patient=${visit.patient.uuid}&v=${customRepresentation}&limit=1000`,
     );
 
     const enrollments = data?.results ?? [];

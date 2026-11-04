@@ -8,7 +8,7 @@ const customRepresentation = `custom:(uuid,display,program,dateEnrolled,dateComp
 
 export const useActivePatientEnrollment = (patientUuid: string) => {
   const { data, error, isLoading } = useSWR<{ data: { results: Array<PatientProgram> } }>(
-    `${restBaseUrl}/programenrollment?patient=${patientUuid}&v=${customRepresentation}`,
+    `${restBaseUrl}/programenrollment?patient=${patientUuid}&v=${customRepresentation}&limit=1000`,
     openmrsFetch,
   );
 
