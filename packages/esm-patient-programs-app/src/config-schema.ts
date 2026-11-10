@@ -304,6 +304,24 @@ export const configSchema = {
             maxAge: 200,
             readOnly: false,
           },
+          {
+            // "Child Last Status" -- the beneficiary's outcome in the programme. The CMAM Follow-up
+            // reports (Under 5 / Above 5) and the Nutrition reports' Status column read this concept.
+            conceptUuid: '524fea02-d6e8-47c0-84ee-e7b889f08d4c',
+            label: 'Child Last Status',
+            controlType: 'select',
+            options: [],
+            answers: [
+              { label: 'Under F/U', conceptUuid: '75162a2d-cd15-488b-a37d-4ac4807f8515' },
+              { label: 'Cured', conceptUuid: 'f10f11d5-7a60-44fd-b5cb-e2c012ecd801' },
+              { label: 'Defaulter', conceptUuid: 'a9c15c37-4a2e-477b-b167-2f17f4e0f115' },
+              { label: 'Death', conceptUuid: 'ea1ac227-5948-451a-b217-c491c2d83c10' },
+              { label: 'Transferred', conceptUuid: '298c1e10-c3ff-4a4e-bddb-fb54a1a808bc' },
+            ],
+            minAge: 0,
+            maxAge: 200,
+            readOnly: false,
+          },
         ],
       },
       {
