@@ -19,6 +19,7 @@
   "editNursing": "Edit nursing record",
   "editOrDeleteNursing": "Edit or delete nursing record",
   "encounterUuidRequired": "Encounter UUID is required to delete a nursing record",
+  "enterValidValue": "Enter a valid value",
   "error": "Error",
   "errorDeletingNursing": "Error deleting nursing record",
   "generalNotes": "General notes",
