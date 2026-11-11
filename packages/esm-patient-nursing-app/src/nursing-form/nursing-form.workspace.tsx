@@ -86,6 +86,13 @@ const NursingForm: React.FC<PatientWorkspace2DefinitionProps<NursingFormProps, o
 
   const [showEmptyFormError, setShowEmptyFormError] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [invalidNumericFields, setInvalidNumericFields] = useState<Record<string, boolean>>({});
+  const hasInvalidNumericField = Object.values(invalidNumericFields).some(Boolean);
+  // Flags entries that aren't a plain non-negative number (letters, 'e', '+', '-').
+  const validateNumericEntry = (name: string, target: HTMLInputElement | HTMLButtonElement) => {
+    const isInvalid = !!target.validity?.badInput || (target.value !== '' && Number(target.value) < 0);
+    setInvalidNumericFields((prev) => (prev[name] === isInvalid ? prev : { ...prev, [name]: isInvalid }));
+  };
 
   const {
     control,
@@ -353,11 +360,19 @@ const NursingForm: React.FC<PatientWorkspace2DefinitionProps<NursingFormProps, o
                         disableWheel
                         hideSteppers
                         id="spirometry"
+                        invalid={!!invalidNumericFields.spirometry}
+                        invalidText={t('enterValidValue', 'Enter a valid value')}
+                        min={0}
+                        onInput={(event) => validateNumericEntry('spirometry', event.currentTarget)}
                         label={withUnit(t('spirometry', 'Spirometry'), nursing.spirometryUnit)}
-                        onBlur={onBlur}
-                        onChange={(_event, { value: nextValue }) =>
-                          onChange(nextValue === '' || nextValue == null ? undefined : Number(nextValue))
-                        }
+                        onBlur={(event) => {
+                          validateNumericEntry('spirometry', event.currentTarget);
+                          onBlur();
+                        }}
+                        onChange={(event, { value: nextValue }) => {
+                          validateNumericEntry('spirometry', event.target as HTMLInputElement);
+                          onChange(nextValue === '' || nextValue == null ? undefined : Number(nextValue));
+                        }}
                         ref={ref}
                         value={value ?? ''}
                       />
@@ -376,11 +391,19 @@ const NursingForm: React.FC<PatientWorkspace2DefinitionProps<NursingFormProps, o
                         disableWheel
                         hideSteppers
                         id="monofilament"
+                        invalid={!!invalidNumericFields.monofilament}
+                        invalidText={t('enterValidValue', 'Enter a valid value')}
+                        min={0}
+                        onInput={(event) => validateNumericEntry('monofilament', event.currentTarget)}
                         label={withUnit(t('monofilament', 'Monofilament'), nursing.monofilamentUnit)}
-                        onBlur={onBlur}
-                        onChange={(_event, { value: nextValue }) =>
-                          onChange(nextValue === '' || nextValue == null ? undefined : Number(nextValue))
-                        }
+                        onBlur={(event) => {
+                          validateNumericEntry('monofilament', event.currentTarget);
+                          onBlur();
+                        }}
+                        onChange={(event, { value: nextValue }) => {
+                          validateNumericEntry('monofilament', event.target as HTMLInputElement);
+                          onChange(nextValue === '' || nextValue == null ? undefined : Number(nextValue));
+                        }}
                         ref={ref}
                         value={value ?? ''}
                       />
@@ -495,7 +518,7 @@ const NursingForm: React.FC<PatientWorkspace2DefinitionProps<NursingFormProps, o
             className={styles.button}
             kind="primary"
             onClick={handleSubmit(saveNursingRecord, onError)}
-            disabled={!hasUserUnsavedChanges || isSubmitting || isLoadingInitialValues}
+            disabled={!hasUserUnsavedChanges || isSubmitting || isLoadingInitialValues || hasInvalidNumericField}
             type="submit"
           >
             {t('saveAndClose', 'Save and close')}
