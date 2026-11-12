@@ -76,28 +76,17 @@ const medicationOrder = {
 } as unknown as Order;
 
 describe('buildMedicationOrder', () => {
-  it('defaults RENEW basket items to now instead of the previous activation date', () => {
-    const before = Date.now();
+  it('leaves RENEW basket items without a start date, so they start when signed', () => {
     const result = buildMedicationOrder(medicationOrder, 'RENEW');
-    const after = Date.now();
 
-    expect(result.scheduledDate).toBeInstanceOf(Date);
-    expect((result.scheduledDate as Date).getTime()).toBeGreaterThanOrEqual(before);
-    expect((result.scheduledDate as Date).getTime()).toBeLessThanOrEqual(after);
-    expect(result.scheduledDate).not.toBe(medicationOrder.dateActivated);
+    expect(result.scheduledDate).toBeUndefined();
   });
 
-  it('defaults REVISE basket items to now instead of the previous activation or scheduled date', () => {
-    const before = Date.now();
+  it('leaves REVISE basket items without a start date instead of the previous activation or scheduled date', () => {
     const scheduledDate = '2026-05-01T00:00:00.000+0000';
     const result = buildMedicationOrder({ ...medicationOrder, scheduledDate } as Order, 'REVISE');
-    const after = Date.now();
 
-    expect(result.scheduledDate).toBeInstanceOf(Date);
-    expect((result.scheduledDate as Date).getTime()).toBeGreaterThanOrEqual(before);
-    expect((result.scheduledDate as Date).getTime()).toBeLessThanOrEqual(after);
-    expect(result.scheduledDate).not.toBe(scheduledDate);
-    expect(result.scheduledDate).not.toBe(medicationOrder.dateActivated);
+    expect(result.scheduledDate).toBeUndefined();
   });
 
   it.each(['RENEW', 'REVISE'] as const)(
@@ -118,9 +107,8 @@ describe('buildMedicationOrder', () => {
   );
 
   it.each(['RENEW', 'REVISE'] as const)(
-    'defaults %s basket items to now when a future scheduled date is not marked ON_SCHEDULED_DATE',
+    'leaves %s basket items without a start date when a future scheduled date is not marked ON_SCHEDULED_DATE',
     (action) => {
-      const before = Date.now();
       const scheduledDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       const result = buildMedicationOrder(
         {
@@ -130,12 +118,8 @@ describe('buildMedicationOrder', () => {
         } as Order,
         action,
       );
-      const after = Date.now();
 
-      expect(result.scheduledDate).toBeInstanceOf(Date);
-      expect((result.scheduledDate as Date).getTime()).toBeGreaterThanOrEqual(before);
-      expect((result.scheduledDate as Date).getTime()).toBeLessThanOrEqual(after);
-      expect(result.scheduledDate).not.toEqual(new Date(scheduledDate));
+      expect(result.scheduledDate).toBeUndefined();
     },
   );
 

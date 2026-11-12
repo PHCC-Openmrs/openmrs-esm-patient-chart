@@ -39,6 +39,7 @@ vi.mock('@openmrs/esm-patient-common-lib', async () => ({
   usePatientChartStore: vi.fn(() => ({
     visitContext: null,
     setVisitContext: mockSetVisitContext,
+    forgetPastVisitChoice: vi.fn(),
   })),
 }));
 

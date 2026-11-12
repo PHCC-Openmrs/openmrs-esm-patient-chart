@@ -68,6 +68,7 @@ describe('useDeleteVisit', () => {
       mutateVisitContext: vi.fn(),
       setPatient: vi.fn(),
       setVisitContext: mockSetVisitContext,
+      forgetPastVisitChoice: vi.fn(),
     });
 
     mockUseSWRConfig.mockReturnValue({
@@ -147,6 +148,7 @@ describe('useDeleteVisit', () => {
       mutateVisitContext: vi.fn(),
       setPatient: vi.fn(),
       setVisitContext: mockSetVisitContext,
+      forgetPastVisitChoice: vi.fn(),
     });
     mockUseSWRConfig.mockReturnValue({
       mutate: mockGlobalMutate,
@@ -193,6 +195,7 @@ describe('useDeleteVisit', () => {
       mutateVisitContext: vi.fn(),
       setPatient: vi.fn(),
       setVisitContext: mockSetVisitContext,
+      forgetPastVisitChoice: vi.fn(),
     });
     mockUseSWRConfig.mockReturnValue({
       mutate: mockGlobalMutate,

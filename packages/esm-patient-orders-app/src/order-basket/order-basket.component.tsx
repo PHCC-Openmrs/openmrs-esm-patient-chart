@@ -6,7 +6,9 @@ import { useSWRConfig } from 'swr';
 import {
   Extension,
   ExtensionSlot,
+  formatDate,
   getPatientName,
+  parseDate,
   PatientBannerPatientInfo,
   PatientPhoto,
   showModal,
@@ -330,6 +332,25 @@ const OrderBasket: React.FC<OrderBasketProps> = ({
               ))}
         </div>
         <div>
+          {visitContext?.stopDatetime && (
+            // Orders placed in an ended visit are filed under it and dated within it (not today), so
+            // say so before signing: otherwise e.g. a renewal shows the old visit's date when dispensed.
+            <InlineNotification
+              kind="warning"
+              lowContrast
+              hideCloseButton
+              className={styles.inlineNotification}
+              title={t('ordersGoToPastVisit', 'These orders will be added to a past visit')}
+              subtitle={t(
+                'ordersGoToPastVisitDetail',
+                'They will be dated within the visit of {{fromDate}} - {{toDate}}, not today. To order for today, change the visit or start a new one.',
+                {
+                  fromDate: formatDate(parseDate(visitContext.startDatetime), { time: false }),
+                  toDate: formatDate(parseDate(visitContext.stopDatetime), { time: false }),
+                },
+              )}
+            />
+          )}
           {(creatingEncounterError || errorFetchingEncounterUuid) && (
             <InlineNotification
               kind="error"

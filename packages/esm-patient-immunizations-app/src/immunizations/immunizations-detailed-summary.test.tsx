@@ -105,6 +105,7 @@ describe('ImmunizationsDetailedSummary', () => {
       mutateVisitContext: vi.fn(),
       setPatient: vi.fn(),
       setVisitContext: vi.fn(),
+      forgetPastVisitChoice: vi.fn(),
     });
   });
 
@@ -197,6 +198,7 @@ describe('ImmunizationsDetailedSummary', () => {
       mutateVisitContext: vi.fn(),
       setPatient: vi.fn(),
       setVisitContext: vi.fn(),
+      forgetPastVisitChoice: vi.fn(),
     });
 
     const user = userEvent.setup();
@@ -233,6 +235,7 @@ describe('ImmunizationsDetailedSummary', () => {
       mutateVisitContext: null,
       setPatient: vi.fn(),
       setVisitContext: vi.fn(),
+      forgetPastVisitChoice: vi.fn(),
     });
     mockUseImmunizations.mockReturnValueOnce({
       data: mockImmunizationData,

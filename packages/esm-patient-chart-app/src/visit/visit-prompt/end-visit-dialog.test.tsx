@@ -39,6 +39,7 @@ mockUsePatientChartStore.mockReturnValue({
   mutateVisitContext: vi.fn(),
   setPatient: vi.fn(),
   setVisitContext: mockSetVisitContext,
+  forgetPastVisitChoice: vi.fn(),
 });
 
 describe('End visit dialog', () => {
