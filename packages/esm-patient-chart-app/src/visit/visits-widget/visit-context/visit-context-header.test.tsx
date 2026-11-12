@@ -36,6 +36,7 @@ describe('VisitContextHeader', () => {
       mutateVisitContext: null,
       setPatient: vi.fn(),
       setVisitContext: vi.fn(),
+      forgetPastVisitChoice: vi.fn(),
     });
 
     render(<VisitContextHeader patientUuid="some-uuid" />);
@@ -50,6 +51,7 @@ describe('VisitContextHeader', () => {
       mutateVisitContext: null,
       setPatient: vi.fn(),
       setVisitContext: vi.fn(),
+      forgetPastVisitChoice: vi.fn(),
     });
 
     render(<VisitContextHeader patientUuid={mockPatient.id} />);

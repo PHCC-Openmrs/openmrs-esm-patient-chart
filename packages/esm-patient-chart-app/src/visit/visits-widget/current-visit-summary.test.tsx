@@ -23,6 +23,7 @@ describe('CurrentVisitSummary', () => {
       mutateVisitContext: null,
       setPatient: vi.fn(),
       setVisitContext: vi.fn(),
+      forgetPastVisitChoice: vi.fn(),
     });
     render(<CurrentVisitSummary patientUuid={mockPatient.id} />);
     expect(screen.getByText(/current visit/i)).toBeInTheDocument();
@@ -37,6 +38,7 @@ describe('CurrentVisitSummary', () => {
       mutateVisitContext: null,
       setPatient: vi.fn(),
       setVisitContext: vi.fn(),
+      forgetPastVisitChoice: vi.fn(),
     });
     render(<CurrentVisitSummary patientUuid={mockPatient.id} />);
     expect(screen.queryByText(/current visit/i)).not.toBeInTheDocument();
@@ -69,6 +71,7 @@ describe('CurrentVisitSummary', () => {
       mutateVisitContext: null,
       setPatient: vi.fn(),
       setVisitContext: vi.fn(),
+      forgetPastVisitChoice: vi.fn(),
     });
 
     render(<CurrentVisitSummary patientUuid={mockPatient.id} />);

@@ -272,9 +272,12 @@ export function buildMedicationOrder(order: Order, action: OrderAction): DrugOrd
     patientInstructions: order.dosingType !== 'org.openmrs.FreeTextDosingInstructions' ? order.dosingInstructions : '',
     asNeeded: order.asNeeded,
     asNeededCondition: order.asNeededCondition ?? null,
+    // A renewal or revision starts when it is signed, so it gets no start date of its own (unless the
+    // order it follows is still scheduled to start later). Stamping the click time here backdated the
+    // order and its encounter to that click when the basket was signed later (hours, or a day, on).
     scheduledDate:
       action === 'RENEW' || action === 'REVISE'
-        ? futureScheduledDate ?? new Date()
+        ? futureScheduledDate ?? undefined
         : new Date(order.scheduledDate || order.dateActivated),
     duration: order.duration,
     durationUnit: order.durationUnits

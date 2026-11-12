@@ -97,6 +97,8 @@
   "ordersCompleted": "Orders completed",
   "ordersCouldNotBePlaced": "The orders could not be placed",
   "ordersDiscontinued": "Orders discontinued",
+  "ordersGoToPastVisit": "These orders will be added to a past visit",
+  "ordersGoToPastVisitDetail": "They will be dated within the visit of {{fromDate}} - {{toDate}}, not today. To order for today, change the visit or start a new one.",
   "ordersLower": "orders",
   "ordersNotSubmittedTryAgain": "The orders were not submitted. Please try again.",
   "ordersPlaced": "Orders placed",

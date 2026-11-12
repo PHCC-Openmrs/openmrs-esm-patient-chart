@@ -1,5 +1,5 @@
 import { toOmrsIsoString } from '@openmrs/esm-framework';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { prepMedicationOrderPostData, buildMedicationOrder, bucketMedicationOrders } from './api';
 import type { DrugOrderBasketItem, Order } from '@openmrs/esm-patient-common-lib';
 
@@ -248,28 +248,34 @@ describe('bucketMedicationOrders', () => {
 });
 
 describe('buildMedicationOrder', () => {
-  it('defaults RENEW basket items to now instead of the previous activation date', () => {
-    const before = Date.now();
+  it('leaves RENEW basket items without a start date, so they start when signed', () => {
     const result = buildMedicationOrder(medicationOrder, 'RENEW');
-    const after = Date.now();
 
-    expect(result.scheduledDate).toBeInstanceOf(Date);
-    expect((result.scheduledDate as Date).getTime()).toBeGreaterThanOrEqual(before);
-    expect((result.scheduledDate as Date).getTime()).toBeLessThanOrEqual(after);
-    expect(result.scheduledDate).not.toBe(medicationOrder.dateActivated);
+    expect(result.scheduledDate).toBeUndefined();
   });
 
-  it('defaults REVISE basket items to now instead of the previous activation or scheduled date', () => {
-    const before = Date.now();
+  it('does not date a renewal by when Renew was clicked if the basket is signed later', () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-11-10T09:00:00.000Z'));
+      const renewal = buildMedicationOrder(medicationOrder, 'RENEW');
+
+      vi.setSystemTime(new Date('2026-11-11T14:00:00.000Z'));
+      const payload = prepMedicationOrderPostData(renewal, 'patient-uuid', 'encounter-uuid', 'provider-uuid');
+
+      // no dateActivated: the server stamps the order (and its encounter) when it is signed
+      expect(payload).not.toHaveProperty('dateActivated');
+      expect(payload).not.toHaveProperty('scheduledDate');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('leaves REVISE basket items without a start date instead of the previous activation or scheduled date', () => {
     const scheduledDate = '2026-05-01T00:00:00.000+0000';
     const result = buildMedicationOrder({ ...medicationOrder, scheduledDate } as Order, 'REVISE');
-    const after = Date.now();
 
-    expect(result.scheduledDate).toBeInstanceOf(Date);
-    expect((result.scheduledDate as Date).getTime()).toBeGreaterThanOrEqual(before);
-    expect((result.scheduledDate as Date).getTime()).toBeLessThanOrEqual(after);
-    expect(result.scheduledDate).not.toBe(scheduledDate);
-    expect(result.scheduledDate).not.toBe(medicationOrder.dateActivated);
+    expect(result.scheduledDate).toBeUndefined();
   });
 
   it.each(['RENEW', 'REVISE'] as const)(
@@ -290,9 +296,8 @@ describe('buildMedicationOrder', () => {
   );
 
   it.each(['RENEW', 'REVISE'] as const)(
-    'defaults %s basket items to now when a future scheduled date is not marked ON_SCHEDULED_DATE',
+    'leaves %s basket items without a start date when a future scheduled date is not marked ON_SCHEDULED_DATE',
     (action) => {
-      const before = Date.now();
       const scheduledDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       const result = buildMedicationOrder(
         {
@@ -302,12 +307,8 @@ describe('buildMedicationOrder', () => {
         } as Order,
         action,
       );
-      const after = Date.now();
 
-      expect(result.scheduledDate).toBeInstanceOf(Date);
-      expect((result.scheduledDate as Date).getTime()).toBeGreaterThanOrEqual(before);
-      expect((result.scheduledDate as Date).getTime()).toBeLessThanOrEqual(after);
-      expect(result.scheduledDate).not.toEqual(new Date(scheduledDate));
+      expect(result.scheduledDate).toBeUndefined();
     },
   );
 

@@ -23,6 +23,7 @@ describe('VisitBannerTag', () => {
       mutateVisitContext: null,
       setPatient: vi.fn(),
       setVisitContext: vi.fn(),
+      forgetPastVisitChoice: vi.fn(),
     });
   });
 
@@ -89,6 +90,7 @@ describe('VisitBannerTag', () => {
       mutateVisitContext: null,
       setPatient: vi.fn(),
       setVisitContext: vi.fn(),
+      forgetPastVisitChoice: vi.fn(),
     });
 
     const patient = { ...mockPatient, deceasedDateTime: null };

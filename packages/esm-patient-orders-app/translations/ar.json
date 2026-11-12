@@ -101,6 +101,8 @@
   "Orders": "طلبات",
   "ordersCompleted": "اكتملت الطلبات",
   "ordersDiscontinued": "تم إيقاف الطلبات",
+  "ordersGoToPastVisit": "ستُضاف هذه الطلبات إلى زيارة سابقة",
+  "ordersGoToPastVisitDetail": "سيُؤرَّخ تاريخها ضمن الزيارة من {{fromDate}} إلى {{toDate}}، وليس اليوم. للطلب بتاريخ اليوم، غيّر الزيارة أو ابدأ زيارة جديدة.",
   "ordersLower": "الطلبات",
   "ordersPlaced": "تم تقديم الطلبات",
   "ordersUnpinned": "تم إلغاء تثبيت الطلبات",

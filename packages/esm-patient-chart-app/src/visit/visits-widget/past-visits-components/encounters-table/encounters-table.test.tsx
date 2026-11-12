@@ -76,6 +76,7 @@ beforeEach(() => {
     mutateVisitContext: vi.fn(),
     setPatient: vi.fn(),
     setVisitContext: vi.fn(),
+    forgetPastVisitChoice: vi.fn(),
   } as any);
 });
 

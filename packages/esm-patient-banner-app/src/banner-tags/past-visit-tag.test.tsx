@@ -34,6 +34,7 @@ describe('PastVisitTag', () => {
       mutateVisitContext: null,
       setPatient: vi.fn(),
       setVisitContext: vi.fn(),
+      forgetPastVisitChoice: vi.fn(),
     });
 
     render(<PastVisitTag patientUuid={mockPatient.id} />);
@@ -53,6 +54,7 @@ describe('PastVisitTag', () => {
       mutateVisitContext: null,
       setPatient: vi.fn(),
       setVisitContext: vi.fn(),
+      forgetPastVisitChoice: vi.fn(),
     });
 
     render(<PastVisitTag patientUuid={mockPatient.id} />);
@@ -69,6 +71,7 @@ describe('PastVisitTag', () => {
       mutateVisitContext: null,
       setPatient: vi.fn(),
       setVisitContext: vi.fn(),
+      forgetPastVisitChoice: vi.fn(),
     });
 
     render(<PastVisitTag patientUuid={mockPatient.id} />);

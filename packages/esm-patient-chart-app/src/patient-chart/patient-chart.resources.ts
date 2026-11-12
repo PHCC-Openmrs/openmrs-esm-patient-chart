@@ -57,12 +57,16 @@ export function useVisitByUuid(visitUuid: string | null, representation: string 
  * Note: We do not unset visitContext when leaving the chart, so it persists across
  * in‑app navigation. On a full page reload, visitContext is rehydrated by refetching
  * (via useVisit/useVisitByUuId) rather than restored from storage.
- * When we enter the chart, we want to update the visit context as follows:
- * does the the stored visitContext exist and belong to the patient?
- * 1. If so, the visitContext should be valid but possibly stale; fetch the visit again
- *    and update the context
- * 2. If not, fetch the active visit of the patient, If it exists, set it as the
- *    visitContext; otherwise, clear it.
+ * When we enter the chart (and whenever either visit is refetched), the visit context is chosen as:
+ * 1. The stored visitContext, refetched, if it belongs to the patient and is either still open or
+ *    a past visit someone deliberately chose (see `isPastVisitChosen` in the store).
+ * 2. Otherwise the patient's active visit, if they have one.
+ * 3. Otherwise no visit.
+ * A stored visit that was open when it was put in context but has since been ended (the daily
+ * auto-close, or another user ending it) is therefore dropped rather than kept: keeping it filed
+ * new orders under the ended visit, with the encounter backdated to its end, so a renewal showed
+ * the old visit's date on the dispensing sheet. A deliberately chosen past visit is forgotten when
+ * the chart is left, so a later return to the patient starts from their active visit again.
  * @param patientUuid
  * @returns
  */
@@ -75,19 +79,29 @@ export function usePatientChartPatientAndVisit(patientUuid: string) {
     visitContext,
     mutateVisitContext,
     setVisitContext,
+    isPastVisitChosen,
+    forgetPastVisitChoice,
   } = usePatientChartStore(patientUuid);
 
   const isVisitContextValid = visitContext?.patient.uuid === patientUuid;
+  const keepPastVisit = isVisitContextValid && Boolean(isPastVisitChosen);
   const {
     visit: newVisitContext,
     mutate: newMutateVisitContext,
     isValidating: isValidatingVisitContext,
   } = useVisitByUuid(isVisitContextValid ? visitContext.uuid : null);
+  // The active visit is looked up even when a stored visit context exists: that visit may have been
+  // ended since it was stored, and then the active visit (if any) is the one to use instead.
   const {
     activeVisit,
     isValidating: isValidatingActiveVisit,
     mutate: mutateActiveVisit,
-  } = useVisit(isVisitContextValid ? null : patientUuid);
+  } = useVisit(keepPastVisit ? null : patientUuid);
+
+  // A past visit chosen in this chart applies only while the chart stays open.
+  const forgetPastVisitChoiceRef = useRef(forgetPastVisitChoice);
+  forgetPastVisitChoiceRef.current = forgetPastVisitChoice;
+  useEffect(() => () => forgetPastVisitChoiceRef.current?.(), []);
 
   const launchedWorkspaceGroupKey = useRef<WorkspaceGroupLaunchKey | null>(null);
   const latestWorkspaceGroupProps = useRef<PatientWorkspaceGroupProps | null>(null);
@@ -151,19 +165,19 @@ export function usePatientChartPatientAndVisit(patientUuid: string) {
     const initializeWorkspaceGroup = async () => {
       if (!isValidatingVisitContext && !isValidatingActiveVisit && patient) {
         let groupProps: PatientWorkspaceGroupProps = null;
-        if (activeVisit) {
-          groupProps = {
-            patientUuid: patient.id,
-            patient,
-            visitContext: activeVisit,
-            mutateVisitContext: mutateActiveVisit,
-          };
-        } else if (newVisitContext) {
+        if (newVisitContext && (keepPastVisit || !newVisitContext.stopDatetime)) {
           groupProps = {
             patientUuid: patient.id,
             patient,
             visitContext: newVisitContext,
             mutateVisitContext: newMutateVisitContext,
+          };
+        } else if (activeVisit) {
+          groupProps = {
+            patientUuid: patient.id,
+            patient,
+            visitContext: activeVisit,
+            mutateVisitContext: mutateActiveVisit,
           };
         } else {
           groupProps = {
@@ -193,6 +207,7 @@ export function usePatientChartPatientAndVisit(patientUuid: string) {
     return () => {};
   }, [
     newVisitContext,
+    keepPastVisit,
     isValidatingVisitContext,
     newMutateVisitContext,
     setVisitContext,
