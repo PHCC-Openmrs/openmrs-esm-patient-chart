@@ -32,6 +32,7 @@ import {
 } from '@openmrs/esm-framework';
 import { type PatientWorkspace2DefinitionProps, useOptimisticVisitMutations } from '@openmrs/esm-patient-common-lib';
 import { type ConfigObject } from '../config-schema';
+import { ecgMaxFileSizeMb } from '../constants';
 import {
   createOrUpdateNursingEncounter,
   getEcgAttachmentSrc,
@@ -328,22 +329,36 @@ const NursingForm: React.FC<PatientWorkspace2DefinitionProps<NursingFormProps, o
                 <Controller
                   name="ecgFile"
                   control={control}
-                  render={({ field: { onChange } }) => (
-                    <FileUploader
-                      accept={['image/*', '.pdf']}
-                      buttonKind="tertiary"
-                      buttonLabel={t('addFile', 'Add file')}
-                      filenameStatus="edit"
-                      iconDescription={t('removeFile', 'Remove file')}
-                      labelDescription={t(
-                        'ecgUploadDescription',
-                        'Upload an image or PDF of the ECG result. Max file size is determined by the server.',
-                      )}
-                      onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                        onChange(event.target.files?.[0] ?? null)
-                      }
-                      onDelete={() => onChange(null)}
-                    />
+                  render={({ field: { onChange }, fieldState: { error } }) => (
+                    <>
+                      <FileUploader
+                        accept={['image/*', '.pdf']}
+                        buttonKind="tertiary"
+                        buttonLabel={t('addFile', 'Add file')}
+                        filenameStatus="edit"
+                        iconDescription={t('removeFile', 'Remove file')}
+                        labelDescription={t(
+                          'ecgUploadDescription',
+                          'Upload an image or PDF of the ECG result. Max file size is {{maxSize}} MB.',
+                          { maxSize: ecgMaxFileSizeMb },
+                        )}
+                        onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                          onChange(event.target.files?.[0] ?? null)
+                        }
+                        onDelete={() => onChange(null)}
+                      />
+                      {error ? (
+                        <p className={styles.errorText}>
+                          {t(
+                            'ecgFileTooLarge',
+                            'This file is larger than {{maxSize}} MB. Remove it and choose a smaller file.',
+                            {
+                              maxSize: ecgMaxFileSizeMb,
+                            },
+                          )}
+                        </p>
+                      ) : null}
+                    </>
                   )}
                 />
               </Column>

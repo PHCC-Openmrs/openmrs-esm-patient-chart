@@ -73,6 +73,12 @@
   margin-bottom: layout.$spacing-03;
 }
 
+.errorText {
+  @include type.type-style('helper-text-01');
+  color: $danger;
+  margin-top: layout.$spacing-02;
+}
+
 .helperText {
   @include type.type-style('helper-text-01');
   color: $text-02;
