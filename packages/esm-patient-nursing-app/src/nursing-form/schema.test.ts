@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ecgMaxFileSizeBytes } from '../constants';
 import { NursingFormSchema } from './schema';
 
 function issuePaths(data: Record<string, unknown>) {
@@ -21,5 +22,15 @@ describe('NursingFormSchema', () => {
 
   it('accepts a quantity of zero together with a drug', () => {
     expect(NursingFormSchema.safeParse({ nebulizationDrug: 'drug-uuid', nebulizationQty: 0 }).success).toBe(true);
+  });
+
+  it('accepts an ECG file of exactly the maximum size', () => {
+    const file = new File([new Uint8Array(ecgMaxFileSizeBytes)], 'ecg.pdf', { type: 'application/pdf' });
+    expect(NursingFormSchema.safeParse({ ecgFile: file }).success).toBe(true);
+  });
+
+  it('rejects an ECG file larger than the maximum size', () => {
+    const file = new File([new Uint8Array(ecgMaxFileSizeBytes + 1)], 'ecg.pdf', { type: 'application/pdf' });
+    expect(issuePaths({ ecgFile: file })).toEqual(['ecgFile']);
   });
 });

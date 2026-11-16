@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ecgMaxFileSizeBytes } from '../constants';
 
 export const NursingFormSchema = z
   .object({
@@ -7,7 +8,10 @@ export const NursingFormSchema = z
     ointments: z.array(z.string()),
     dressingGeneralNotes: z.string(),
     // Other measures
-    ecgFile: z.instanceof(File).nullable(),
+    ecgFile: z
+      .instanceof(File)
+      .refine((file) => file.size <= ecgMaxFileSizeBytes, { message: 'ecgFileTooLarge' })
+      .nullable(),
     spirometry: z.number(),
     monofilament: z.number(),
     // Nursing procedures
