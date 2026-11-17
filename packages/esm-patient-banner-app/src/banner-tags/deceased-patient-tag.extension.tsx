@@ -12,7 +12,10 @@ interface DeceasedPatientBannerTagProps {
 const DeceasedPatientBannerTag: React.FC<DeceasedPatientBannerTagProps> = ({ patient }) => {
   const { t } = useTranslation();
   const isDeceased = Boolean(patient?.deceasedDateTime);
-  const { causeOfDeath, nonCodedCauseOfDeath } = useCauseOfDeath(patient?.id);
+  // This tag sits in every patient banner, including each row of the patient search dropdown, so
+  // only ask for the cause of death when there is a death to describe -- otherwise every living
+  // patient shown costs a wasted request.
+  const { causeOfDeath, nonCodedCauseOfDeath } = useCauseOfDeath(isDeceased ? patient?.id : null);
 
   if (!isDeceased) return null;
 
