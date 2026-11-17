@@ -32,7 +32,9 @@ import {
   type OrderBasketWindowProps,
   type PatientWorkspaceGroupProps,
   useLaunchWorkspaceRequiringVisit,
-  useMedicationDispense,
+  getQuantityDispensed,
+  type MedicationDispense,
+  useMedicationDispenses,
   useOrderBasket,
 } from '@openmrs/esm-patient-common-lib';
 import {
@@ -67,15 +69,14 @@ export interface MedicationsDetailsTableProps {
   patient: fhir.Patient;
 }
 
-const DispensedQuantity: React.FC<{ orderUuid: string; quantity: number; quantityUnitsDisplay?: string }> = ({
-  orderUuid,
-  quantity,
-  quantityUnitsDisplay,
-}) => {
+const DispensedQuantity: React.FC<{
+  dispenses: Array<MedicationDispense> | undefined;
+  quantity: number;
+  quantityUnitsDisplay?: string;
+}> = ({ dispenses, quantity, quantityUnitsDisplay }) => {
   const { t } = useTranslation();
-  const { dispenses, quantityDispensed, isLoading } = useMedicationDispense(orderUuid);
 
-  if (isLoading || !dispenses.length) {
+  if (!dispenses?.length) {
     return null;
   }
 
@@ -83,7 +84,7 @@ const DispensedQuantity: React.FC<{ orderUuid: string; quantity: number; quantit
     <span>
       <span className={styles.label01}> {t('dispensed', 'Dispensed').toUpperCase()}</span>{' '}
       {t('quantityDispensedOfTotal', '{{dispensed}} of {{total}} {{unit}}', {
-        dispensed: quantityDispensed,
+        dispensed: getQuantityDispensed(dispenses),
         total: quantity,
         unit: quantityUnitsDisplay ?? '',
       })}
@@ -112,6 +113,10 @@ const MedicationsDetailsTable: React.FC<MedicationsDetailsTableProps> = ({
 
   const { orders, setOrders } = useOrderBasket<DrugOrderBasketItem>(patient, 'medications');
   const { results, goTo, currentPage } = usePagination(medications, pageSize);
+  // one request for the page's orders, not one per row
+  const { dispensesByOrder } = useMedicationDispenses(
+    results?.filter((medication) => medication.quantity != null).map((medication) => medication.uuid) ?? [],
+  );
   const session = useSession();
   const canManageOrders = userHasAccess('Task: patientChart.addDrugOrder', session?.user);
 
@@ -232,7 +237,7 @@ const MedicationsDetailsTable: React.FC<MedicationsDetailsTableProps> = ({
             )}{' '}
             {medication.quantity != null && (
               <DispensedQuantity
-                orderUuid={medication.uuid}
+                dispenses={dispensesByOrder?.get(medication.uuid)}
                 quantity={medication.quantity}
                 quantityUnitsDisplay={medication?.quantityUnits?.display}
               />
