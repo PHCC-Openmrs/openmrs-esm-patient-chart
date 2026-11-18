@@ -79,10 +79,10 @@ describe('Conditions form', () => {
   it('renders the conditions form with all the relevant fields and values', () => {
     renderConditionsForm();
 
-    expect(screen.getByRole('group', { name: /condition/i })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /diagnosis/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/onset date/i)).toBeInTheDocument();
     expect(screen.getByRole('group', { name: /clinical status/i })).toBeInTheDocument();
-    expect(screen.getByRole('searchbox', { name: /enter condition/i })).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: /enter diagnosis/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /clear search input/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/^active/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^active/i)).toBeChecked();
@@ -121,7 +121,7 @@ describe('Conditions form', () => {
     const user = userEvent.setup();
     renderConditionsForm();
 
-    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter condition/i });
+    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter diagnosis/i });
     expect(screen.queryByRole('menuitem', { name: /Headache/i })).not.toBeInTheDocument();
     expect(screen.queryByDisplayValue('Headache')).not.toBeInTheDocument();
 
@@ -133,7 +133,7 @@ describe('Conditions form', () => {
     const user = userEvent.setup();
     renderConditionsForm();
 
-    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter condition/i });
+    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter diagnosis/i });
     expect(screen.queryByRole('menuitem', { name: /Post-acute sequelae of COVID-19/i })).not.toBeInTheDocument();
     expect(screen.queryByDisplayValue(/Post-acute sequelae of COVID-19/i)).not.toBeInTheDocument();
 
@@ -159,7 +159,7 @@ describe('Conditions form', () => {
     const cancelButton = screen.getByRole('button', { name: /cancel/i });
     const submitButton = screen.getByRole('button', { name: /save & close/i });
     const activeStatusInput = screen.getByRole('radio', { name: 'Active' });
-    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter condition/i });
+    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter diagnosis/i });
 
     const onsetDateInput = screen.getByRole('textbox', { name: /onset date/i });
     expect(onsetDateInput).toBeInTheDocument();
@@ -198,7 +198,7 @@ describe('Conditions form', () => {
 
     const submitButton = screen.getByRole('button', { name: /save & close/i });
     const activeStatusInput = screen.getByRole('radio', { name: 'Active' });
-    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter condition/i });
+    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter diagnosis/i });
     const onsetDateInput = screen.getByRole('textbox', { name: /onset date/i });
 
     const error = {
@@ -233,11 +233,11 @@ describe('Conditions form', () => {
 
     renderConditionsForm();
 
-    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter condition/i });
+    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter diagnosis/i });
     const submitButton = screen.getByRole('button', { name: /save & close/i });
     await user.click(submitButton);
 
-    expect(screen.getByText(/a condition is required/i)).toBeInTheDocument();
+    expect(screen.getByText(/a diagnosis is required/i)).toBeInTheDocument();
     expect(screen.getByText(/onset date is required/i)).toBeInTheDocument();
     expect(screen.queryByText(/a clinical status is required/i)).not.toBeInTheDocument();
 
@@ -245,7 +245,7 @@ describe('Conditions form', () => {
     await user.click(screen.getByRole('menuitem', { name: /headache/i }));
     await user.click(submitButton);
 
-    expect(screen.queryByText(/a condition is required/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/a diagnosis is required/i)).not.toBeInTheDocument();
     expect(screen.getByText(/onset date is required/i)).toBeInTheDocument();
     expect(mockCreateCondition).not.toHaveBeenCalled();
 
@@ -278,13 +278,13 @@ describe('Conditions form', () => {
 
     renderConditionsForm();
 
-    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter condition/i });
+    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter diagnosis/i });
     const submitButton = screen.getByRole('button', { name: /save & close/i });
 
     await user.type(conditionSearchInput, 'Definitely not a condition');
     await user.click(submitButton);
 
-    expect(await screen.findByText(/a condition is required/i)).toBeInTheDocument();
+    expect(await screen.findByText(/a diagnosis is required/i)).toBeInTheDocument();
     expect(mockCreateCondition).not.toHaveBeenCalled();
   });
 
@@ -305,7 +305,7 @@ describe('Conditions form', () => {
 
     renderConditionsForm({ condition: conditionToEdit, formContext: 'editing' });
 
-    expect(screen.queryByRole('searchbox', { name: /enter condition/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('searchbox', { name: /enter diagnosis/i })).not.toBeInTheDocument();
 
     const inactiveStatusInput = screen.getByLabelText(/inactive/i);
     const submitButton = screen.getByRole('button', { name: /save & close/i });
@@ -351,7 +351,7 @@ describe('Duplicate condition detection', () => {
 
     renderConditionsForm();
 
-    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter condition/i });
+    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter diagnosis/i });
     await user.type(conditionSearchInput, 'Hypertension');
     await user.click(screen.getByRole('menuitem', { name: /hypertension/i }));
 
@@ -396,7 +396,7 @@ describe('Duplicate condition detection', () => {
 
       renderConditionsForm();
 
-      const conditionSearchInput = screen.getByRole('searchbox', { name: /enter condition/i });
+      const conditionSearchInput = screen.getByRole('searchbox', { name: /enter diagnosis/i });
       await user.type(conditionSearchInput, "Huntington's");
       await user.click(screen.getByRole('menuitem', { name: /huntington's chorea/i }));
 
@@ -441,7 +441,7 @@ describe('Duplicate condition detection', () => {
 
     renderConditionsForm();
 
-    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter condition/i });
+    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter diagnosis/i });
     await user.type(conditionSearchInput, 'Hypertension');
     await user.click(screen.getByRole('menuitem', { name: /hypertension/i }));
 
@@ -481,7 +481,7 @@ describe('Duplicate condition detection', () => {
 
     renderConditionsForm();
 
-    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter condition/i });
+    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter diagnosis/i });
     await user.type(conditionSearchInput, 'Headache');
     await user.click(screen.getByRole('menuitem', { name: /headache/i }));
 
@@ -517,7 +517,7 @@ describe('Duplicate condition detection', () => {
 
     renderConditionsForm();
 
-    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter condition/i });
+    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter diagnosis/i });
     await user.type(conditionSearchInput, 'Hypertension');
     await user.click(screen.getByRole('menuitem', { name: /hypertension/i }));
 
@@ -564,7 +564,7 @@ describe('Duplicate condition detection', () => {
 
     renderConditionsForm();
 
-    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter condition/i });
+    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter diagnosis/i });
     await user.type(conditionSearchInput, 'Hypertension');
     await user.click(screen.getByRole('menuitem', { name: /hypertension/i }));
 
@@ -603,7 +603,7 @@ describe('Duplicate condition detection', () => {
 
     renderConditionsForm();
 
-    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter condition/i });
+    const conditionSearchInput = screen.getByRole('searchbox', { name: /enter diagnosis/i });
     await user.type(conditionSearchInput, 'Hypertension');
     await user.click(screen.getByRole('menuitem', { name: /hypertension/i }));
 

@@ -38,7 +38,7 @@ export const conditionDeleteConfirmationDialog = getAsyncLifecycle(
   options,
 );
 
-// t('recordCondition', 'Record a Condition')
+// t('recordCondition', 'Record a Diagnosis')
 export const conditionsFormWorkspace = getAsyncLifecycle(
   () => import('./conditions/conditions-form.workspace'),
   options,
