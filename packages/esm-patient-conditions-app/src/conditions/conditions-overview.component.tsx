@@ -93,7 +93,7 @@ const ConditionsOverview: React.FC<ConditionsOverviewProps> = ({ patientUuid }) 
     () => [
       {
         key: 'display',
-        header: t('condition', 'Condition'),
+        header: t('condition', 'Diagnosis'),
         isSortable: true,
         sortFunc: (valueA, valueB) => valueA.display?.localeCompare(valueB.display),
       },

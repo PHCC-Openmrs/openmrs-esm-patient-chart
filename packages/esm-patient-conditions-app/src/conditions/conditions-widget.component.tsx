@@ -233,7 +233,7 @@ const ConditionsWidget: React.FC<ConditionsWidgetProps> = ({
   return (
     <div className={styles.formContainer}>
       <Stack gap={7}>
-        <FormGroup legendText={<RequiredFieldLabel label={t('condition', 'Condition')} t={t} />}>
+        <FormGroup legendText={<RequiredFieldLabel label={t('condition', 'Diagnosis')} t={t} />}>
           {isEditing ? (
             <FormLabel className={styles.conditionLabel}>{displayName}</FormLabel>
           ) : (
@@ -251,7 +251,7 @@ const ConditionsWidget: React.FC<ConditionsWidgetProps> = ({
                       disabled={isEditing}
                       id="conditionsSearch"
                       aria-labelledby={errors?.conditionUuid ? 'conditionsSearchError' : undefined}
-                      labelText={t('enterCondition', 'Enter condition')}
+                      labelText={t('enterCondition', 'Enter diagnosis')}
                       onChange={(event) => {
                         const val = event.target.value;
                         onChange(val);
@@ -264,7 +264,7 @@ const ConditionsWidget: React.FC<ConditionsWidgetProps> = ({
                         setSelectedCondition(null);
                         setValue('conditionUuid', '');
                       }}
-                      placeholder={t('searchConditions', 'Search conditions')}
+                      placeholder={t('searchConditions', 'Search diagnoses')}
                       ref={searchInputRef}
                       renderIcon={errors?.conditionUuid && ((props) => <WarningFilled fill="red" {...props} />)}
                       value={selectedCondition?.display ?? value ?? ''}

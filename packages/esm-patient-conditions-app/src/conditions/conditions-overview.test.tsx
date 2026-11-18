@@ -70,7 +70,7 @@ describe('ConditionsOverview', () => {
     expect(screen.getByRole('heading', { name: /diagnoses/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /add/i })).toBeInTheDocument();
 
-    const expectedColumnHeaders = [/condition/, /date of onset/, /status/];
+    const expectedColumnHeaders = [/diagnosis/, /date of onset/, /status/];
     expectedColumnHeaders.forEach((header) => {
       expect(screen.getByRole('columnheader', { name: new RegExp(header, 'i') })).toBeInTheDocument();
     });

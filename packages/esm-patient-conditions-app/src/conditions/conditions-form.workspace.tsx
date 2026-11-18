@@ -25,7 +25,7 @@ const createSchema = (formContext: 'creating' | 'editing', t: TFunction) => {
   });
 
   const conditionUuidValidation = z.string().refine((conditionUuid) => !isCreating || !!conditionUuid, {
-    message: t('conditionRequired', 'A condition is required'),
+    message: t('conditionRequired', 'A diagnosis is required'),
   });
 
   return z.object({
@@ -96,7 +96,7 @@ const ConditionsForm: React.FC<PatientWorkspace2DefinitionProps<ConditionFormPro
   }, [closeWorkspace]);
 
   return (
-    <Workspace2 title={t('recordCondition', 'Record condition')} hasUnsavedChanges={isDirty}>
+    <Workspace2 title={t('recordCondition', 'Record a Diagnosis')} hasUnsavedChanges={isDirty}>
       <FormProvider {...methods}>
         <Form className={styles.form} onSubmit={methods.handleSubmit(onSubmit, onError)}>
           <ConditionsWidget
