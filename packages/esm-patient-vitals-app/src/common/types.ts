@@ -122,6 +122,9 @@ export interface PatientVitalsAndBiometrics {
   respiratoryRateRenderInterpretation?: ObservationInterpretation;
   muac?: number;
   muacRenderInterpretation?: ObservationInterpretation;
+  hemoglobin?: number;
+  hemoglobinRenderInterpretation?: ObservationInterpretation;
+  bloodGroup?: string;
 }
 
 export interface VitalsResponse {

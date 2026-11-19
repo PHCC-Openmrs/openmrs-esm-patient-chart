@@ -302,6 +302,26 @@ const VitalsHeader: React.FC<VitalsHeaderProps> = ({
               value={latestVitals?.temperature ?? '--'}
             />
             <VitalsHeaderItem
+              conceptUuid={config.concepts.hemoglobinUuid}
+              interpretation={latestVitals?.hemoglobinRenderInterpretation}
+              patientUuid={patientUuid}
+              unitName={t('hemoglobin', 'Hemoglobin')}
+              unitSymbol={
+                latestVitals?.hemoglobin != null
+                  ? conceptUnits.get(config.concepts.hemoglobinUuid) ||
+                    conceptRangeMap.get(config.concepts.hemoglobinUuid)?.units ||
+                    'g/dL'
+                  : ''
+              }
+              value={latestVitals?.hemoglobin ?? '--'}
+            />
+            <VitalsHeaderItem
+              patientUuid={patientUuid}
+              unitName={t('bloodGroup', 'Blood group')}
+              unitSymbol=""
+              value={latestVitals?.bloodGroup ?? '--'}
+            />
+            <VitalsHeaderItem
               patientUuid={patientUuid}
               unitName={t('weight', 'Weight')}
               unitSymbol={latestVitals?.weight != null ? conceptUnits.get(config.concepts.weightUuid) ?? '' : ''}

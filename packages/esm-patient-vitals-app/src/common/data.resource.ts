@@ -194,12 +194,11 @@ export function useVitalsOrBiometricsConcepts(mode: VitalsAndBiometricsMode) {
     // generalPatientNoteUuid and overallRiskUuid are fetched separately to avoid note-only or
     // risk-only encounters polluting the vitals list (highRiskUuid and lowRiskUuid are answers,
     // not observation concepts); vitalSignsConceptSetUuid is a concept set, not an obs concept.
-    // bloodGlucoseUuid, hemoglobinUuid and bloodGroupUuid are recorded on the vitals form but have
-    // no column in the vitals table yet, so including them would surface encounters holding only
-    // those readings as rows of dashes.
+    // bloodGlucoseUuid is recorded on the vitals form but has no column in the vitals table yet, so
+    // including it would surface glucose-only encounters as rows of dashes. bloodGroupUuid is coded,
+    // so it is fetched separately (like the overall risk) and merged into existing vitals encounters.
     const excludedFromQuery = new Set([
       'bloodGlucoseUuid',
-      'hemoglobinUuid',
       'bloodGroupUuid',
       'generalPatientNoteUuid',
       'overallRiskUuid',
@@ -241,7 +240,8 @@ export function useVitalsOrBiometricsConcepts(mode: VitalsAndBiometricsMode) {
  */
 export function useVitalsAndBiometrics(patientUuid: string, mode: VitalsAndBiometricsMode = 'vitals') {
   const conceptUuids = useVitalsOrBiometricsConcepts(mode);
-  const { concepts } = useConfig<ConfigObject>();
+  const config = useConfig<ConfigObject>();
+  const { concepts } = config;
   const { conceptRanges } = useVitalsConceptMetadata(patientUuid);
 
   const getPage = useCallback(
@@ -281,16 +281,25 @@ export function useVitalsAndBiometrics(patientUuid: string, mode: VitalsAndBiome
     openmrsFetch,
   );
 
+  // The blood group is coded, so like the overall risk it is fetched separately and merged into
+  // existing vitals encounters below.
+  const { data: bloodGroupData, mutate: mutateBloodGroup } = useSWR<VitalsFetchResponse, Error>(
+    concepts.bloodGroupUuid && patientUuid
+      ? `${fhirBaseUrl}/Observation?subject:Patient=${patientUuid}&code=${concepts.bloodGroupUuid}&_sort=-date`
+      : null,
+    openmrsFetch,
+  );
+
   // see the comments above for why this is here
   useEffect(() => {
     const index = ++vitalsHooksCounter;
     // The notes and overall risk are fetched by separate requests, so they must be revalidated
     // together with the vitals or a newly saved / edited note and risk only show up after a reload.
-    vitalsHooksMutates.set(index, () => Promise.all([mutate(), mutateNotes(), mutateRisk()]));
+    vitalsHooksMutates.set(index, () => Promise.all([mutate(), mutateNotes(), mutateRisk(), mutateBloodGroup()]));
     return () => {
       vitalsHooksMutates.delete(index);
     };
-  }, [mutate, mutateNotes, mutateRisk]);
+  }, [mutate, mutateNotes, mutateRisk, mutateBloodGroup]);
 
   const getVitalsMapKey = useCallback(
     (conceptUuid: string): string => {
@@ -315,6 +324,8 @@ export function useVitalsAndBiometrics(patientUuid: string, mode: VitalsAndBiome
           return 'muac';
         case concepts.bodyMassIndexUuid:
           return 'bmi';
+        case concepts.hemoglobinUuid:
+          return 'hemoglobin';
         default:
           return ''; // or throw an error for unknown conceptUuid
       }
@@ -322,6 +333,7 @@ export function useVitalsAndBiometrics(patientUuid: string, mode: VitalsAndBiome
     [
       concepts.bodyMassIndexUuid,
       concepts.heightUuid,
+      concepts.hemoglobinUuid,
       concepts.midUpperArmCircumferenceUuid,
       concepts.systolicBloodPressureUuid,
       concepts.oxygenSaturationUuid,
@@ -392,6 +404,27 @@ export function useVitalsAndBiometrics(patientUuid: string, mode: VitalsAndBiome
         }
       });
 
+    const bloodGroupLabels = new Map(
+      (config.vitals?.bloodGroupOptions ?? []).map((option) => [option.conceptUuid, option.label]),
+    );
+    bloodGroupData?.data?.entry
+      ?.map((entry) => entry.resource)
+      .filter(Boolean)
+      .forEach((resource) => {
+        const encounterId = extractEncounterUuid(resource.encounter);
+        const coding = resource?.valueCodeableConcept?.coding ?? [];
+        const bloodGroup =
+          coding.map((c) => bloodGroupLabels.get(c.code)).find(Boolean) ??
+          resource?.valueCodeableConcept?.text ??
+          coding[0]?.display;
+        if (encounterId && bloodGroup && vitalsHashTable.has(encounterId)) {
+          vitalsHashTable.set(encounterId, {
+            ...vitalsHashTable.get(encounterId),
+            bloodGroup,
+          });
+        }
+      });
+
     return Array.from(vitalsHashTable).map(([encounterId, vitalSigns]) => {
       const result = {
         id: encounterId,
@@ -420,11 +453,22 @@ export function useVitalsAndBiometrics(patientUuid: string, mode: VitalsAndBiome
         result.temperatureRenderInterpretation = vitalSigns.temperatureRenderInterpretation;
         result.spo2RenderInterpretation = vitalSigns.spo2RenderInterpretation;
         result.respiratoryRateRenderInterpretation = vitalSigns.respiratoryRateRenderInterpretation;
+        result.hemoglobinRenderInterpretation = vitalSigns.hemoglobinRenderInterpretation;
       }
 
       return result;
     });
-  }, [conceptRanges, concepts, data, getVitalsMapKey, mode, notesData, riskData]);
+  }, [
+    bloodGroupData,
+    conceptRanges,
+    concepts,
+    config.vitals?.bloodGroupOptions,
+    data,
+    getVitalsMapKey,
+    mode,
+    notesData,
+    riskData,
+  ]);
 
   return {
     data: data ? formattedObs : undefined,

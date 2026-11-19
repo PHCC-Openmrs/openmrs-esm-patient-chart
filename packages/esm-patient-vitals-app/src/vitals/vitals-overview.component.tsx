@@ -18,7 +18,13 @@ import {
 import type { ConfigObject } from '../config-schema';
 import type { VitalsTableHeader, VitalsTableRow } from './types';
 import { useLaunchVitalsAndBiometricsForm } from '../utils';
-import { useVitalsAndBiometrics, useConceptUnits, withUnit, canRecordVitalsAndBiometrics } from '../common';
+import {
+  useVitalsAndBiometrics,
+  useConceptUnits,
+  useVitalsConceptMetadata,
+  withUnit,
+  canRecordVitalsAndBiometrics,
+} from '../common';
 import PaginatedVitals from './paginated-vitals.component';
 import PrintComponent from './print/print.component';
 import VitalsChart from './vitals-chart.component';
@@ -48,6 +54,7 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
   const { excludePatientIdentifierCodeTypes } = useConfig();
   const { data: vitals, error, isLoading, isValidating } = useVitalsAndBiometrics(patientUuid);
   const { conceptUnits } = useConceptUnits();
+  const { conceptRangeMap } = useVitalsConceptMetadata(patientUuid);
   const showPrintButton = config.vitals.showPrintButton && !chartView;
 
   const patientDetails = useMemo(() => {
@@ -134,6 +141,25 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
       isSortable: true,
       sortFunc: (valueA, valueB) => (valueA.spo2 && valueB.spo2 ? valueA.spo2 - valueB.spo2 : 0),
     },
+    {
+      key: 'hemoglobinRender',
+      conceptUuid: config.concepts.hemoglobinUuid,
+      header: withUnit(
+        t('hemoglobin', 'Hemoglobin'),
+        conceptUnits.get(config.concepts.hemoglobinUuid) ||
+          conceptRangeMap.get(config.concepts.hemoglobinUuid)?.units ||
+          'g/dL',
+      ),
+      isSortable: true,
+      sortFunc: (valueA, valueB) =>
+        valueA.hemoglobin && valueB.hemoglobin ? valueA.hemoglobin - valueB.hemoglobin : 0,
+    },
+    {
+      key: 'bloodGroupRender',
+      header: t('bloodGroup', 'Blood group'),
+      isSortable: true,
+      sortFunc: (valueA, valueB) => (valueA.bloodGroup ?? '').localeCompare(valueB.bloodGroup ?? ''),
+    },
   ];
   const tableHeadersWithRisk: Array<VitalsTableHeader> = [
     tableHeaders[0],
@@ -163,6 +189,9 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
           temperatureRenderInterpretation: vitalSigns.temperatureRenderInterpretation,
           respiratoryRateRender: vitalSigns.respiratoryRate ?? '--',
           respiratoryRateRenderInterpretation: vitalSigns.respiratoryRateRenderInterpretation,
+          hemoglobinRender: vitalSigns.hemoglobin ?? '--',
+          hemoglobinRenderInterpretation: vitalSigns.hemoglobinRenderInterpretation,
+          bloodGroupRender: vitalSigns.bloodGroup ?? '--',
         };
       }),
     [vitals],
