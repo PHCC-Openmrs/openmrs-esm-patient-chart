@@ -216,8 +216,11 @@ export const configSchema = {
             conceptUuid: '6d4f0916-5913-4e48-82ea-265e379ffb6b',
             label: 'Diagnosis (Autofill)',
             controlType: 'select',
+            // Child band is ages 0-5 (inclusive), so this starts at 6: both bounds are inclusive, and
+            // minAge 5 made a 5-year-old match both Diagnosis entries (same concept, different autofill
+            // rules), which overwrote each other in a loop.
             options: ADULT_MUAC_DIAGNOSIS_OPTIONS,
-            minAge: 5,
+            minAge: 6,
             maxAge: 200,
             readOnly: true,
             autofillFromConceptUuid: '1343AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
