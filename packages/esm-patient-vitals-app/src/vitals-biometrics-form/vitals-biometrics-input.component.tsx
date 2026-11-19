@@ -1,7 +1,7 @@
 import React, { Fragment, useId, useState } from 'react';
 import classNames from 'classnames';
 import { type Control, Controller } from 'react-hook-form';
-import { FormLabel, NumberInput, TextArea } from '@carbon/react';
+import { FormLabel, NumberInput, Select, SelectItem, TextArea } from '@carbon/react';
 import { Warning } from '@carbon/react/icons';
 import { useTranslation } from 'react-i18next';
 import { useLayoutType, ResponsiveWrapper } from '@openmrs/esm-framework';
@@ -11,10 +11,12 @@ import styles from './vitals-biometrics-input.scss';
 
 type fieldId =
   | 'bloodGlucose'
+  | 'bloodGroup'
   | 'computedBodyMassIndex'
   | 'diastolicBloodPressure'
   | 'generalPatientNote'
   | 'height'
+  | 'hemoglobin'
   | 'midUpperArmCircumference'
   | 'oxygenSaturation'
   | 'pulse'
@@ -24,7 +26,7 @@ type fieldId =
   | 'weight';
 
 type AbnormalValue = 'critically_low' | 'critically_high' | 'high' | 'low';
-type FieldTypes = 'number' | 'textarea';
+type FieldTypes = 'number' | 'select' | 'textarea';
 
 interface VitalsAndBiometricsInputProps {
   control: Control<VitalsBiometricsFormData>;
@@ -37,6 +39,8 @@ interface VitalsAndBiometricsInputProps {
     max?: number | null;
     min?: number | null;
     name: string;
+    /** Choices for a `select` field; the value saved is the option's `value` (an answer concept uuid). */
+    options?: Array<{ value: string; label: string }>;
     separator?: string;
     type?: FieldTypes;
   }>;
@@ -166,6 +170,38 @@ const VitalsAndBiometricsInput: React.FC<VitalsAndBiometricsInputProps> = ({
                     </ResponsiveWrapper>
                     {fieldProperty?.separator}
                   </Fragment>
+                );
+              }
+
+              if (fieldProperty.type === 'select') {
+                return (
+                  <ResponsiveWrapper key={fieldProperty.id}>
+                    <Controller
+                      name={fieldProperty.id}
+                      control={control}
+                      render={({ field: { onChange, ref, value } }) => (
+                        <Select
+                          className={styles.select}
+                          id={`${fieldId}-${fieldProperty.id}`}
+                          labelText=""
+                          aria-labelledby={`${fieldId}-label`}
+                          name={fieldProperty.name}
+                          onBlur={() => handleFocusChange(false)}
+                          onChange={(event) => onChange(event.target.value === '' ? undefined : event.target.value)}
+                          onFocus={() => handleFocusChange(true)}
+                          readOnly={readOnly}
+                          ref={ref}
+                          title={fieldProperty.name}
+                          value={(value as string) ?? ''}
+                        >
+                          <SelectItem text={t('selectOption', 'Select')} value="" />
+                          {fieldProperty.options?.map((option) => (
+                            <SelectItem key={option.value} text={option.label} value={option.value} />
+                          ))}
+                        </Select>
+                      )}
+                    />
+                  </ResponsiveWrapper>
                 );
               }
 

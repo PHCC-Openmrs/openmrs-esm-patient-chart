@@ -93,6 +93,7 @@ export function useVitalsConceptMetadata(patientUuid: string) {
     concepts: {
       bloodGlucoseUuid,
       diastolicBloodPressureUuid,
+      hemoglobinUuid,
       oxygenSaturationUuid,
       pulseUuid,
       respiratoryRateUuid,
@@ -101,7 +102,7 @@ export function useVitalsConceptMetadata(patientUuid: string) {
     },
   } = useConfig<ConfigObject>();
 
-  const apiUrl = `${restBaseUrl}/conceptreferencerange/?patient=${patientUuid}&concept=${systolicBloodPressureUuid},${diastolicBloodPressureUuid},${pulseUuid},${temperatureUuid},${oxygenSaturationUuid},${respiratoryRateUuid},${bloodGlucoseUuid}&v=full`;
+  const apiUrl = `${restBaseUrl}/conceptreferencerange/?patient=${patientUuid}&concept=${systolicBloodPressureUuid},${diastolicBloodPressureUuid},${pulseUuid},${temperatureUuid},${oxygenSaturationUuid},${respiratoryRateUuid},${bloodGlucoseUuid},${hemoglobinUuid}&v=full`;
 
   const { data, error, isLoading } = useSWRImmutable<{ data: any }, Error>(patientUuid ? apiUrl : null, openmrsFetch);
 
@@ -193,10 +194,13 @@ export function useVitalsOrBiometricsConcepts(mode: VitalsAndBiometricsMode) {
     // generalPatientNoteUuid and overallRiskUuid are fetched separately to avoid note-only or
     // risk-only encounters polluting the vitals list (highRiskUuid and lowRiskUuid are answers,
     // not observation concepts); vitalSignsConceptSetUuid is a concept set, not an obs concept.
-    // bloodGlucoseUuid is recorded on the vitals form but has no column in the vitals table
-    // yet, so including it would surface glucose-only encounters as rows of dashes.
+    // bloodGlucoseUuid, hemoglobinUuid and bloodGroupUuid are recorded on the vitals form but have
+    // no column in the vitals table yet, so including them would surface encounters holding only
+    // those readings as rows of dashes.
     const excludedFromQuery = new Set([
       'bloodGlucoseUuid',
+      'hemoglobinUuid',
+      'bloodGroupUuid',
       'generalPatientNoteUuid',
       'overallRiskUuid',
       'highRiskUuid',

@@ -107,6 +107,7 @@
 // t('ANC cases', 'ANC cases')
 // t('Deliveries', 'Deliveries')
 // t('Newborns', 'Newborns')
+// t('Hospital', 'Hospital')
 // t('Other', 'Other')
 // t('<72 H', '<72 H')
 // t('>72 H', '>72 H')

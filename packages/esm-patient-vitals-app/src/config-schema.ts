@@ -28,6 +28,17 @@ export const configSchema = {
       _description:
         'Numeric concept recording the blood glucose reading taken alongside vitals. Defaults to the CIEL "Serum glucose" concept; point this at whichever glucose concept your implementation records at the point of care.',
     },
+    hemoglobinUuid: {
+      _type: Type.ConceptUuid,
+      _default: '0c29be00-d2b8-4fd4-ab32-1f717c426449',
+      _description: 'Numeric concept (decimals allowed) recording the hemoglobin reading taken alongside vitals.',
+    },
+    bloodGroupUuid: {
+      _type: Type.ConceptUuid,
+      _default: 'e07ac41c-1ec5-4917-bc46-d58c9532b3f3',
+      _description:
+        'Coded concept recording the blood group alongside vitals. Its answers are listed in vitals.bloodGroupOptions.',
+    },
     heightUuid: {
       _type: Type.ConceptUuid,
       _default: '5090AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
@@ -124,6 +135,26 @@ export const configSchema = {
       _default: false,
       _description: 'Whether to show/use MUAC color codes. If set to true, the input will show status colors.',
     },
+    bloodGroupOptions: {
+      _type: Type.Array,
+      _description:
+        'The choices of the Blood group dropdown, in display order. Each is an answer concept of concepts.bloodGroupUuid and the label shown for it.',
+      _elements: {
+        _type: Type.Object,
+        conceptUuid: { _type: Type.ConceptUuid },
+        label: { _type: Type.String },
+      },
+      _default: [
+        { conceptUuid: '690AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', label: 'A+' },
+        { conceptUuid: '692AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', label: 'A−' },
+        { conceptUuid: '694AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', label: 'B+' },
+        { conceptUuid: '696AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', label: 'B−' },
+        { conceptUuid: '1230AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', label: 'AB+' },
+        { conceptUuid: '1231AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', label: 'AB−' },
+        { conceptUuid: '699AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', label: 'O+' },
+        { conceptUuid: '701AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', label: 'O−' },
+      ],
+    },
   },
   biometrics: {
     bmiUnit: {
@@ -159,6 +190,8 @@ export interface ConfigObject {
     temperatureUuid: string;
     oxygenSaturationUuid: string;
     bloodGlucoseUuid: string;
+    hemoglobinUuid: string;
+    bloodGroupUuid: string;
     heightUuid: string;
     weightUuid: string;
     respiratoryRateUuid: string;
@@ -179,6 +212,7 @@ export interface ConfigObject {
     formName: string;
     useMuacColors: boolean;
     showPrintButton: boolean;
+    bloodGroupOptions: Array<{ conceptUuid: string; label: string }>;
   };
   biometrics: BiometricsConfigObject;
 }
