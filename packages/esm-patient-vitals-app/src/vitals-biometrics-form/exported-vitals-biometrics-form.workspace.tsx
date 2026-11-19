@@ -124,6 +124,7 @@ const ExportedVitalsAndBiometricsForm: React.FC<Workspace2DefinitionProps<Vitals
   const respiratoryRate = watch('respiratoryRate');
   const oxygenSaturation = watch('oxygenSaturation');
   const bloodGlucose = watch('bloodGlucose');
+  const hemoglobin = watch('hemoglobin');
   const temperature = watch('temperature');
   const pulse = watch('pulse');
   const weight = watch('weight');
@@ -171,6 +172,7 @@ const ExportedVitalsAndBiometricsForm: React.FC<Workspace2DefinitionProps<Vitals
       systolicBloodPressureRange: conceptRangeMap.get(config.concepts.systolicBloodPressureUuid),
       oxygenSaturationRange: conceptRangeMap.get(config.concepts.oxygenSaturationUuid),
       bloodGlucoseRange: conceptRangeMap.get(config.concepts.bloodGlucoseUuid),
+      hemoglobinRange: conceptRangeMap.get(config.concepts.hemoglobinUuid),
       respiratoryRateRange: conceptRangeMap.get(config.concepts.respiratoryRateUuid),
       temperatureRange: conceptRangeMap.get(config.concepts.temperatureUuid),
       weightRange: conceptRangeMap.get(config.concepts.weightUuid),
@@ -602,6 +604,53 @@ const ExportedVitalsAndBiometricsForm: React.FC<Workspace2DefinitionProps<Vitals
                   showErrorMessage={showErrorMessage}
                   label={t('bloodGlucose', 'Blood glucose')}
                   unitSymbol={conceptUnits.get(config.concepts.bloodGlucoseUuid) ?? ''}
+                />
+              </Column>
+            </Row>
+            <Row className={styles.row}>
+              <Column>
+                <VitalsAndBiometricsInput
+                  control={control}
+                  fieldProperties={[
+                    {
+                      name: t('hemoglobin', 'Hemoglobin'),
+                      type: 'number',
+                      min: concepts.hemoglobinRange?.lowAbsolute,
+                      max: concepts.hemoglobinRange?.hiAbsolute,
+                      id: 'hemoglobin',
+                    },
+                  ]}
+                  interpretation={
+                    hemoglobin != null
+                      ? assessValue(hemoglobin, getReferenceRangesForConcept(config.concepts.hemoglobinUuid, conceptRanges))
+                      : undefined
+                  }
+                  isValueWithinReferenceRange={
+                    hemoglobin != null
+                      ? isValueWithinReferenceRange(conceptRanges, config.concepts['hemoglobinUuid'], hemoglobin)
+                      : true
+                  }
+                  showErrorMessage={showErrorMessage}
+                  label={t('hemoglobin', 'Hemoglobin')}
+                  // The hemoglobin concept is not a member of the vital signs concept set the units are read from.
+                  unitSymbol={conceptUnits.get(config.concepts.hemoglobinUuid) || 'g/dL'}
+                />
+              </Column>
+              <Column>
+                <VitalsAndBiometricsInput
+                  control={control}
+                  fieldProperties={[
+                    {
+                      name: t('bloodGroup', 'Blood group'),
+                      type: 'select',
+                      id: 'bloodGroup',
+                      options: (config.vitals.bloodGroupOptions ?? []).map(({ conceptUuid, label }) => ({
+                        value: conceptUuid,
+                        label,
+                      })),
+                    },
+                  ]}
+                  label={t('bloodGroup', 'Blood group')}
                 />
               </Column>
             </Row>

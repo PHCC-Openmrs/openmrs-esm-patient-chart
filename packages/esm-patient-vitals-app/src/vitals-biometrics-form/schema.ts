@@ -8,6 +8,8 @@ export const VitalsAndBiometricsFormSchema = z
     respiratoryRate: z.number(),
     oxygenSaturation: z.number(),
     bloodGlucose: z.number(),
+    hemoglobin: z.number(),
+    bloodGroup: z.string(),
     pulse: z.number(),
     temperature: z.number(),
     generalPatientNote: z.string(),

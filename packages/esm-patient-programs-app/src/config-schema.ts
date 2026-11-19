@@ -591,7 +591,7 @@ export const configSchema = {
             conceptUuid: '26bcbe57-ac91-4763-a249-1e530acb237f',
             label: 'Referrals',
             controlType: 'select',
-            options: ['ANC cases', 'Deliveries', 'Newborns', 'Other'],
+            options: ['ANC cases', 'Deliveries', 'Newborns', 'Hospital', 'Other'],
             minAge: 0,
             maxAge: 200,
             readOnly: false,
