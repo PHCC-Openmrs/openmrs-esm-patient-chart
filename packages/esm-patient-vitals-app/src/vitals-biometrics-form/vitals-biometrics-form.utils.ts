@@ -96,3 +96,29 @@ export function getMuacColorCode(age: number, muac: number, setColorCode: (color
       break;
   }
 }
+
+type SaveErrorResponse = {
+  error?: {
+    message?: string;
+    fieldErrors?: Record<string, Array<{ message?: string }>>;
+    globalErrors?: Array<{ message?: string }>;
+  };
+};
+
+/**
+ * Pulls the human-readable reason out of an OpenMRS REST error (`error.responseBody`), preferring
+ * field errors, then global errors, then the top-level message. Returns undefined when the server
+ * gave no usable reason (e.g. a network failure), so callers can fall back to a generic message.
+ */
+export function extractSaveErrorMessage(error: unknown): string | undefined {
+  const body = (error as { responseBody?: SaveErrorResponse })?.responseBody?.error;
+  if (!body) {
+    return undefined;
+  }
+
+  const fieldMessages = Object.values(body.fieldErrors ?? {}).flatMap((errors) => errors.map((e) => e.message));
+  const globalMessages = (body.globalErrors ?? []).map((e) => e.message);
+  const messages = [...fieldMessages, ...globalMessages].filter(Boolean);
+
+  return messages.length > 0 ? messages.join('\n') : body.message || undefined;
+}

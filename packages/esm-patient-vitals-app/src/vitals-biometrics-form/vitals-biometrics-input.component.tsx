@@ -80,10 +80,31 @@ const VitalsAndBiometricsInput: React.FC<VitalsAndBiometricsInputProps> = ({
   const hasAbnormalValue = !isFocused && interpretation && abnormalValues.includes(interpretation as AbnormalValue);
 
   function checkValidity(value, onChange) {
-    setInvalid(value !== '' && isNaN(Number(value)));
+    const isInvalid = value !== '' && isNaN(Number(value));
+    setInvalid(isInvalid);
 
-    if (!invalid) {
+    if (!isInvalid) {
       onChange(value === '' ? undefined : Number(value));
+    }
+  }
+
+  // Only digits, a decimal point and (when negatives are allowed) a minus sign may be typed or pasted.
+  function isAllowedText(text: string, allowNegative: boolean) {
+    return (allowNegative ? /^-?[0-9]*\.?[0-9]*$/ : /^[0-9]*\.?[0-9]*$/).test(text);
+  }
+
+  function blockNonNumericKey(event: React.KeyboardEvent<HTMLInputElement>, allowNegative: boolean) {
+    if (event.ctrlKey || event.metaKey || event.altKey || event.key.length !== 1) {
+      return;
+    }
+    if (!isAllowedText(event.key, allowNegative)) {
+      event.preventDefault();
+    }
+  }
+
+  function blockNonNumericPaste(event: React.ClipboardEvent<HTMLInputElement>, allowNegative: boolean) {
+    if (!isAllowedText(event.clipboardData.getData('text').trim(), allowNegative)) {
+      event.preventDefault();
     }
   }
 
@@ -156,6 +177,8 @@ const VitalsAndBiometricsInput: React.FC<VitalsAndBiometricsInputProps> = ({
                               onBlur={() => handleFocusChange(false)}
                               onChange={(event, { value }) => checkValidity(value, onChange)}
                               onFocus={() => handleFocusChange(true)}
+                              onKeyDown={(event) => blockNonNumericKey(event, !(fieldProperty.min >= 0))}
+                              onPaste={(event) => blockNonNumericPaste(event, !(fieldProperty.min >= 0))}
                               placeholder={generatePlaceholder(fieldProperty.name)}
                               readOnly={readOnly}
                               ref={ref}
