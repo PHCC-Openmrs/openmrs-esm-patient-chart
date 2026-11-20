@@ -382,6 +382,28 @@ describe('VitalsBiometricsForm', () => {
     );
   });
 
+  it('shows the reason the server gave when saving vitals and biometrics fails', async () => {
+    const user = userEvent.setup();
+
+    mockCreateOrUpdateVitalsAndBiometrics.mockRejectedValueOnce({
+      responseBody: {
+        error: {
+          message: 'Validation failed',
+          fieldErrors: { obs: [{ message: 'Value 66 is above the allowed maximum' }] },
+        },
+      },
+    });
+
+    renderVitalsAndBiometricsForm();
+
+    await user.type(screen.getByRole('spinbutton', { name: /temperature/i }), temperatureValue.toString());
+    await user.click(screen.getByRole('button', { name: /save and close/i }));
+
+    expect(mockShowSnackbar).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'error', subtitle: 'Value 66 is above the allowed maximum' }),
+    );
+  });
+
   it('renders an error snackbar if there was a problem saving vitals and biometrics', async () => {
     const user = userEvent.setup();
 

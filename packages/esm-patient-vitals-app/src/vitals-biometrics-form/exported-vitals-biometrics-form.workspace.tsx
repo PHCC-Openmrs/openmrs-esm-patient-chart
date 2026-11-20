@@ -32,6 +32,7 @@ import { type ConfigObject } from '../config-schema';
 import {
   calculateBodyMassIndex,
   extractNumbers,
+  extractSaveErrorMessage,
   getMuacColorCode,
   isValueWithinReferenceRange,
 } from './vitals-biometrics-form.utils';
@@ -253,7 +254,7 @@ const ExportedVitalsAndBiometricsForm: React.FC<Workspace2DefinitionProps<Vitals
               subtitle: t('vitalsAndBiometricsNowAvailable', 'They are now visible on the Vitals and Biometrics page'),
             });
           })
-          .catch(() => {
+          .catch((error) => {
             showSnackbar({
               title:
                 formContext === 'creating'
@@ -261,7 +262,8 @@ const ExportedVitalsAndBiometricsForm: React.FC<Workspace2DefinitionProps<Vitals
                   : t('vitalsAndBiometricsUpdateError', 'Error updating Vitals and Biometrics'),
               kind: 'error',
               isLowContrast: false,
-              subtitle: t('checkForValidity', 'Some of the values entered are invalid'),
+              subtitle:
+                extractSaveErrorMessage(error) ?? t('checkForValidity', 'Some of the values entered are invalid'),
             });
           });
       } else {
@@ -622,7 +624,10 @@ const ExportedVitalsAndBiometricsForm: React.FC<Workspace2DefinitionProps<Vitals
                   ]}
                   interpretation={
                     hemoglobin != null
-                      ? assessValue(hemoglobin, getReferenceRangesForConcept(config.concepts.hemoglobinUuid, conceptRanges))
+                      ? assessValue(
+                          hemoglobin,
+                          getReferenceRangesForConcept(config.concepts.hemoglobinUuid, conceptRanges),
+                        )
                       : undefined
                   }
                   isValueWithinReferenceRange={
