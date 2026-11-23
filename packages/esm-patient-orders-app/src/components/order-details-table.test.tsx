@@ -673,6 +673,49 @@ describe('OrderDetailsTable', () => {
     expect(screen.getAllByRole('button', { name: /options/i })).toHaveLength(1);
   });
 
+  it('shows a lab decline comment as the reason for cancelling, but not the comment on a completed lab order', async () => {
+    mockUsePatientOrders.mockReturnValue({
+      data: [
+        {
+          ...mockOrders[1],
+          uuid: 'completed-lab-order',
+          orderNumber: 'ORD-CMP',
+          type: 'testorder',
+          fulfillerStatus: 'COMPLETED',
+          fulfillerComment: 'Test Results Entered',
+        },
+        {
+          ...mockOrders[1],
+          uuid: 'declined-lab-order',
+          orderNumber: 'ORD-DEC',
+          type: 'testorder',
+          fulfillerStatus: 'DECLINED',
+          fulfillerComment: 'Sample rejected',
+        },
+      ] as unknown as Array<Order>,
+      error: undefined,
+      isLoading: false,
+      isValidating: false,
+      mutate: vi.fn(),
+    });
+
+    renderOrderDetailsTable();
+
+    await screen.findByRole('table');
+
+    const reasonColumnIndex = screen
+      .getAllByRole('columnheader')
+      .findIndex((header) => /reason for cancelling/i.test(header.textContent ?? ''));
+    const reasonCell = (orderNumber: string) =>
+      within(screen.getAllByRole('row').find((row) => within(row).queryByText(orderNumber))).getAllByRole('cell')[
+        reasonColumnIndex
+      ];
+
+    expect(screen.queryByText('Test Results Entered')).not.toBeInTheDocument();
+    expect(reasonCell('ORD-CMP')).toHaveTextContent('--');
+    expect(reasonCell('ORD-DEC')).toHaveTextContent('Sample rejected');
+  });
+
   it('lets a completed lab order have its results edited, but not be modified', async () => {
     mockUsePatientOrders.mockReturnValue({
       data: [
