@@ -321,8 +321,10 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
               )}
             </Tag>
           ),
+          // The fulfiller comment is a reason only when the lab declined the order; on any other status it
+          // is a progress note (entering lab results sets "Test Results Entered"), not a reason for cancelling.
           reasonForCancelling:
-            order.fulfillerComment ||
+            (order.fulfillerStatus === 'DECLINED' && order.fulfillerComment) ||
             discontinuedOrderReasons[order.uuid] ||
             medicationDispenseReasons[order.uuid] ||
             '--',
