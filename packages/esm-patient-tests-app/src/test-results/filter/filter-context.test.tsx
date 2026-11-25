@@ -428,6 +428,51 @@ describe('FilterContext', () => {
     });
   });
 
+  describe('Table data dates', () => {
+    it('groups results by their day in server time, not by their UTC day', async () => {
+      // 00:30 in Gaza (+0200) is still the previous day in UTC; both results belong to 24 Nov.
+      const roots: Array<TreeNode> = [
+        {
+          display: 'Complete Blood Count',
+          flatName: 'CBC',
+          hasData: true,
+          subSets: [
+            {
+              display: 'Hemoglobin',
+              flatName: 'CBC: Hemoglobin',
+              hasData: true,
+              obs: [
+                { obsDatetime: '2026-11-24T00:30:00.000+0200', value: '12.5', interpretation: 'NORMAL' },
+                { obsDatetime: '2026-11-24T10:00:00.000+0200', value: '12.0', interpretation: 'NORMAL' },
+              ],
+              subSets: [],
+            },
+          ],
+        },
+      ];
+
+      const DatesConsumer = () => {
+        const { tableData } = useContext(FilterContext);
+        return (
+          <div data-testid="table-dates">
+            {(tableData ?? []).map((group) => `${group.date}:${group.entries.length}`).join(',')}
+          </div>
+        );
+      };
+
+      render(
+        <FilterProvider roots={roots} isLoading={false}>
+          <DatesConsumer />
+        </FilterProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('table-dates')).toHaveTextContent('2026-11-24:2');
+      });
+      expect(screen.getByTestId('table-dates')).not.toHaveTextContent('2026-11-23');
+    });
+  });
+
   describe('Table data de-duplication by conceptUuid', () => {
     const sharedConceptUuid = '729AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
     const sharedObs = [{ obsDatetime: '2024-11-04T05:48:00.000Z', value: '56.0', interpretation: 'LOW' as const }];
