@@ -1,4 +1,5 @@
 import React, { createContext, useReducer, useEffect, useMemo } from 'react';
+import dayjs from 'dayjs';
 import { formatDate, formatTime, parseDate, useConfig } from '@openmrs/esm-framework';
 import { type RangeResultConcept } from '@openmrs/esm-patient-common-lib';
 import { type ConfigObject } from '../../config-schema';
@@ -275,7 +276,12 @@ const FilterProvider = ({ roots, isLoading: isLoadingRoots, children }: FilterPr
     flattenedObs.forEach((curr: MappedObservation) => {
       const groupKey = deriveGroupKey(curr.flatName);
 
-      const dateKey = new Date(curr.obsDatetime).toISOString().split('T')[0];
+      // Group by the day of the result as recorded on the server. obstree returns obsDatetime in server time
+      // with its offset (e.g. 2026-11-24T01:30:00.000+0200), so its first 10 characters are that day.
+      // Converting to UTC first put results from just after midnight under the previous day.
+      const dateKey = /^\d{4}-\d{2}-\d{2}/.test(curr.obsDatetime ?? '')
+        ? curr.obsDatetime.slice(0, 10)
+        : dayjs(curr.obsDatetime).format('YYYY-MM-DD');
 
       const compositeKey = `${groupKey}__${dateKey}`;
       if (!groupedObs[compositeKey]) {
