@@ -2,15 +2,17 @@ import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Layer, OverflowMenu, OverflowMenuItem } from '@carbon/react';
 import { launchWorkspace2, showModal, useLayoutType, useSession, userHasAccess } from '@openmrs/esm-framework';
-import { nursingDeleteConfirmationModal, patientNursingFormWorkspace } from '../../constants';
+import { type NursingFormSection, nursingDeleteConfirmationModal, patientNursingFormWorkspace } from '../../constants';
 import styles from './nursing-action-menu.scss';
 
 interface NursingActionMenuProps {
   patientUuid: string;
   encounterUuid: string;
+  /** Edit opens only this part of the form -- the sections of the card the row is in. */
+  section?: NursingFormSection;
 }
 
-export const NursingActionMenu: React.FC<NursingActionMenuProps> = ({ encounterUuid, patientUuid }) => {
+export const NursingActionMenu: React.FC<NursingActionMenuProps> = ({ encounterUuid, patientUuid, section }) => {
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
   const session = useSession();
@@ -18,11 +20,11 @@ export const NursingActionMenu: React.FC<NursingActionMenuProps> = ({ encounterU
 
   const handleLaunchEditForm = useCallback(() => {
     launchWorkspace2(patientNursingFormWorkspace, {
-      workspaceTitle: t('editNursing', 'Edit nursing record'),
       editEncounterUuid: encounterUuid,
       formContext: 'editing',
+      section,
     });
-  }, [encounterUuid, t]);
+  }, [encounterUuid, section]);
 
   const handleLaunchDeleteModal = useCallback(() => {
     const dispose = showModal(nursingDeleteConfirmationModal, {

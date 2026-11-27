@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
+import { type TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -32,13 +33,14 @@ import {
 } from '@openmrs/esm-framework';
 import { type PatientWorkspace2DefinitionProps, useOptimisticVisitMutations } from '@openmrs/esm-patient-common-lib';
 import { type ConfigObject } from '../config-schema';
-import { ecgMaxFileSizeMb } from '../constants';
+import { ecgMaxFileSizeMb, type NursingFormSection } from '../constants';
 import {
   createOrUpdateNursingEncounter,
   getEcgAttachmentSrc,
   uploadEcgAttachment,
   useConceptAnswers,
   useInvalidateNursingRecords,
+  nursingProcedures,
   useNursingEncounter,
   useOintmentAnswers,
   withUnit,
@@ -51,18 +53,28 @@ import styles from './nursing-form.scss';
 export interface NursingFormProps {
   formContext: 'creating' | 'editing';
   editEncounterUuid?: string;
+  /**
+   * The part of the form to show, matching the card it was opened from: 'dressing' for
+   * Dressing and Other Measures, 'procedures' for Nursing Procedures. Left out, every section shows.
+   */
+  section?: NursingFormSection;
 }
 
 /**
  * The form for recording the three nursing sections -- Dressing, Other Measures and
  * Nursing Procedures -- into a single nursing encounter.
+ *
+ * When opened for one section, the others are hidden but still hold the encounter's values.
+ * Saving only writes fields that differ from what was loaded, so hidden values are left as they were.
  */
 const NursingForm: React.FC<PatientWorkspace2DefinitionProps<NursingFormProps, object>> = ({
   closeWorkspace,
   workspaceProps,
   groupProps: { patientUuid },
 }) => {
-  const { editEncounterUuid, formContext = 'creating' } = workspaceProps ?? ({} as NursingFormProps);
+  const { editEncounterUuid, formContext = 'creating', section } = workspaceProps ?? ({} as NursingFormProps);
+  const showDressing = section !== 'procedures';
+  const showProcedures = section !== 'dressing';
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
   const { concepts, nursing } = useConfig<ConfigObject>();
@@ -124,11 +136,26 @@ const NursingForm: React.FC<PatientWorkspace2DefinitionProps<NursingFormProps, o
   const existingEcgAttachmentUuid = initialValues['ecgImage'] as string | undefined;
   const hasUserUnsavedChanges = Object.keys(dirtyFields).length > 0;
 
-  const onError = useCallback((errors) => {
-    if (errors?.oneFieldRequired) {
-      setShowEmptyFormError(true);
-    }
-  }, []);
+  const onError = useCallback(
+    (errors) => {
+      if (errors?.oneFieldRequired) {
+        setShowEmptyFormError(true);
+      }
+      // Hidden procedure fields are still validated. Say so rather than fail with nothing on screen.
+      const hasHiddenProcedureError =
+        !showProcedures &&
+        nursingProcedures.some((procedure) => errors?.[`${procedure}Drug`] || errors?.[`${procedure}Qty`]);
+      if (hasHiddenProcedureError) {
+        setSaveError(
+          t(
+            'incompleteNursingProcedure',
+            'A nursing procedure on this record has a drug without a quantity, or a quantity without a drug. Fix it from the Nursing Procedures card first.',
+          ),
+        );
+      }
+    },
+    [showProcedures, t],
+  );
 
   const saveNursingRecord = useCallback(
     async (data: NursingFormData) => {
@@ -220,286 +247,289 @@ const NursingForm: React.FC<PatientWorkspace2DefinitionProps<NursingFormProps, o
   );
 
   return (
-    <Workspace2
-      title={isEditing ? t('editNursing', 'Edit nursing record') : t('recordNursing', 'Record nursing')}
-      hasUnsavedChanges={hasUserUnsavedChanges}
-    >
+    <Workspace2 title={getFormTitle(t, isEditing, section)} hasUnsavedChanges={hasUserUnsavedChanges}>
       <Form className={styles.form} data-openmrs-role="Nursing Form">
         <ExtensionSlot name="visit-context-header-slot" state={{ patientUuid }} />
         <div className={styles.grid}>
-          <Stack>
-            <Column>
-              <p className={styles.title}>{t('dressing', 'Dressing')}</p>
-            </Column>
-            <Row className={styles.row}>
-              <Column className={styles.fullWidth}>
-                <ResponsiveWrapper>
-                  <Controller
-                    name="typeOfWound"
-                    control={control}
-                    render={({ field: { onChange, onBlur, ref, value } }) => (
-                      <TextInput
-                        id="typeOfWound"
-                        labelText={t('typeOfWound', 'Type of wound')}
-                        onBlur={onBlur}
-                        onChange={onChange}
-                        placeholder={t('typeOfWoundPlaceholder', 'Describe the type of wound')}
-                        ref={ref}
-                        value={value ?? ''}
-                      />
-                    )}
-                  />
-                </ResponsiveWrapper>
-              </Column>
-            </Row>
-            <Row className={styles.row}>
-              <Column className={styles.fullWidth}>
-                <ResponsiveWrapper>
-                  <Controller
-                    name="ointments"
-                    control={control}
-                    render={({ field: { onChange, value } }) => (
-                      <MultiSelect
-                        id="ointment"
-                        disabled={isLoadingOintments}
-                        titleText={t('ointment', 'Ointment')}
-                        label={t('selectOintments', 'Select ointments')}
-                        items={ointmentAnswers}
-                        itemToString={(answer: ConceptAnswer) => answer?.display ?? ''}
-                        selectedItems={ointmentAnswers.filter((answer) =>
-                          ((value as Array<string>) ?? []).includes(answer.uuid),
+          {showDressing && (
+            <>
+              <Stack>
+                <Column>
+                  <p className={styles.title}>{t('dressing', 'Dressing')}</p>
+                </Column>
+                <Row className={styles.row}>
+                  <Column className={styles.fullWidth}>
+                    <ResponsiveWrapper>
+                      <Controller
+                        name="typeOfWound"
+                        control={control}
+                        render={({ field: { onChange, onBlur, ref, value } }) => (
+                          <TextInput
+                            id="typeOfWound"
+                            labelText={t('typeOfWound', 'Type of wound')}
+                            onBlur={onBlur}
+                            onChange={onChange}
+                            placeholder={t('typeOfWoundPlaceholder', 'Describe the type of wound')}
+                            ref={ref}
+                            value={value ?? ''}
+                          />
                         )}
-                        onChange={({ selectedItems }) =>
-                          onChange((selectedItems ?? []).map((answer: ConceptAnswer) => answer.uuid))
-                        }
                       />
-                    )}
-                  />
-                </ResponsiveWrapper>
-              </Column>
-            </Row>
-            <Row className={styles.row}>
-              <Column className={styles.fullWidth}>
-                <ResponsiveWrapper>
-                  <Controller
-                    name="dressingGeneralNotes"
-                    control={control}
-                    render={({ field: { onChange, onBlur, ref, value } }) => (
-                      <TextArea
-                        id="dressingGeneralNotes"
-                        labelText={t('generalNotes', 'General notes')}
-                        onBlur={onBlur}
-                        onChange={onChange}
-                        placeholder={t(
-                          'generalNotesPlaceholder',
-                          'Type any additional observations about the dressing case here',
-                        )}
-                        ref={ref}
-                        rows={3}
-                        value={value ?? ''}
-                      />
-                    )}
-                  />
-                </ResponsiveWrapper>
-              </Column>
-            </Row>
-          </Stack>
-
-          <Stack className={styles.spacer}>
-            <Column>
-              <p className={styles.title}>{t('otherMeasures', 'Other Measures')}</p>
-            </Column>
-            <Row className={styles.row}>
-              <Column className={styles.fullWidth}>
-                <FormLabel className={styles.fileLabel}>{t('ecgResult', 'ECG result')}</FormLabel>
-                {existingEcgAttachmentUuid ? (
-                  <p className={styles.existingAttachment}>
-                    <Link
-                      href={getEcgAttachmentSrc(existingEcgAttachmentUuid)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {t('viewCurrentEcg', 'View the ECG currently on this record')}
-                    </Link>
-                    <span className={styles.helperText}>
-                      {t('uploadReplacesEcg', 'Uploading a new file replaces it.')}
-                    </span>
-                  </p>
-                ) : null}
-                <Controller
-                  name="ecgFile"
-                  control={control}
-                  render={({ field: { onChange }, fieldState: { error } }) => (
-                    <>
-                      <FileUploader
-                        accept={['image/*', '.pdf']}
-                        buttonKind="tertiary"
-                        buttonLabel={t('addFile', 'Add file')}
-                        filenameStatus="edit"
-                        iconDescription={t('removeFile', 'Remove file')}
-                        labelDescription={t(
-                          'ecgUploadDescription',
-                          'Upload an image or PDF of the ECG result. Max file size is {{maxSize}} MB.',
-                          { maxSize: ecgMaxFileSizeMb },
-                        )}
-                        onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                          onChange(event.target.files?.[0] ?? null)
-                        }
-                        onDelete={() => onChange(null)}
-                      />
-                      {error ? (
-                        <p className={styles.errorText}>
-                          {t(
-                            'ecgFileTooLarge',
-                            'This file is larger than {{maxSize}} MB. Remove it and choose a smaller file.',
-                            {
-                              maxSize: ecgMaxFileSizeMb,
-                            },
-                          )}
-                        </p>
-                      ) : null}
-                    </>
-                  )}
-                />
-              </Column>
-            </Row>
-            <Row className={styles.row}>
-              <Column>
-                <ResponsiveWrapper>
-                  <Controller
-                    name="spirometry"
-                    control={control}
-                    render={({ field: { onChange, onBlur, ref, value } }) => (
-                      <NumberInput
-                        allowEmpty
-                        disableWheel
-                        hideSteppers
-                        id="spirometry"
-                        invalid={!!invalidNumericFields.spirometry}
-                        invalidText={t('enterValidValue', 'Enter a valid value')}
-                        min={0}
-                        onInput={(event) => validateNumericEntry('spirometry', event.currentTarget)}
-                        label={withUnit(t('spirometry', 'Spirometry'), nursing.spirometryUnit)}
-                        onBlur={(event) => {
-                          validateNumericEntry('spirometry', event.currentTarget);
-                          onBlur();
-                        }}
-                        onChange={(event, { value: nextValue }) => {
-                          validateNumericEntry('spirometry', event.target as HTMLInputElement);
-                          onChange(nextValue === '' || nextValue == null ? undefined : Number(nextValue));
-                        }}
-                        ref={ref}
-                        value={value ?? ''}
-                      />
-                    )}
-                  />
-                </ResponsiveWrapper>
-              </Column>
-              <Column>
-                <ResponsiveWrapper>
-                  <Controller
-                    name="monofilament"
-                    control={control}
-                    render={({ field: { onChange, onBlur, ref, value } }) => (
-                      <NumberInput
-                        allowEmpty
-                        disableWheel
-                        hideSteppers
-                        id="monofilament"
-                        invalid={!!invalidNumericFields.monofilament}
-                        invalidText={t('enterValidValue', 'Enter a valid value')}
-                        min={0}
-                        onInput={(event) => validateNumericEntry('monofilament', event.currentTarget)}
-                        label={withUnit(t('monofilament', 'Monofilament'), nursing.monofilamentUnit)}
-                        onBlur={(event) => {
-                          validateNumericEntry('monofilament', event.currentTarget);
-                          onBlur();
-                        }}
-                        onChange={(event, { value: nextValue }) => {
-                          validateNumericEntry('monofilament', event.target as HTMLInputElement);
-                          onChange(nextValue === '' || nextValue == null ? undefined : Number(nextValue));
-                        }}
-                        ref={ref}
-                        value={value ?? ''}
-                      />
-                    )}
-                  />
-                </ResponsiveWrapper>
-              </Column>
-            </Row>
-          </Stack>
-
-          <Stack className={styles.spacer}>
-            <Column>
-              <p className={styles.title}>{t('nursingProcedures', 'Nursing Procedures')}</p>
-            </Column>
-            {(
-              [
-                { id: 'imInjection', label: t('imInjection', 'IM injection'), drugs: imInjectionDrugs },
-                { id: 'ivInjection', label: t('ivInjection', 'IV injection'), drugs: ivInjectionDrugs },
-                { id: 'oral', label: t('oral', 'Oral'), drugs: oralDrugs },
-                { id: 'nebulization', label: t('nebulization', 'Nebulization'), drugs: nebulizationDrugs },
-              ] as const
-            ).map(({ id, label, drugs }) => (
-              <Row className={`${styles.row} ${styles.procedureRow}`} key={id}>
-                <Column className={styles.procedureDrug}>
-                  <ResponsiveWrapper>
-                    <Controller
-                      name={`${id}Drug`}
-                      control={control}
-                      render={({ field: { onChange, value }, fieldState: { error } }) => (
-                        <ComboBox
-                          id={`${id}Drug`}
-                          disabled={drugs.isLoading}
-                          titleText={label}
-                          placeholder={t('selectDrug', 'Select a drug')}
-                          items={drugs.answers}
-                          itemToString={(answer: ConceptAnswer) => answer?.display ?? ''}
-                          selectedItem={drugs.answers.find((answer) => answer.uuid === value) ?? null}
-                          invalid={Boolean(error)}
-                          invalidText={t('drugRequired', 'Select the drug that was given')}
-                          onChange={({ selectedItem }: { selectedItem?: ConceptAnswer | null }) => {
-                            onChange(selectedItem?.uuid ?? '');
-                            if (!selectedItem) {
-                              // A quantity without a drug is meaningless: clear it with the drug.
-                              setValue(`${id}Qty`, undefined, { shouldDirty: true });
+                    </ResponsiveWrapper>
+                  </Column>
+                </Row>
+                <Row className={styles.row}>
+                  <Column className={styles.fullWidth}>
+                    <ResponsiveWrapper>
+                      <Controller
+                        name="ointments"
+                        control={control}
+                        render={({ field: { onChange, value } }) => (
+                          <MultiSelect
+                            id="ointment"
+                            disabled={isLoadingOintments}
+                            titleText={t('ointment', 'Ointment')}
+                            label={t('selectOintments', 'Select ointments')}
+                            items={ointmentAnswers}
+                            itemToString={(answer: ConceptAnswer) => answer?.display ?? ''}
+                            selectedItems={ointmentAnswers.filter((answer) =>
+                              ((value as Array<string>) ?? []).includes(answer.uuid),
+                            )}
+                            onChange={({ selectedItems }) =>
+                              onChange((selectedItems ?? []).map((answer: ConceptAnswer) => answer.uuid))
                             }
-                          }}
-                        />
-                      )}
-                    />
-                  </ResponsiveWrapper>
+                          />
+                        )}
+                      />
+                    </ResponsiveWrapper>
+                  </Column>
+                </Row>
+                <Row className={styles.row}>
+                  <Column className={styles.fullWidth}>
+                    <ResponsiveWrapper>
+                      <Controller
+                        name="dressingGeneralNotes"
+                        control={control}
+                        render={({ field: { onChange, onBlur, ref, value } }) => (
+                          <TextArea
+                            id="dressingGeneralNotes"
+                            labelText={t('generalNotes', 'General notes')}
+                            onBlur={onBlur}
+                            onChange={onChange}
+                            placeholder={t(
+                              'generalNotesPlaceholder',
+                              'Type any additional observations about the dressing case here',
+                            )}
+                            ref={ref}
+                            rows={3}
+                            value={value ?? ''}
+                          />
+                        )}
+                      />
+                    </ResponsiveWrapper>
+                  </Column>
+                </Row>
+              </Stack>
+
+              <Stack className={styles.spacer}>
+                <Column>
+                  <p className={styles.title}>{t('otherMeasures', 'Other Measures')}</p>
                 </Column>
-                <Column className={styles.procedureQuantity}>
-                  <ResponsiveWrapper>
+                <Row className={styles.row}>
+                  <Column className={styles.fullWidth}>
+                    <FormLabel className={styles.fileLabel}>{t('ecgResult', 'ECG result')}</FormLabel>
+                    {existingEcgAttachmentUuid ? (
+                      <p className={styles.existingAttachment}>
+                        <Link
+                          href={getEcgAttachmentSrc(existingEcgAttachmentUuid)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {t('viewCurrentEcg', 'View the ECG currently on this record')}
+                        </Link>
+                        <span className={styles.helperText}>
+                          {t('uploadReplacesEcg', 'Uploading a new file replaces it.')}
+                        </span>
+                      </p>
+                    ) : null}
                     <Controller
-                      name={`${id}Qty`}
+                      name="ecgFile"
                       control={control}
-                      render={({ field: { onChange, onBlur, ref, value }, fieldState: { error } }) => (
-                        <NumberInput
-                          allowEmpty
-                          disableWheel
-                          hideSteppers
-                          disabled={!watch(`${id}Drug`)}
-                          id={`${id}Qty`}
-                          invalid={Boolean(error)}
-                          invalidText={t('quantityRequired', 'Enter the quantity that was given')}
-                          label={t('quantity', 'Quantity')}
-                          min={0}
-                          onBlur={onBlur}
-                          onChange={(_event, { value: nextValue }) =>
-                            onChange(nextValue === '' || nextValue == null ? undefined : Number(nextValue))
-                          }
-                          ref={ref}
-                          value={value ?? ''}
-                        />
+                      render={({ field: { onChange }, fieldState: { error } }) => (
+                        <>
+                          <FileUploader
+                            accept={['image/*', '.pdf']}
+                            buttonKind="tertiary"
+                            buttonLabel={t('addFile', 'Add file')}
+                            filenameStatus="edit"
+                            iconDescription={t('removeFile', 'Remove file')}
+                            labelDescription={t(
+                              'ecgUploadDescription',
+                              'Upload an image or PDF of the ECG result. Max file size is {{maxSize}} MB.',
+                              { maxSize: ecgMaxFileSizeMb },
+                            )}
+                            onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                              onChange(event.target.files?.[0] ?? null)
+                            }
+                            onDelete={() => onChange(null)}
+                          />
+                          {error ? (
+                            <p className={styles.errorText}>
+                              {t(
+                                'ecgFileTooLarge',
+                                'This file is larger than {{maxSize}} MB. Remove it and choose a smaller file.',
+                                {
+                                  maxSize: ecgMaxFileSizeMb,
+                                },
+                              )}
+                            </p>
+                          ) : null}
+                        </>
                       )}
                     />
-                  </ResponsiveWrapper>
-                </Column>
-              </Row>
-            ))}
-          </Stack>
+                  </Column>
+                </Row>
+                <Row className={styles.row}>
+                  <Column>
+                    <ResponsiveWrapper>
+                      <Controller
+                        name="spirometry"
+                        control={control}
+                        render={({ field: { onChange, onBlur, ref, value } }) => (
+                          <NumberInput
+                            allowEmpty
+                            disableWheel
+                            hideSteppers
+                            id="spirometry"
+                            invalid={!!invalidNumericFields.spirometry}
+                            invalidText={t('enterValidValue', 'Enter a valid value')}
+                            min={0}
+                            onInput={(event) => validateNumericEntry('spirometry', event.currentTarget)}
+                            label={withUnit(t('spirometry', 'Spirometry'), nursing.spirometryUnit)}
+                            onBlur={(event) => {
+                              validateNumericEntry('spirometry', event.currentTarget);
+                              onBlur();
+                            }}
+                            onChange={(event, { value: nextValue }) => {
+                              validateNumericEntry('spirometry', event.target as HTMLInputElement);
+                              onChange(nextValue === '' || nextValue == null ? undefined : Number(nextValue));
+                            }}
+                            ref={ref}
+                            value={value ?? ''}
+                          />
+                        )}
+                      />
+                    </ResponsiveWrapper>
+                  </Column>
+                  <Column>
+                    <ResponsiveWrapper>
+                      <Controller
+                        name="monofilament"
+                        control={control}
+                        render={({ field: { onChange, onBlur, ref, value } }) => (
+                          <NumberInput
+                            allowEmpty
+                            disableWheel
+                            hideSteppers
+                            id="monofilament"
+                            invalid={!!invalidNumericFields.monofilament}
+                            invalidText={t('enterValidValue', 'Enter a valid value')}
+                            min={0}
+                            onInput={(event) => validateNumericEntry('monofilament', event.currentTarget)}
+                            label={withUnit(t('monofilament', 'Monofilament'), nursing.monofilamentUnit)}
+                            onBlur={(event) => {
+                              validateNumericEntry('monofilament', event.currentTarget);
+                              onBlur();
+                            }}
+                            onChange={(event, { value: nextValue }) => {
+                              validateNumericEntry('monofilament', event.target as HTMLInputElement);
+                              onChange(nextValue === '' || nextValue == null ? undefined : Number(nextValue));
+                            }}
+                            ref={ref}
+                            value={value ?? ''}
+                          />
+                        )}
+                      />
+                    </ResponsiveWrapper>
+                  </Column>
+                </Row>
+              </Stack>
+            </>
+          )}
+
+          {showProcedures && (
+            <Stack className={showDressing ? styles.spacer : undefined}>
+              <Column>
+                <p className={styles.title}>{t('nursingProcedures', 'Nursing Procedures')}</p>
+              </Column>
+              {(
+                [
+                  { id: 'imInjection', label: t('imInjection', 'IM injection'), drugs: imInjectionDrugs },
+                  { id: 'ivInjection', label: t('ivInjection', 'IV injection'), drugs: ivInjectionDrugs },
+                  { id: 'oral', label: t('oral', 'Oral'), drugs: oralDrugs },
+                  { id: 'nebulization', label: t('nebulization', 'Nebulization'), drugs: nebulizationDrugs },
+                ] as const
+              ).map(({ id, label, drugs }) => (
+                <Row className={`${styles.row} ${styles.procedureRow}`} key={id}>
+                  <Column className={styles.procedureDrug}>
+                    <ResponsiveWrapper>
+                      <Controller
+                        name={`${id}Drug`}
+                        control={control}
+                        render={({ field: { onChange, value }, fieldState: { error } }) => (
+                          <ComboBox
+                            id={`${id}Drug`}
+                            disabled={drugs.isLoading}
+                            titleText={label}
+                            placeholder={t('selectDrug', 'Select a drug')}
+                            items={drugs.answers}
+                            itemToString={(answer: ConceptAnswer) => answer?.display ?? ''}
+                            selectedItem={drugs.answers.find((answer) => answer.uuid === value) ?? null}
+                            invalid={Boolean(error)}
+                            invalidText={t('drugRequired', 'Select the drug that was given')}
+                            onChange={({ selectedItem }: { selectedItem?: ConceptAnswer | null }) => {
+                              onChange(selectedItem?.uuid ?? '');
+                              if (!selectedItem) {
+                                // A quantity without a drug is meaningless: clear it with the drug.
+                                setValue(`${id}Qty`, undefined, { shouldDirty: true });
+                              }
+                            }}
+                          />
+                        )}
+                      />
+                    </ResponsiveWrapper>
+                  </Column>
+                  <Column className={styles.procedureQuantity}>
+                    <ResponsiveWrapper>
+                      <Controller
+                        name={`${id}Qty`}
+                        control={control}
+                        render={({ field: { onChange, onBlur, ref, value }, fieldState: { error } }) => (
+                          <NumberInput
+                            allowEmpty
+                            disableWheel
+                            hideSteppers
+                            disabled={!watch(`${id}Drug`)}
+                            id={`${id}Qty`}
+                            invalid={Boolean(error)}
+                            invalidText={t('quantityRequired', 'Enter the quantity that was given')}
+                            label={t('quantity', 'Quantity')}
+                            min={0}
+                            onBlur={onBlur}
+                            onChange={(_event, { value: nextValue }) =>
+                              onChange(nextValue === '' || nextValue == null ? undefined : Number(nextValue))
+                            }
+                            ref={ref}
+                            value={value ?? ''}
+                          />
+                        )}
+                      />
+                    </ResponsiveWrapper>
+                  </Column>
+                </Row>
+              ))}
+            </Stack>
+          )}
         </div>
 
         {showEmptyFormError && (
@@ -543,5 +573,19 @@ const NursingForm: React.FC<PatientWorkspace2DefinitionProps<NursingFormProps, o
     </Workspace2>
   );
 };
+
+function getFormTitle(t: TFunction, isEditing: boolean, section?: NursingFormSection): string {
+  if (section === 'dressing') {
+    return isEditing
+      ? t('editDressingAndOtherMeasures', 'Edit dressing and other measures')
+      : t('recordDressingAndOtherMeasures', 'Record dressing and other measures');
+  }
+  if (section === 'procedures') {
+    return isEditing
+      ? t('editNursingProcedures', 'Edit nursing procedures')
+      : t('recordNursingProcedures', 'Record nursing procedures');
+  }
+  return isEditing ? t('editNursing', 'Edit nursing record') : t('recordNursing', 'Record nursing');
+}
 
 export default NursingForm;

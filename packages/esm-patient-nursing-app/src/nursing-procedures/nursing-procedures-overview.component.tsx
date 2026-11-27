@@ -51,6 +51,7 @@ const NursingProceduresOverview: React.FC<NursingProceduresOverviewProps> = ({
   return (
     <NursingWidget
       patientUuid={patientUuid}
+      section="procedures"
       headerTitle={t('nursingProcedures', 'Nursing Procedures')}
       displayText={t('nursingProcedureRecords', 'nursing procedure records')}
       columns={columns}
