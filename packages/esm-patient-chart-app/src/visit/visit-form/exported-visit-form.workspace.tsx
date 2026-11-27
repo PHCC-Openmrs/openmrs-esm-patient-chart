@@ -44,6 +44,7 @@ import {
   invalidateVisitAndEncounterData,
   SERVICE_VISIT_ATTRIBUTE_TYPE_UUID,
   useActivePatientEnrollment,
+  useVisitEndPermission,
 } from '@openmrs/esm-patient-common-lib';
 import { MemoizedRecommendedVisitType } from './recommended-visit-type.component';
 import {
@@ -187,6 +188,9 @@ const ExportedVisitForm: React.FC<Workspace2DefinitionProps<ExportedVisitFormPro
 
   const visitStatus = useWatch({ control, name: 'visitStatus' });
   const hasActiveVisitConflict = !visitToEdit && visitStatus !== 'past' && !!activeVisit && !allowOverlappingVisits;
+  // Marking an ongoing visit "Ended" ends it, which is only allowed from the visit's own location.
+  const visitEndPermission = useVisitEndPermission(visitToEdit);
+  const cannotEndEditedVisit = !!visitToEdit && !visitToEdit.stopDatetime && !visitEndPermission.canEndVisit;
 
   // default values are cached so form needs to be reset when they change (e.g. when default visit location finishes loading)
   useEffect(() => {
@@ -596,7 +600,9 @@ const ExportedVisitForm: React.FC<Workspace2DefinitionProps<ExportedVisitFormPro
                           size="md"
                         >
                           <Switch name="ongoing">{t('ongoing', 'Ongoing')}</Switch>
-                          <Switch name="past">{t('ended', 'Ended')}</Switch>
+                          <Switch name="past" disabled={cannotEndEditedVisit}>
+                            {t('ended', 'Ended')}
+                          </Switch>
                         </ContentSwitcher>
                       ) : (
                         <ContentSwitcher
@@ -621,6 +627,27 @@ const ExportedVisitForm: React.FC<Workspace2DefinitionProps<ExportedVisitFormPro
                   />
                 </FormGroup>
               </section>
+              {cannotEndEditedVisit && (
+                <InlineNotification
+                  className={styles.inlineNotification}
+                  kind="info"
+                  lowContrast
+                  hideCloseButton
+                  title={t('cannotEndVisitHere', 'This visit cannot be ended here')}
+                  subtitle={
+                    visitEndPermission.visitLocationName
+                      ? t(
+                          'visitStartedAtOtherLocation',
+                          'This visit was started at {{location}}. Log in at {{location}} to end it.',
+                          { location: visitEndPermission.visitLocationName },
+                        )
+                      : t(
+                          'visitStartedAtOtherLocationUnnamed',
+                          'This visit was started at a different location. Log in at that location to end it.',
+                        )
+                  }
+                />
+              )}
               {hasActiveVisitConflict && (
                 <InlineNotification
                   className={styles.inlineNotification}

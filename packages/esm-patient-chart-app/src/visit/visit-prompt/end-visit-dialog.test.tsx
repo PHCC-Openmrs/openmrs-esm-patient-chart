@@ -13,7 +13,7 @@ import { screen, render } from '@testing-library/react';
 import { showSnackbar, updateVisit, useVisit, type Visit, type FetchResponse } from '@openmrs/esm-framework';
 import { mockCurrentVisit } from '__mocks__';
 import EndVisitDialog from './end-visit-dialog.modal';
-import { usePatientChartStore } from '@openmrs/esm-patient-common-lib';
+import { usePatientChartStore, useVisitEndPermission } from '@openmrs/esm-patient-common-lib';
 
 const endVisitPayload = {
   stopDatetime: expect.any(Date),
@@ -30,7 +30,10 @@ const mockSetVisitContext = vi.fn();
 
 vi.mock('@openmrs/esm-patient-common-lib', () => ({
   usePatientChartStore: vi.fn(),
+  useVisitEndPermission: vi.fn(),
 }));
+
+const mockUseVisitEndPermission = vi.mocked(useVisitEndPermission);
 
 mockUsePatientChartStore.mockReturnValue({
   patientUuid: 'patient-123',
@@ -53,6 +56,7 @@ describe('End visit dialog', () => {
       isValidating: false,
       mutate: mockMutate,
     });
+    mockUseVisitEndPermission.mockReturnValue({ canEndVisit: true, visitLocationName: 'Site A' });
   });
 
   test('displays a success snackbar when the visit is ended successfully', async () => {
@@ -128,5 +132,40 @@ describe('End visit dialog', () => {
       title: 'Error ending visit',
       isLowContrast: false,
     });
+  });
+
+  test("shows the server's reason when it refuses to end the visit", async () => {
+    const user = userEvent.setup();
+    mockUpdateVisit.mockRejectedValue({
+      message: 'Server responded with 403 (Forbidden)',
+      responseBody: { error: { message: 'This visit was started at Site A. Log in at Site A to end it.' } },
+    });
+
+    render(<EndVisitDialog patientUuid="some-patient-uuid" closeModal={mockCloseModal} />);
+    await user.click(screen.getByRole('button', { name: /End Visit/i }));
+
+    expect(mockShowSnackbar).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'error',
+        subtitle: 'This visit was started at Site A. Log in at Site A to end it.',
+      }),
+    );
+  });
+
+  test('does not offer to end a visit started at another location', async () => {
+    const user = userEvent.setup();
+    mockUseVisitEndPermission.mockReturnValue({ canEndVisit: false, visitLocationName: 'Site A' });
+
+    render(<EndVisitDialog patientUuid="some-patient-uuid" closeModal={mockCloseModal} />);
+
+    expect(screen.getByRole('heading', { name: /this visit cannot be ended here/i })).toBeInTheDocument();
+    expect(screen.getByText('This visit was started at Site A. Log in at Site A to end it.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /end visit/i })).not.toBeInTheDocument();
+
+    // The header's X is also named "Close"; click the footer button.
+    const closeButtons = screen.getAllByRole('button', { name: /^close$/i });
+    await user.click(closeButtons[closeButtons.length - 1]);
+    expect(mockCloseModal).toHaveBeenCalled();
+    expect(mockUpdateVisit).not.toHaveBeenCalled();
   });
 });
