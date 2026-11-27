@@ -1,7 +1,8 @@
 import React from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
-import { getDefaultsFromConfigSchema, useConfig } from '@openmrs/esm-framework';
+import userEvent from '@testing-library/user-event';
+import { getDefaultsFromConfigSchema, launchWorkspace2, useConfig, userHasAccess } from '@openmrs/esm-framework';
 import { renderWithSwr, waitForLoadingToFinish } from 'tools';
 import { configSchema, type ConfigObject } from '../config-schema';
 import { useNursingRecords } from '../common';
@@ -16,8 +17,11 @@ vi.mock('../common', async () => ({
   useNursingRecords: vi.fn(),
 }));
 
+const mockLaunchNursingForm = vi.fn();
+const mockUseLaunchNursingForm = vi.fn((_patientUuid: string, _section?: string) => mockLaunchNursingForm);
+
 vi.mock('../utils', () => ({
-  useLaunchNursingForm: () => vi.fn(),
+  useLaunchNursingForm: (patientUuid: string, section?: string) => mockUseLaunchNursingForm(patientUuid, section),
 }));
 
 function mockRecords(records: Array<NursingRecord>) {
@@ -31,6 +35,7 @@ function mockRecords(records: Array<NursingRecord>) {
 }
 
 beforeEach(() => {
+  vi.mocked(userHasAccess).mockReturnValue(true);
   mockUseConfig.mockReturnValue(getDefaultsFromConfigSchema(configSchema) as ConfigObject);
 });
 
@@ -144,5 +149,31 @@ describe('DressingOverview', () => {
     await waitForLoadingToFinish();
 
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  it('opens only its own sections of the nursing form from Add and Edit', async () => {
+    const user = userEvent.setup();
+    mockRecords([
+      {
+        id: 'encounter-1',
+        date: '2026-09-10T10:00:00.000+0000',
+        ointments: [],
+        typeOfWound: 'Abrasion',
+      },
+    ]);
+
+    renderWithSwr(<DressingOverview patientUuid="patient-uuid" />);
+    await waitForLoadingToFinish();
+
+    await user.click(screen.getByRole('button', { name: /add/i }));
+    expect(mockUseLaunchNursingForm).toHaveBeenCalledWith('patient-uuid', 'dressing');
+    expect(mockLaunchNursingForm).toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: /options/i }));
+    await user.click(await screen.findByText('Edit'));
+    expect(launchWorkspace2).toHaveBeenCalledWith(
+      'patient-nursing-form-workspace',
+      expect.objectContaining({ editEncounterUuid: 'encounter-1', formContext: 'editing', section: 'dressing' }),
+    );
   });
 });

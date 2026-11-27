@@ -97,6 +97,7 @@ const DressingOverview: React.FC<DressingOverviewProps> = ({ patientUuid, pageSi
   return (
     <NursingWidget
       patientUuid={patientUuid}
+      section="dressing"
       headerTitle={t('dressingAndOtherMeasures', 'Dressing and Other Measures')}
       displayText={t('dressingAndOtherMeasuresRecords', 'dressing and other measures records')}
       columns={columns}

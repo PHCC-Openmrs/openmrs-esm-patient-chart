@@ -25,6 +25,7 @@ import {
 import { CardHeader, EmptyState, ErrorState, PatientChartPagination } from '@openmrs/esm-patient-common-lib';
 import { useNursingRecords } from '../common';
 import { type NursingRecord } from '../common/types';
+import { type NursingFormSection } from '../constants';
 import { useLaunchNursingForm } from '../utils';
 import { NursingActionMenu } from '../components/action-menu/nursing-action-menu.component';
 import styles from './nursing-widget.scss';
@@ -38,6 +39,8 @@ export interface NursingWidgetColumn {
 
 interface NursingWidgetProps {
   patientUuid: string;
+  /** The part of the nursing form this card's Add and Edit open. */
+  section: NursingFormSection;
   /** Title shown in the card header, e.g. "Dressing". */
   headerTitle: string;
   /** Lowercase noun used in the empty state, e.g. "dressing records". */
@@ -60,6 +63,7 @@ interface NursingWidgetProps {
  */
 const NursingWidget: React.FC<NursingWidgetProps> = ({
   patientUuid,
+  section,
   headerTitle,
   displayText,
   columns,
@@ -71,7 +75,7 @@ const NursingWidget: React.FC<NursingWidgetProps> = ({
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
   const { records, error, isLoading, isValidating } = useNursingRecords(patientUuid);
-  const launchNursingForm = useLaunchNursingForm(patientUuid);
+  const launchNursingForm = useLaunchNursingForm(patientUuid, section);
   const session = useSession();
   const canRecordNursing = userHasAccess('Task: patientChart.recordNursing', session?.user);
 
@@ -164,7 +168,7 @@ const NursingWidget: React.FC<NursingWidgetProps> = ({
                       <TableCell key={cell.id}>{cell.value}</TableCell>
                     ))}
                     <TableCell className="cds--table-column-menu">
-                      <NursingActionMenu patientUuid={patientUuid} encounterUuid={row.id} />
+                      <NursingActionMenu patientUuid={patientUuid} encounterUuid={row.id} section={section} />
                     </TableCell>
                   </TableRow>
                 ))}

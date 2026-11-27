@@ -7,3 +7,9 @@ export const nursingDeleteConfirmationModal = 'nursing-delete-confirmation-modal
  */
 export const ecgMaxFileSizeMb = 5;
 export const ecgMaxFileSizeBytes = ecgMaxFileSizeMb * 1024 * 1024;
+
+/**
+ * Which part of the nursing form to show. Each card on the chart opens only its own sections:
+ * 'dressing' is Dressing plus Other Measures, 'procedures' is Nursing Procedures.
+ */
+export type NursingFormSection = 'dressing' | 'procedures';
